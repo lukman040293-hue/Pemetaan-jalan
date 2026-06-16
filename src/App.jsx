@@ -122,6 +122,7 @@ export default function App() {
   const [gpsAccuracy, setGpsAccuracy] = useState('-');
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [pinLocation, setPinLocation] = useState(null); 
+  const [currentLocation, setCurrentLocation] = useState(null); // <-- Tambahkan state untuk lokasi saat ini
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
   const [uploadedVideoFile, setUploadedVideoFile] = useState(null); 
   const [formData, setFormData] = useState({
@@ -135,6 +136,8 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null);
   const surveyorMapInstanceRef = useRef(null);
   const surveyorMarkerRef = useRef(null);
+  const currentLocationMarkerRef = useRef(null); // <-- Tambahkan ref untuk marker titik biru
+  const watchLocationIdRef = useRef(null); // <-- Tambahkan ref untuk watchPosition di peta
 
   // --- 1. INISIALISASI PUSTAKA LEAFLET ---
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
@@ -284,11 +287,13 @@ export default function App() {
 
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
+    // Jika ada rute yang sedang direkam, tampilkan poligonnya dan arahkan peta ke sana
     if (realGpsPoints.length > 0) {
       const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
       window.L.polyline(latlngs, { color: '#3B82F6', weight: 5, opacity: 0.8 }).addTo(map);
       map.fitBounds(window.L.latLngBounds(latlngs), { padding: [20, 20] });
     } else {
+        // Jika tidak, tampilkan koordinat awal Samarinda
       map.setView([-0.425, 117.185], 13);
     }
 
@@ -297,16 +302,42 @@ export default function App() {
       showToast("📍 Pin diletakkan!");
     });
 
+    if ('geolocation' in navigator) {
+        watchLocationIdRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                const newPos = { lat: latitude, lng: longitude };
+                setCurrentLocation(newPos);
+
+                // Pertama kali dapat lokasi, pusatkan peta (jika tidak sedang merekam)
+                if (realGpsPoints.length === 0 && !currentLocationMarkerRef.current) {
+                    map.setView([latitude, longitude], 17);
+                }
+            },
+            (err) => {
+                console.warn("Gagal mendapatkan lokasi GPS:", err);
+                showToast("Aktifkan GPS/Lokasi perangkat Anda.");
+            },
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+        );
+    }
+
     return () => {
+      if (watchLocationIdRef.current) {
+          navigator.geolocation.clearWatch(watchLocationIdRef.current);
+      }
       map.remove();
       surveyorMapInstanceRef.current = null;
       surveyorMarkerRef.current = null;
+      currentLocationMarkerRef.current = null;
     };
   }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints]);
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     const map = surveyorMapInstanceRef.current;
+
+    // --- Marker Pin Kerusakan (Merah) ---
     if (pinLocation) {
       if (surveyorMarkerRef.current) {
         surveyorMarkerRef.current.setLatLng([pinLocation.lat, pinLocation.lng]);
@@ -319,7 +350,34 @@ export default function App() {
         surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(map);
       }
     }
-  }, [appRole, mobileScreen, pinLocation]);
+
+    // --- Marker Titik Biru Lokasi Anda (Current Location) ---
+    if (currentLocation) {
+        if (currentLocationMarkerRef.current) {
+            currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        } else {
+            // Ikon titik biru mirip Google Maps
+            const blueDotIcon = window.L.divIcon({
+                className: 'current-location-dot',
+                html: `
+                    <div style="position: relative; width: 16px; height: 16px;">
+                        <div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div>
+                        <div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div>
+                    </div>
+                    <style>
+                       @keyframes ping {
+                         75%, 100% { transform: scale(2); opacity: 0; }
+                       }
+                    </style>
+                `,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon: blueDotIcon, zIndexOffset: 1000 }).addTo(map);
+        }
+    }
+
+  }, [appRole, mobileScreen, pinLocation, currentLocation]);
 
 
   // --- FUNGSI UTILITI & PERKAKASAN ---
@@ -552,12 +610,7 @@ export default function App() {
           <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
             {mobileScreen === 'home' && (
               <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-                <div className="mb-8 mt-4">
-                  <h2 className="text-3xl font-black text-slate-800 leading-tight">Pemetaan<br/>Masa Nyata</h2>
-                  <p className="text-sm text-slate-500 mt-2">Gunakan penderia peranti untuk merakam rute jalan rusak.</p>
-                </div>
-                
-                <button onClick={startRealHardware} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-3xl p-6 mb-4 shadow-xl shadow-blue-600/20 transition-all flex flex-col items-center">
+                <button onClick={startRealHardware} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-3xl p-6 mb-4 mt-4 shadow-xl shadow-blue-600/20 transition-all flex flex-col items-center">
                   <div className="bg-white/20 p-4 rounded-full mb-3"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg></div>
                   <span className="font-extrabold text-lg">Mulai Rekaman</span>
                   <span className="text-xs text-blue-100 mt-1">Aktifkan Kamera & GPS</span>
@@ -679,8 +732,15 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="pt-4 pb-8">
+                  <div className="pt-4 pb-8 flex flex-col space-y-3">
                     <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl">Simpan ke Memori Luring (Draft)</button>
+                    <button type="button" onClick={() => {
+                      setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], condition: 'Tanah/Rusak', notes: '' });
+                      setUploadedVideoFile(null); setUploadedVideoUrl(null); setPinLocation(null);
+                      setMobileScreen('home');
+                    }} className="w-full bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-2xl font-bold text-base shadow-sm hover:bg-slate-50">
+                      Batal & Kembali
+                    </button>
                   </div>
                 </form>
               </div>
@@ -690,8 +750,29 @@ export default function App() {
               <div className="flex-1 flex flex-col bg-slate-100 relative">
                 <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm">
                   <div><h3 className="font-extrabold text-slate-800 text-base">Tandai Lokasi</h3><p className="text-xs text-slate-500">Ketuk peta untuk meletakkan pin</p></div>
-                  <button onClick={() => setMobileScreen('form')} className="bg-blue-600 text-white px-5 py-2 rounded-full font-bold text-sm">Selesai</button>
+                  <button onClick={() => setMobileScreen('form')} className="bg-blue-600 text-white px-5 py-2 rounded-full font-bold text-sm shadow-md">Selesai</button>
                 </div>
+                
+                {/* Tombol Fokus Lokasi Saat Ini */}
+                <div className="absolute bottom-6 right-4 z-20">
+                     <button 
+                         onClick={() => {
+                             if (surveyorMapInstanceRef.current && currentLocation) {
+                                 surveyorMapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 18);
+                             } else if (!currentLocation) {
+                                 showToast("Mencari sinyal GPS...");
+                             }
+                         }}
+                         className="bg-white p-3 rounded-full shadow-xl border border-slate-200 text-blue-600 hover:bg-slate-50"
+                         aria-label="Pusatkan ke lokasi Anda"
+                     >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                     </button>
+                </div>
+
                 <div className="flex-1 relative z-0">
                    <div ref={surveyorMapContainerRef} className="absolute inset-0 bg-slate-200"></div>
                    {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuatkan Peta...</div>}
