@@ -111,6 +111,7 @@ export default function App() {
   // --- STATE ADMIN ---
   const [filterKelurahan, setFilterKelurahan] = useState('Semua');
   const [filterKondisi, setFilterKondisi] = useState('Semua');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
   const adminLayerGroupRef = useRef(null);
@@ -264,7 +265,18 @@ export default function App() {
             html: `<div style="background-color: ${getConditionColor(road.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
             iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -18]
           });
-          window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon }).addTo(layerGroup).bindPopup(`<b>📍 ${road.name}</b>`);
+          const popupContent = `
+            <div style="min-width: 160px; font-family: sans-serif;">
+              <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">📍 ${road.name}</h4>
+              <div style="font-size: 12px; color: #475569; margin-bottom: 4px;"><b>Kelurahan:</b> ${road.kelurahan}</div>
+              <div style="font-size: 12px; margin-bottom: 4px;"><b>Kondisi:</b> <span style="background-color: ${getConditionColor(road.condition)}20; color: ${getConditionColor(road.condition)}; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${road.condition}</span></div>
+              <div style="font-size: 12px; color: #475569; margin-bottom: 8px;"><b>Catatan:</b> ${road.notes || '<i>Tidak ada catatan</i>'}</div>
+              <div style="font-size: 10px; color: #94a3b8; font-style: italic;">Dilaporkan pada ${road.date}</div>
+            </div>
+          `;
+          window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon })
+            .addTo(layerGroup)
+            .bindPopup(popupContent);
         }
         polyline.on('click', () => setSelectedRoad(road));
       }
@@ -276,6 +288,14 @@ export default function App() {
     }
   }, [appRole, syncedRoads, filterKelurahan, filterKondisi]);
 
+  // Efek untuk menyesuaikan ukuran peta Leaflet saat sidebar dilipat/dibuka
+  useEffect(() => {
+    if (appRole === 'admin' && adminMapInstanceRef.current) {
+      setTimeout(() => {
+        adminMapInstanceRef.current.invalidateSize();
+      }, 300); // Sinkronisasi dengan durasi transisi CSS (300ms)
+    }
+  }, [isSidebarOpen, appRole]);
 
   // --- EFEK PETA SURVEYOR ---
   useEffect(() => {
@@ -337,17 +357,32 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     const map = surveyorMapInstanceRef.current;
 
-    // --- Marker Pin Kerusakan (Merah) ---
+    // --- Marker Pin Kerusakan ---
     if (pinLocation) {
+      const popupContent = `
+        <div style="min-width: 150px; font-family: sans-serif;">
+          <div style="font-size: 10px; font-weight: bold; color: #ef4444; margin-bottom: 4px; text-transform: uppercase;">Pratinjau Lokasi</div>
+          <h4 style="margin: 0 0 6px 0; font-size: 14px; font-weight: 800; color: #1e293b;">${formData.name || 'Nama Jalan Belum Diisi'}</h4>
+          <div style="font-size: 12px; color: #475569; margin-bottom: 4px;"><b>Kelurahan:</b> ${formData.kelurahan}</div>
+          <div style="font-size: 12px; margin-bottom: 4px;"><b>Kondisi:</b> <span style="font-weight: bold; color: ${getConditionColor(formData.condition)}">${formData.condition}</span></div>
+          <div style="font-size: 12px; color: #475569;"><b>Catatan:</b> ${formData.notes || '-'}</div>
+        </div>
+      `;
+
       if (surveyorMarkerRef.current) {
         surveyorMarkerRef.current.setLatLng([pinLocation.lat, pinLocation.lng]);
+        surveyorMarkerRef.current.setPopupContent(popupContent);
+        surveyorMarkerRef.current.openPopup();
       } else {
         const pinIcon = window.L.divIcon({
           className: 'custom-pin-mobile',
-          html: `<div style="background-color: #EF4444; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
-          iconSize: [18, 18], iconAnchor: [9, 18]
+          html: `<div style="background-color: ${getConditionColor(formData.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
+          iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -18]
         });
-        surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(map);
+        surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon })
+          .addTo(map)
+          .bindPopup(popupContent)
+          .openPopup();
       }
     }
 
@@ -377,7 +412,7 @@ export default function App() {
         }
     }
 
-  }, [appRole, mobileScreen, pinLocation, currentLocation]);
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
 
 
   // --- FUNGSI UTILITI & PERKAKASAN ---
@@ -727,7 +762,14 @@ export default function App() {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi Kerusakan (Pin)</label>
                     <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
-                      <span className={`text-sm font-bold flex items-center ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
+                      <div className={`flex flex-col ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
+                        <span className="text-sm font-bold flex items-center">{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
+                        {pinLocation && (
+                           <span className="text-[10px] font-mono mt-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                             {pinLocation.lat.toFixed(6)}, {pinLocation.lng.toFixed(6)}
+                           </span>
+                        )}
+                      </div>
                       <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl text-xs font-extrabold">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
                     </div>
                   </div>
@@ -826,6 +868,11 @@ export default function App() {
           
           <header className="bg-white border-b border-slate-200 h-16 px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm">
             <div className="flex items-center space-x-3">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500" title="Tampilkan/Sembunyikan Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+                </svg>
+              </button>
               <div className="bg-blue-600 text-white p-2 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
               </div>
@@ -851,11 +898,11 @@ export default function App() {
           </header>
 
           <main className="flex-1 flex overflow-hidden">
-            <aside className="w-96 bg-white border-r border-slate-200 flex flex-col z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] relative">
-              <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="font-extrabold text-slate-800 text-sm mb-3 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 mr-2 text-slate-400"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
-                  Filter Peta Sebaran
+            <aside className={`bg-white flex flex-col z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out overflow-hidden ${isSidebarOpen ? 'w-96 border-r border-slate-200' : 'w-0 border-r-0'}`}>
+              <div className="w-96 flex flex-col h-full flex-shrink-0">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="font-extrabold text-slate-800 text-sm mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 mr-2 text-slate-400"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
                 </h3>
                 <div className="space-y-3">
                   <select value={filterKelurahan} onChange={(e) => setFilterKelurahan(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
@@ -903,6 +950,7 @@ export default function App() {
                   )}
                 </div>
               </div>
+             </div>
             </aside>
 
             <section className="flex-1 flex flex-col relative z-0">
@@ -911,12 +959,35 @@ export default function App() {
                 {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta Leaflet...</div>}
                 
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-slate-200 shadow-lg text-xs font-bold text-slate-700 z-[1000] pointer-events-none">
-                  <div className="mb-2 text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1">Legenda Peta</div>
+                  <div className="mb-2 text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1 flex justify-between">
+                     <span>Legenda Peta</span>
+                     <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
+                  </div>
                   <div className="flex flex-col space-y-2 mt-2">
-                    <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#10B981] rounded-full"></span><span>Aspal (Mulus)</span></div>
-                    <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#F59E0B] rounded-full"></span><span>Berbatu (Sedang)</span></div>
-                    <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#B45309] rounded-full"></span><span>Tanah (Rusak)</span></div>
-                    <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#EF4444] rounded-full"></span><span>Licin (Bahaya)</span></div>
+                    <div className="flex items-center justify-between space-x-3">
+                       <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#10B981] rounded-full"></span><span>Aspal (Mulus)</span></div>
+                       <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Aspal/Baik' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                       </span>
+                    </div>
+                    <div className="flex items-center justify-between space-x-3">
+                       <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#F59E0B] rounded-full"></span><span>Berbatu (Sedang)</span></div>
+                       <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Berbatu' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                       </span>
+                    </div>
+                    <div className="flex items-center justify-between space-x-3">
+                       <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#B45309] rounded-full"></span><span>Tanah (Rusak)</span></div>
+                       <span className="bg-[#B45309] bg-opacity-20 text-[#B45309] px-1.5 py-0.5 rounded text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Tanah/Rusak' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                       </span>
+                    </div>
+                    <div className="flex items-center justify-between space-x-3">
+                       <div className="flex items-center space-x-2"><span className="w-4 h-1.5 bg-[#EF4444] rounded-full"></span><span>Licin (Bahaya)</span></div>
+                       <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Licin/Buruk' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                       </span>
+                    </div>
                   </div>
                 </div>
               </div>
