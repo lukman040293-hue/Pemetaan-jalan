@@ -221,9 +221,24 @@ export default function App() {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
     
     const map = window.L.map(adminMapContainerRef.current).setView([-0.425, 117.185], 13);
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    
+    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
+    const topo = window.L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' });
+    const terang = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '© CartoDB' });
+    const gelap = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '© CartoDB' });
+
+    osm.addTo(map); // Peta awal yang dimuat
+
+    const baseMaps = {
+      "Jalanan (OSM)": osm,
+      "Citra Satelit": satelit,
+      "Topografi": topo,
+      "Peta Terang": terang,
+      "Peta Gelap": gelap
+    };
+
+    window.L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
     
     const layerGroup = window.L.layerGroup().addTo(map);
     adminMapInstanceRef.current = map;
@@ -303,7 +318,19 @@ export default function App() {
 
     const map = window.L.map(surveyorMapContainerRef.current);
     surveyorMapInstanceRef.current = map;
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    
+    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    
+    osm.addTo(map); // Peta awal yang dimuat
+
+    const baseMaps = {
+      "Peta Jalan (OSM)": osm,
+      "Citra Satelit": satelit
+    };
+    
+    // Menambahkan tombol layer di pojok kiri atas untuk menghindari tombol khusus kita di bawah
+    window.L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
