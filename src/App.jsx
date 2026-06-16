@@ -307,11 +307,18 @@ export default function App() {
 
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
-    // Jika ada rute yang sedang direkam, tampilkan poligonnya dan arahkan peta ke sana
+    // ✅ FITUR UTAMA: Jika ada rute yang terekam, render garis biru dan Zoom menyesuaikan jalur
     if (realGpsPoints.length > 0) {
       const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
-      window.L.polyline(latlngs, { color: '#3B82F6', weight: 5, opacity: 0.8 }).addTo(map);
-      map.fitBounds(window.L.latLngBounds(latlngs), { padding: [20, 20] });
+      // Menambahkan garis biru tebal di peta yang menandakan jejak perjalanan
+      window.L.polyline(latlngs, { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+      
+      // Menambahkan titik mulai dan akhir
+      window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+      window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, fillColor: '#EF4444', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+
+      // Memaksa kamera peta (zoom & pan) untuk fokus pada keseluruhan garis tersebut
+      map.fitBounds(window.L.latLngBounds(latlngs), { padding: [30, 30] });
     } else {
         // Jika tidak, tampilkan koordinat awal Samarinda
       map.setView([-0.425, 117.185], 13);
@@ -319,7 +326,7 @@ export default function App() {
 
     map.on('click', (e) => {
       setPinLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-      showToast("📍 Pin diletakkan!");
+      showToast("📍 Pin kerusakan diletakkan!");
     });
 
     if ('geolocation' in navigator) {
@@ -328,15 +335,9 @@ export default function App() {
                 const { latitude, longitude } = position.coords;
                 const newPos = { lat: latitude, lng: longitude };
                 setCurrentLocation(newPos);
-
-                // Pertama kali dapat lokasi, pusatkan peta (jika tidak sedang merekam)
-                if (realGpsPoints.length === 0 && !currentLocationMarkerRef.current) {
-                    map.setView([latitude, longitude], 17);
-                }
             },
             (err) => {
                 console.warn("Gagal mendapatkan lokasi GPS:", err);
-                showToast("Aktifkan GPS/Lokasi perangkat Anda.");
             },
             { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
         );
@@ -391,7 +392,6 @@ export default function App() {
         if (currentLocationMarkerRef.current) {
             currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
         } else {
-            // Ikon titik biru mirip Google Maps
             const blueDotIcon = window.L.divIcon({
                 className: 'current-location-dot',
                 html: `
@@ -711,8 +711,24 @@ export default function App() {
             {mobileScreen === 'form' && (
               <div className="flex-1 p-6 overflow-y-auto bg-slate-50 text-left">
                 <h3 className="text-xl font-black text-slate-800 mb-1">Form Survei Lapangan</h3>
-                <p className="text-sm text-slate-500 mb-6">Verifikasi informasi rute yang direkam.</p>
+                <p className="text-sm text-slate-500 mb-5">Verifikasi informasi rute yang direkam.</p>
                 
+                {/* 🔵 KOTAK INFO GPS BARU */}
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl mb-6 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-200 text-blue-600 p-2.5 rounded-xl">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                    </div>
+                    <div>
+                      <div className="text-blue-900 font-black text-sm leading-tight">Jalur Terekam</div>
+                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} log satelit disimpan</div>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center space-x-1.5 whitespace-nowrap">
+                    <span>Lihat Jalur</span>
+                  </button>
+                </div>
+
                 <form onSubmit={saveDraft} className="space-y-5">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jalan</label>
@@ -791,8 +807,8 @@ export default function App() {
             {mobileScreen === 'pin_map' && (
               <div className="flex-1 flex flex-col bg-slate-100 relative">
                 <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm">
-                  <div><h3 className="font-extrabold text-slate-800 text-base">Tandai Lokasi</h3><p className="text-xs text-slate-500">Ketuk peta untuk meletakkan pin</p></div>
-                  <button onClick={() => setMobileScreen('form')} className="bg-blue-600 text-white px-5 py-2 rounded-full font-bold text-sm shadow-md">Selesai</button>
+                  <div><h3 className="font-extrabold text-slate-800 text-base">Tandai Lokasi</h3><p className="text-xs text-slate-500">Ketuk garis biru untuk meletakkan pin</p></div>
+                  <button onClick={() => setMobileScreen('form')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-bold text-sm shadow-md transition-colors">Selesai</button>
                 </div>
                 
                 {/* Tombol Fokus Lokasi Saat Ini */}
