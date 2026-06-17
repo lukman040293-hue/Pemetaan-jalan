@@ -347,7 +347,21 @@ export default function App() {
       if (road.realGps && road.realGps.length > 0) {
         const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
         const polyline = window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 6, opacity: 0.8 }).addTo(layerGroup);
-        window.L.circleMarker(latlngs[0], { radius: 4, fillColor: '#ffffff', color: getConditionColor(road.condition), weight: 2, fillOpacity: 1 }).addTo(layerGroup);
+        
+        // --- TAMBAHAN KHUSUS ADMIN: Tampilkan titik-titik jalur ---
+        latlngs.forEach(coord => {
+          window.L.circleMarker(coord, { 
+            radius: 2, 
+            fillColor: '#ffffff', 
+            color: getConditionColor(road.condition), 
+            weight: 1.5, 
+            fillOpacity: 1 
+          }).addTo(layerGroup);
+        });
+
+        // Penanda titik awal dan titik akhir rute dengan ukuran lebih besar
+        window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#ffffff', weight: 2, fillOpacity: 1 }).addTo(layerGroup);
+        window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, fillColor: '#EF4444', color: '#ffffff', weight: 2, fillOpacity: 1 }).addTo(layerGroup);
 
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
           const pinIcon = window.L.divIcon({
