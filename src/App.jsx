@@ -133,7 +133,39 @@ export default function App() {
   const [syncedRoads, setSyncedRoads] = useState([]); 
   const [drafts, setDrafts] = useState([]); 
   const [selectedRoad, setSelectedRoad] = useState(null);
+  
+  // Status Upload Cloud
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
+  // --- MEMUAT DRAFT DARI LOCAL STORAGE SAAT APLIKASI DIBUKA ---
+  useEffect(() => {
+    try {
+      const savedDrafts = localStorage.getItem('rmap_drafts');
+      if (savedDrafts) {
+        setDrafts(JSON.parse(savedDrafts));
+      }
+    } catch (error) {
+      console.warn("Gagal memuat draft dari Local Storage:", error);
+    }
+  }, []);
+
+  // --- MENYIMPAN DRAFT KE LOCAL STORAGE SETIAP KALI ADA PERUBAHAN ---
+  useEffect(() => {
+    try {
+      // Kita perlu menyaring object "File" asli karena File tidak bisa di-stringify ke JSON langsung.
+      // Kita hanya menyimpan data teks, GPS, dan string URL sementara.
+      // Catatan: Jika user me-refresh halaman, preview foto mungkin hilang karena blob URL kadaluarsa.
+      // Namun data form dan GPS tetap aman.
+      const draftsToSave = drafts.map(draft => {
+        const { videoFile, photoFiles, ...safeDraft } = draft;
+        return safeDraft;
+      });
+      localStorage.setItem('rmap_drafts', JSON.stringify(draftsToSave));
+    } catch (error) {
+      console.warn("Gagal menyimpan draft ke Local Storage:", error);
+    }
+  }, [drafts]);
 
   // --- STATE ADMIN ---
   const [filterKelurahan, setFilterKelurahan] = useState('Semua');
@@ -743,15 +775,20 @@ export default function App() {
     if (!supabase) return showToast("Konfigurasi Supabase Anda belum diatur di dalam kode.");
 
     setIsSyncing(true);
+    setSyncMessage("Mempersiapkan data...");
     
     try {
       let uploadCount = 0;
-      for (const draft of draftsToUpload) {
+      for (let i = 0; i < draftsToUpload.length; i++) {
+        const draft = draftsToUpload[i];
         let finalVideoUrl = null;
         let finalPhotoUrls = [];
 
         // 1. Upload Video (jika ada)
         if (draft.videoFile) {
+          const sizeInMB = (draft.videoFile.size / (1024 * 1024)).toFixed(1);
+          setSyncMessage(`Mengunggah Video (${sizeInMB} MB) untuk Rute ${i+1}/${draftsToUpload.length}... Mohon tunggu.`);
+          
           const fileExt = draft.videoFile.name.split('.').pop();
           const fileName = `video-${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
           const { error: uploadError } = await supabase.storage.from('media').upload(fileName, draft.videoFile);
@@ -764,10 +801,12 @@ export default function App() {
 
         // 2. Upload Multiple Photos (jika ada)
         if (draft.photoFiles && draft.photoFiles.length > 0) {
-          for (let i = 0; i < draft.photoFiles.length; i++) {
-            const photoFile = draft.photoFiles[i];
+          setSyncMessage(`Mengunggah ${draft.photoFiles.length} Foto untuk Rute ${i+1}/${draftsToUpload.length}...`);
+          
+          for (let j = 0; j < draft.photoFiles.length; j++) {
+            const photoFile = draft.photoFiles[j];
             const fileExt = photoFile.name.split('.').pop();
-            const fileName = `photo-${Date.now()}-${i}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+            const fileName = `photo-${Date.now()}-${j}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
             const { error: photoUploadError } = await supabase.storage.from('media').upload(fileName, photoFile);
             
             if (!photoUploadError) {
@@ -778,6 +817,8 @@ export default function App() {
         }
 
         // 3. Simpan ke Database
+        setSyncMessage(`Menyimpan Rute ${i+1}/${draftsToUpload.length} ke Database Pusat...`);
+        
         const { id, videoFile, localVideoUrl, photoFiles, localPhotoUrls, ...dataToUpload } = draft; 
         dataToUpload.realGps = JSON.stringify(dataToUpload.realGps); 
         if(dataToUpload.pinLocation) dataToUpload.pinLocation = JSON.stringify(dataToUpload.pinLocation);
@@ -790,6 +831,7 @@ export default function App() {
         uploadCount++;
       }
       
+      setSyncMessage("Selesai!");
       showToast(`${uploadCount} Rute Berhasil Diunggah ke Supabase!`);
       // Hapus hanya draft yang berhasil diunggah
       setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id)));
@@ -800,6 +842,7 @@ export default function App() {
       showToast(`Gagal mengunggah data: ${error.message}`); 
     } finally { 
       setIsSyncing(false); 
+      setSyncMessage("");
     }
   };
 
@@ -826,11 +869,12 @@ export default function App() {
     <div className="w-full h-full min-h-screen bg-slate-900 relative text-slate-900 font-sans">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
-        .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; }
+        /* touch-action: none mematikan efek gesture browser bawaan saat menggeser peta di HP */
+        .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
         .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-        /* Memaksa font cantik khas Tailwind untuk selalu aktif */
-        body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; }
+        /* Memaksa font cantik khas Tailwind untuk selalu aktif dan mencegah pull-to-refresh di HP */
+        body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; }
       `}} />
 
       {toastMessage && (
@@ -885,9 +929,11 @@ export default function App() {
           
           {isSyncing && (
             <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
+              <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-[80%] text-center">
                 <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                <h3 className="font-bold text-slate-800 text-center">Menyinkronkan ke<br/>Database Supabase...</h3>
+                <h3 className="font-black text-slate-800 mb-1">Menyinkronkan Data</h3>
+                <p className="text-sm font-bold text-blue-600 animate-pulse">{syncMessage}</p>
+                <p className="text-xs text-slate-500 mt-2">Jangan tutup aplikasi saat proses ini berlangsung.</p>
               </div>
             </div>
           )}
@@ -995,8 +1041,23 @@ export default function App() {
 
                 <form onSubmit={saveDraft} className="space-y-5">
                   <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi Kerusakan (Pin)</label>
+                    <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                      <div className={`flex flex-col ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
+                        <span className="text-sm font-bold flex items-center">{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
+                        {pinLocation && (
+                           <span className="text-[10px] font-mono mt-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                             {pinLocation.lat.toFixed(6)}, {pinLocation.lng.toFixed(6)}
+                           </span>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-colors">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jalan</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 p-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 p-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
                   </div>
                   
                   <div>
@@ -1064,7 +1125,8 @@ export default function App() {
 
                   {/* 🎥 UNGGAH VIDEO */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Unggah Video (Opsional, Maks 50MB)</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 50MB)</label>
+                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Jika video terlalu besar, silahkan kirim ke WA dan download kembali agar ukuran video mencukupi.</p>
                     <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors">
                       <input type="file" accept="video/*" onChange={(e) => { 
                           const f = e.target.files[0]; 
@@ -1090,23 +1152,8 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi Kerusakan (Pin)</label>
-                    <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
-                      <div className={`flex flex-col ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
-                        <span className="text-sm font-bold flex items-center">{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
-                        {pinLocation && (
-                           <span className="text-[10px] font-mono mt-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                             {pinLocation.lat.toFixed(6)}, {pinLocation.lng.toFixed(6)}
-                           </span>
-                        )}
-                      </div>
-                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl text-xs font-extrabold">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
-                    </div>
-                  </div>
-
                   <div className="pt-4 pb-8 flex flex-col space-y-3">
-                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl">
+                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl hover:bg-slate-800 transition-colors">
                       {editingDraftId ? 'Simpan Perubahan Draft' : 'Simpan ke Memori Luring (Draft)'}
                     </button>
                     <button type="button" onClick={() => {
