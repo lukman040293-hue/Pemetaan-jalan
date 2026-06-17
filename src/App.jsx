@@ -956,7 +956,7 @@ export default function App() {
   // RENDER STRUKTUR UTAMA
   // =========================================================================
   return (
-    <div className="w-full h-full min-h-screen bg-slate-900 relative text-slate-900 font-sans print:bg-white">
+    <div className="w-full h-screen h-[100dvh] overflow-hidden bg-slate-900 relative text-slate-900 font-sans print:h-auto print:overflow-visible print:bg-white">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         /* touch-action: none mematikan efek gesture browser bawaan saat menggeser peta di HP */
@@ -964,7 +964,7 @@ export default function App() {
         .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
         /* Memaksa font cantik khas Tailwind untuk selalu aktif dan mencegah pull-to-refresh di HP */
-        body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; }
+        body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
         
         /* Kustomisasi Scrollbar untuk Laporan Masuk */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -975,7 +975,7 @@ export default function App() {
         /* --- PENGATURAN CETAK (PRINT) PDF A4 --- */
         @media print {
           @page { size: A4; margin: 20mm; } /* Ukuran Kertas Normal */
-          body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body { background-color: white !important; overflow: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .print-hidden { display: none !important; } /* Sembunyikan elemen utama dari tampilan saat mencetak */
         }
       `}} />
@@ -987,7 +987,7 @@ export default function App() {
       )}
 
       {!appRole && (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900 print-hidden">
+        <div className="h-full flex items-center justify-center p-4 bg-slate-900 print-hidden overflow-y-auto">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-4 border-slate-800">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/30">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
@@ -1028,7 +1028,7 @@ export default function App() {
       )}
 
       {appRole === 'surveyor' && (
-        <div className="min-h-screen bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
+        <div className="h-full bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
           
           {isSyncing && (
             <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -1382,7 +1382,7 @@ export default function App() {
 
       {/* --- RENDER DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
+        <div className="h-full bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
           
           <header className="bg-white border-b border-slate-200 h-16 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm">
             <div className="flex items-center space-x-2 md:space-x-3">
