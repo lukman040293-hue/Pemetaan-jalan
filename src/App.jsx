@@ -1394,21 +1394,24 @@ export default function App() {
               <div className="hidden md:block bg-blue-600 text-white p-2 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
               </div>
-              <div>
+              <div className="flex items-center space-x-2.5">
                 <h1 className="text-base md:text-lg font-black text-slate-900 leading-none">Dasbor WebGIS</h1>
-                <div className="flex items-center space-x-1.5 mt-1">
-                   {isDbConnected ? (
-                       <span className="flex items-center space-x-1.5"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span><span className="text-[9px] md:text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Connected</span></span>
-                   ) : (
-                       <span className="flex items-center space-x-1.5"><span className="w-2 h-2 bg-rose-500 rounded-full"></span><span className="text-[9px] md:text-[10px] text-rose-600 font-bold uppercase tracking-wider">Paused</span></span>
-                   )}
-                </div>
+                {isDbConnected ? (
+                    <div className="relative flex h-2.5 w-2.5" title="Terhubung ke Database">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </div>
+                ) : (
+                    <div className="relative flex h-2.5 w-2.5" title="Koneksi Terputus / Jeda">
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                    </div>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2 md:space-x-4">
-              <button onClick={() => { fetchRoads(); showToast("Memperbarui data dari server..."); }} className="text-blue-600 hover:text-blue-800 font-bold text-xs md:text-sm bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 flex items-center space-x-1">
+              <button onClick={() => { fetchRoads(); showToast("Memperbarui data dari server..."); }} className="text-slate-600 hover:text-slate-900 font-bold text-xs md:text-sm border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 md:hidden"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                <span className="hidden md:inline">Refresh Data</span>
+                <span className="hidden md:inline">Refresh</span>
               </button>
               <button onClick={() => setAppRole(null)} className="text-rose-500 hover:text-white hover:bg-rose-500 border border-rose-200 px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-colors">
                 Keluar
@@ -1422,31 +1425,31 @@ export default function App() {
                <div className="md:hidden absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-20" onClick={() => setIsSidebarOpen(false)}></div>
             )}
 
-            <aside className={`bg-white flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out overflow-hidden z-30 absolute md:relative h-full ${isSidebarOpen ? 'w-full md:w-96 border-r border-slate-200' : 'w-0 border-r-0'}`}>
+            <aside className={`bg-white/80 backdrop-blur-md flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out overflow-hidden z-30 absolute md:relative h-full ${isSidebarOpen ? 'w-full md:w-96 border-r border-slate-200/50' : 'w-0 border-r-0'}`}>
               <div className="w-screen md:w-96 flex flex-col h-full flex-shrink-0">
-                <div className="p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <div className="p-4 md:p-5 border-b border-slate-200/50 bg-white/30 flex justify-between items-center">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 mr-2 text-slate-400"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
                     Filter & Laporan
                   </h3>
                   {/* Tombol tutup sidebar khusus HP */}
-                  <button onClick={() => setIsSidebarOpen(false)} className="md:hidden bg-slate-200 p-1.5 rounded-lg text-slate-600">
+                  <button onClick={() => setIsSidebarOpen(false)} className="md:hidden bg-slate-200/50 p-1.5 rounded-lg text-slate-600">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
                 
-                <div className="p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 space-y-3">
-                  <select value={filterKelurahan} onChange={(e) => setFilterKelurahan(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+                <div className="p-4 md:p-5 border-b border-slate-200/50 bg-white/30 space-y-3">
+                  <select value={filterKelurahan} onChange={(e) => setFilterKelurahan(e.target.value)} className="w-full bg-white/70 backdrop-blur-sm border border-slate-200/70 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Wilayah</option>
                     {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
                   </select>
-                  <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+                  <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)} className="w-full bg-white/70 backdrop-blur-sm border border-slate-200/70 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Jenis Jalan</option>
                     <option value="Tanah">Tanah</option>
                     <option value="Aspal">Aspal</option>
                     <option value="Beton">Beton</option>
                   </select>
-                  <select value={filterKondisi} onChange={(e) => setFilterKondisi(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+                  <select value={filterKondisi} onChange={(e) => setFilterKondisi(e.target.value)} className="w-full bg-white/70 backdrop-blur-sm border border-slate-200/70 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Kondisi</option>
                     <option value="Baik">Kondisi Baik</option>
                     <option value="Rusak Ringan">Rusak Ringan</option>
@@ -1455,10 +1458,10 @@ export default function App() {
                   </select>
                 </div>
 
-              <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200/60 flex justify-between items-end bg-white/50 z-10 shrink-0">
+              <div className="flex-1 flex flex-col bg-transparent overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200/50 flex justify-between items-end bg-white/40 z-10 shrink-0">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Laporan Masuk</span>
-                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                  <span className="bg-blue-100/80 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
                     {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length} Data
                   </span>
                 </div>
@@ -1484,7 +1487,7 @@ export default function App() {
                              const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
                              adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(latlngs), { padding: [40, 40] });
                           }
-                      }} className={`p-3 rounded-2xl border bg-white cursor-pointer transition-all hover:-translate-y-0.5 ${selectedRoad?.id === road.id ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
+                      }} className={`p-3 rounded-2xl border bg-white/80 backdrop-blur-sm cursor-pointer transition-all hover:-translate-y-0.5 ${selectedRoad?.id === road.id ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200/70 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
                         <div className="flex gap-3">
                           {/* --- KOTAK THUMBNAIL (Prioritas Foto, jika tidak ada baru Video) --- */}
                           <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 relative border border-slate-200/60">
@@ -1576,7 +1579,7 @@ export default function App() {
 
               {selectedRoad && (
                 <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-4xl bg-white rounded-2xl md:rounded-3xl shadow-2xl border border-slate-200 flex flex-col md:flex-row overflow-hidden z-[1000] animate-fade-in-up max-h-[85vh]">
-                  <button onClick={() => setSelectedRoad(null)} className="absolute top-2 right-2 md:top-4 md:right-4 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 p-1.5 rounded-full z-30 transition-colors">
+                  <button onClick={() => setSelectedRoad(null)} className="absolute top-3 right-3 md:top-5 md:right-5 text-slate-400 hover:text-slate-800 bg-slate-100/50 hover:bg-slate-100 p-2 rounded-full z-30 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
 
@@ -1610,36 +1613,41 @@ export default function App() {
                     )}
                   </div>
                   
-                  <div className="w-full md:w-2/3 p-4 md:p-6 flex flex-col justify-between bg-white text-slate-800 overflow-y-auto">
+                  <div className="w-full md:w-2/3 p-5 md:p-8 flex flex-col justify-between bg-white text-slate-800 overflow-y-auto">
                     <div>
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="text-[10px] md:text-xs font-bold text-blue-600 uppercase tracking-widest">{selectedRoad.kelurahan}</div>
-                        <div className="flex space-x-2">
-                           <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:text-white hover:bg-blue-600 font-bold px-2 py-1 md:px-3 bg-blue-50 transition-colors rounded-lg border border-blue-200 flex items-center">
+                      {/* PR-12/16 memastikan tombol Hapus Rute tidak akan pernah tertumpuk tombol X (Close) */}
+                      <div className="flex justify-between items-start mb-2 pr-12 md:pr-16">
+                        <div className="text-[10px] md:text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1.5">{selectedRoad.kelurahan}</div>
+                        <div className="flex space-x-1">
+                           <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-50 font-medium px-3 py-1.5 transition-colors rounded-full flex items-center">
                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
                              Cetak PDF
                            </button>
-                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:text-white hover:bg-rose-600 font-bold px-2 py-1 md:px-3 bg-rose-50 transition-colors rounded-lg border border-rose-200">Hapus Rute</button>
+                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-500 hover:bg-rose-50 font-medium px-3 py-1.5 transition-colors rounded-full">Hapus Rute</button>
                         </div>
                       </div>
-                      <h4 className="text-xl md:text-2xl font-black mb-2 md:mb-3 leading-tight text-slate-900">{selectedRoad.name}</h4>
-                      <p className="text-xs md:text-sm text-slate-600 leading-relaxed bg-slate-50 p-2.5 md:p-3 rounded-xl border border-slate-200 line-clamp-3 md:line-clamp-none">"{selectedRoad.notes || "Tidak ada catatan."}"</p>
+                      
+                      <h4 className="text-2xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                      
+                      <p className="text-sm text-slate-500 leading-relaxed font-normal mb-3">
+                        "{selectedRoad.notes || "Tidak ada catatan."}"
+                      </p>
                       
                       {selectedRoad.pinLocation && selectedRoad.pinLocation.lat && selectedRoad.pinLocation.lng && (
-                        <div className="mt-2 md:mt-3 text-[10px] md:text-xs text-amber-700 bg-amber-50 p-2 md:p-2.5 rounded-lg border border-amber-200 inline-flex items-center">
-                          <span className="mr-1.5 md:mr-2 text-sm md:text-base">📍</span> Pin: {selectedRoad.pinLocation.lat.toFixed(5)}, {selectedRoad.pinLocation.lng.toFixed(5)}
+                        <div className="text-xs text-slate-500 font-normal inline-flex items-center">
+                          <span className="mr-1.5 text-amber-500">📍</span> Pin: {selectedRoad.pinLocation.lat.toFixed(5)}, {selectedRoad.pinLocation.lng.toFixed(5)}
                         </div>
                       )}
 
                       {/* Galeri Foto di Dasbor Detail */}
                       {selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 && (
-                        <div className="mt-3 md:mt-4 border-t border-slate-100 pt-3 md:pt-4">
-                          <span className="text-[10px] md:text-xs font-bold text-slate-500 mb-1.5 md:mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
-                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300">
+                        <div className="mt-5 pt-4">
+                          <span className="text-[10px] md:text-xs font-medium text-slate-400 mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
+                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
                             {selectedRoad.photoUrls.map((url, i) => (
                               <a href={url} target="_blank" rel="noreferrer" key={i} className="flex-shrink-0 relative group">
-                                <img src={url} className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-slate-200 hover:border-blue-500 shadow-sm transition-colors" />
-                                <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                <img src={url} className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-slate-200 hover:border-blue-300 shadow-sm transition-colors" />
+                                <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
                                 </div>
                               </a>
@@ -1649,10 +1657,10 @@ export default function App() {
                       )}
                     </div>
                     
-                    <div className="flex gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-slate-600 mt-3 md:mt-4 flex-wrap">
-                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.date}</span>
-                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">Pjg: {formatLength(selectedRoad.length)}</span>
-                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.surveyor}</span>
+                    <div className="flex items-center gap-2 text-xs font-normal text-slate-500 mt-5 pt-4 border-t border-slate-100">
+                      <span>{selectedRoad.date}</span>
+                      <span className="text-slate-300">•</span>
+                      <span>Pjg: {formatLength(selectedRoad.length)}</span>
                     </div>
                   </div>
                 </div>
