@@ -133,6 +133,7 @@ export default function App() {
   const [syncedRoads, setSyncedRoads] = useState([]); 
   const [drafts, setDrafts] = useState([]); 
   const [selectedRoad, setSelectedRoad] = useState(null);
+  const [videoSnapshot, setVideoSnapshot] = useState(null); // State khusus menyimpan screenshot video untuk di-print
   
   // Status Upload Cloud
   const [isSyncing, setIsSyncing] = useState(false);
@@ -415,6 +416,7 @@ export default function App() {
         }
         polyline.on('click', () => {
           setSelectedRoad(road);
+          setVideoSnapshot(null); // Reset snapshot jika berpindah rute
           // Auto close sidebar on mobile to view map details
           if (window.innerWidth < 768) {
              setIsSidebarOpen(false);
@@ -875,12 +877,42 @@ export default function App() {
      }
   };
 
+  // --- FUNGSI CETAK LAPORAN (PRINT TO PDF) ---
+  const handlePrint = async () => {
+    if (!selectedRoad) return;
+    
+    // Jika ada video, coba ambil cuplikan frame-nya menggunakan elemen Canvas yang tersembunyi
+    if (selectedRoad.videoUrl) {
+      try {
+        const videoEl = document.getElementById('admin-vid-player');
+        if (videoEl && videoEl.readyState >= 2) { // Pastikan video memiliki data frame yang siap
+          const canvas = document.createElement('canvas');
+          canvas.width = videoEl.videoWidth;
+          canvas.height = videoEl.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          const snapshotUrl = canvas.toDataURL('image/jpeg');
+          setVideoSnapshot(snapshotUrl);
+        }
+      } catch (err) {
+        console.warn("Gagal mengambil tangkapan layar video (mungkin terblokir kebijakan CORS Supabase):", err);
+      }
+    } else {
+      setVideoSnapshot(null); // Kosongkan jika bukan video
+    }
+
+    // Beri waktu 0.5 detik agar state React ter-update memuat gambar cuplikan tersebut ke DOM sebelum jendela Print muncul
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
 
   // =========================================================================
   // RENDER STRUKTUR UTAMA
   // =========================================================================
   return (
-    <div className="w-full h-full min-h-screen bg-slate-900 relative text-slate-900 font-sans">
+    <div className="w-full h-full min-h-screen bg-slate-900 relative text-slate-900 font-sans print:bg-white">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         /* touch-action: none mematikan efek gesture browser bawaan saat menggeser peta di HP */
@@ -895,16 +927,23 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+        /* --- PENGATURAN CETAK (PRINT) PDF A4 --- */
+        @media print {
+          @page { size: A4; margin: 20mm; } /* Ukuran Kertas Normal */
+          body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-hidden { display: none !important; } /* Sembunyikan elemen utama dari tampilan saat mencetak */
+        }
       `}} />
 
       {toastMessage && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
 
       {!appRole && (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900 print-hidden">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-4 border-slate-800">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/30">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
@@ -945,7 +984,7 @@ export default function App() {
       )}
 
       {appRole === 'surveyor' && (
-        <div className="min-h-screen bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative">
+        <div className="min-h-screen bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
           
           {isSyncing && (
             <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -1299,7 +1338,7 @@ export default function App() {
 
       {/* --- RENDER DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative">
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
           
           <header className="bg-white border-b border-slate-200 h-16 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm">
             <div className="flex items-center space-x-2 md:space-x-3">
@@ -1391,6 +1430,7 @@ export default function App() {
                       .map((road) => (
                       <div key={road.dbId || road.id} onClick={() => {
                           setSelectedRoad(road);
+                          setVideoSnapshot(null); // Reset snapshot jika berpindah rute
                           // Auto close sidebar on mobile so they can see the map
                           if (window.innerWidth < 768) {
                              setIsSidebarOpen(false);
@@ -1500,7 +1540,8 @@ export default function App() {
                     {/* Prioritas Video di panel hitam */}
                     {selectedRoad.videoUrl ? (
                       <>
-                        <video id="admin-vid-player" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain bg-black"></video>
+                        {/* crossOrigin='anonymous' penting agar screenshot Canvas tidak terblokir CORS */}
+                        <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain bg-black"></video>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1529,7 +1570,13 @@ export default function App() {
                     <div>
                       <div className="flex justify-between items-start mb-1">
                         <div className="text-[10px] md:text-xs font-bold text-blue-600 uppercase tracking-widest">{selectedRoad.kelurahan}</div>
-                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1 md:px-3 bg-rose-50 hover:bg-rose-100 transition-colors rounded-lg border border-rose-200">Hapus Rute</button>
+                        <div className="flex space-x-2">
+                           <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:text-white hover:bg-blue-600 font-bold px-2 py-1 md:px-3 bg-blue-50 transition-colors rounded-lg border border-blue-200 flex items-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
+                             Cetak PDF
+                           </button>
+                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:text-white hover:bg-rose-600 font-bold px-2 py-1 md:px-3 bg-rose-50 transition-colors rounded-lg border border-rose-200">Hapus Rute</button>
+                        </div>
                       </div>
                       <h4 className="text-xl md:text-2xl font-black mb-2 md:mb-3 leading-tight text-slate-900">{selectedRoad.name}</h4>
                       <p className="text-xs md:text-sm text-slate-600 leading-relaxed bg-slate-50 p-2.5 md:p-3 rounded-xl border border-slate-200 line-clamp-3 md:line-clamp-none">"{selectedRoad.notes || "Tidak ada catatan."}"</p>
@@ -1571,6 +1618,73 @@ export default function App() {
         </div>
       )}
 
+      {/* ======================================================================================
+          AREA CETAK KHUSUS (Tampil HANYA saat menekan tombol Print/CTRL+P di Dasbor Admin)
+      ========================================================================================== */}
+      {appRole === 'admin' && selectedRoad && (
+        <div className="hidden print:block w-full bg-white text-black p-8 absolute top-0 left-0 z-[99999]" style={{ minHeight: '297mm' }}>
+           <div className="text-center border-b-4 border-slate-800 pb-4 mb-6">
+              <h1 className="text-2xl font-black uppercase tracking-wide">Laporan Survei Kondisi Jalan</h1>
+              <p className="text-slate-500 mt-1 text-sm font-semibold">Dokumen Resmi Sistem WebGIS R-Map</p>
+           </div>
+           
+           <table className="w-full mb-6 text-sm border-collapse">
+              <tbody>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold w-1/3 text-slate-600">Nama Rute / Jalan</td><td className="py-2.5 font-black text-base">: {selectedRoad.name}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kelurahan Wilayah</td><td className="py-2.5 font-bold">: {selectedRoad.kelurahan}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Jenis Material Jalan</td><td className="py-2.5 font-bold">: {selectedRoad.jenisJalan || '-'}</td></tr>
+                <tr className="border-b border-slate-200">
+                   <td className="py-2.5 font-bold text-slate-600">Kondisi Dominan</td>
+                   <td className="py-2.5">
+                      : <span className="font-bold border border-slate-400 px-2 py-0.5 rounded text-[11px]" style={{ color: getConditionColor(selectedRoad.condition), backgroundColor: `${getConditionColor(selectedRoad.condition)}15` }}>{selectedRoad.condition}</span>
+                   </td>
+                </tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Panjang Rute Terecord</td><td className="py-2.5 font-bold">: {formatLength(selectedRoad.length)}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-xs font-bold text-blue-700">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold">: {selectedRoad.date}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tim Surveyor Lapangan</td><td className="py-2.5 font-bold">: {selectedRoad.surveyor}</td></tr>
+              </tbody>
+           </table>
+
+           <div className="mb-6 page-break-inside-avoid">
+              <h3 className="font-bold text-slate-800 border-b-2 border-slate-300 pb-1 mb-3 inline-block">Catatan Lapangan</h3>
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg min-h-[80px] text-sm text-slate-700 italic">
+                 {selectedRoad.notes || "Tidak ada catatan tambahan dari surveyor."}
+              </div>
+           </div>
+
+           <div className="page-break-inside-avoid">
+              <h3 className="font-bold text-slate-800 border-b-2 border-slate-300 pb-1 mb-4 inline-block">Lampiran Media Visual</h3>
+              <div className="grid grid-cols-2 gap-4">
+                 {/* Print Foto */}
+                 {selectedRoad.photoUrls && selectedRoad.photoUrls.map((url, i) => (
+                    <div key={i} className="flex flex-col items-center">
+                       <img src={url} className="w-full h-56 object-cover rounded-lg border-2 border-slate-200" alt="Lampiran" />
+                       <span className="text-[10px] text-slate-500 mt-1 font-bold">Lampiran Foto {i+1}</span>
+                    </div>
+                 ))}
+                 
+                 {/* Print Tangkapan Layar Video */}
+                 {videoSnapshot && (
+                    <div className="flex flex-col items-center">
+                       <div className="relative w-full">
+                         <img src={videoSnapshot} className="w-full h-56 object-cover rounded-lg border-2 border-blue-200 shadow-sm" alt="Cuplikan Video" />
+                         <div className="absolute top-2 left-2 bg-black text-white text-[9px] font-bold px-2 py-1 rounded">CUPLIKAN VIDEO</div>
+                       </div>
+                       <span className="text-[10px] text-slate-500 mt-1 font-bold">Hasil Tangkapan Layar Otomatis</span>
+                    </div>
+                 )}
+                 
+                 {/* Jika Kosong */}
+                 {(!selectedRoad.photoUrls || selectedRoad.photoUrls.length === 0) && !videoSnapshot && (
+                    <div className="col-span-2 text-center p-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 text-sm font-bold">
+                       Tidak ada media visual (Foto/Video) yang dilampirkan pada laporan ini.
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
