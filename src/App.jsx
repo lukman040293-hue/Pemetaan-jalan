@@ -137,14 +137,14 @@ export default function App() {
 
   // --- STATE ADMIN ---
   const [filterKelurahan, setFilterKelurahan] = useState('Semua');
-  const [filterJenis, setFilterJenis] = useState('Semua'); // <-- Filter Baru
+  const [filterJenis, setFilterJenis] = useState('Semua'); 
   const [filterKondisi, setFilterKondisi] = useState('Semua');
   // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
   const adminLayerGroupRef = useRef(null);
-  const hasFittedAdminMapRef = useRef(false); // <-- TAMBAHAN: Mencegah zoom berulang
+  const hasFittedAdminMapRef = useRef(false);
 
   // --- STATE SURVEYOR ---
   const [mobileScreen, setMobileScreen] = useState('home'); 
@@ -152,7 +152,7 @@ export default function App() {
   const [realGpsPoints, setRealGpsPoints] = useState([]);
   const [gpsAccuracy, setGpsAccuracy] = useState('-');
   const [currentSpeed, setCurrentSpeed] = useState(0);
-  const [totalDistance, setTotalDistance] = useState(0); // <-- State Jarak
+  const [totalDistance, setTotalDistance] = useState(0);
   const [pinLocation, setPinLocation] = useState(null); 
   const [currentLocation, setCurrentLocation] = useState(null); 
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
@@ -162,10 +162,13 @@ export default function App() {
   const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
 
+  // State untuk memilih draft offline mana saja yang akan diunggah
+  const [selectedDraftIds, setSelectedDraftIds] = useState([]);
+
   const [formData, setFormData] = useState({
     name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: ''
   });
-  const [editingDraftId, setEditingDraftId] = useState(null); // <-- TAMBAHAN: Melacak draft yang sedang diedit
+  const [editingDraftId, setEditingDraftId] = useState(null); 
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -585,6 +588,21 @@ export default function App() {
     setUploadedPhotoUrls(prev => prev.filter((_, i) => i !== index));
   };
 
+  // --- Fungsi Seleksi Draft ---
+  const toggleDraftSelection = (id) => {
+    setSelectedDraftIds(prev => 
+      prev.includes(id) ? prev.filter(draftId => draftId !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllDrafts = () => {
+    if (selectedDraftIds.length === drafts.length) {
+      setSelectedDraftIds([]); // Kosongkan jika semuanya sudah terpilih
+    } else {
+      setSelectedDraftIds(drafts.map(d => d.id)); // Pilih semua
+    }
+  };
+
   // --- Fungsi Edit Draft ---
   const editDraft = (draft) => {
     setFormData({
@@ -606,6 +624,7 @@ export default function App() {
   const deleteDraft = (id) => {
     if(window.confirm("Hapus draft offline ini secara permanen?")) {
       setDrafts(prev => prev.filter(d => d.id !== id));
+      setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); // Hapus juga dari status seleksi agar tidak error
       showToast("Draft berhasil dihapus.");
     }
   };
@@ -650,14 +669,17 @@ export default function App() {
 
   // --- SUPABASE: UPLOAD DATA & MEDIA ---
   const syncDataToCloud = async () => {
-    if (drafts.length === 0) return;
+    // Saring hanya draft yang sedang dicentang/dipilih oleh user
+    const draftsToUpload = drafts.filter(d => selectedDraftIds.includes(d.id));
+
+    if (draftsToUpload.length === 0) return showToast("Pilih draft yang ingin diunggah!");
     if (!supabase) return showToast("Konfigurasi Supabase Anda belum diatur di dalam kode.");
 
     setIsSyncing(true);
     
     try {
       let uploadCount = 0;
-      for (const draft of drafts) {
+      for (const draft of draftsToUpload) {
         let finalVideoUrl = null;
         let finalPhotoUrls = [];
 
@@ -702,7 +724,9 @@ export default function App() {
       }
       
       showToast(`${uploadCount} Rute Berhasil Diunggah ke Supabase!`);
-      setDrafts([]); 
+      // Hapus hanya draft yang berhasil diunggah
+      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id)));
+      setSelectedDraftIds([]); // Kosongkan daftar seleksi
       fetchRoads();
     } catch (error) { 
       console.warn("Peringatan Supabase:", error);
@@ -1061,46 +1085,67 @@ export default function App() {
 
             {mobileScreen === 'drafts' && (
               <div className="flex-1 p-6 flex flex-col bg-slate-100 text-left">
-                <div className="flex justify-between items-center mb-6 mt-2">
+                <div className="flex justify-between items-center mb-4 mt-2">
                   <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
                   <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
                 </div>
+
+                {drafts.length > 0 && (
+                   <div className="mb-4 flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={selectAllDrafts}>
+                     <span className="text-sm font-bold text-slate-700">Pilih Semua ({drafts.length})</span>
+                     <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                        {selectedDraftIds.length === drafts.length && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                     </div>
+                   </div>
+                )}
 
                 <div className="flex-1 space-y-4 overflow-y-auto pb-4">
                   {drafts.length === 0 ? (
                     <div className="text-center text-slate-400 mt-10 text-base font-medium border-2 border-dashed border-slate-300 rounded-3xl p-8">Belum ada survei yang disimpan.</div>
                   ) : (
-                    drafts.map(d => (
-                      <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden flex">
+                    drafts.map(d => {
+                      const isSelected = selectedDraftIds.includes(d.id);
+                      return (
+                      <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`p-4 rounded-3xl border shadow-sm relative overflow-hidden flex items-center transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300'}`}>
                         <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: getConditionColor(d.condition)}}></div>
-                        <div className="pl-3 w-full">
+                        
+                        {/* KOTAK CHECKBOX */}
+                        <div className="pl-1 pr-3 py-2 flex items-center justify-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                             {isSelected && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                          </div>
+                        </div>
+
+                        {/* INFO DRAFT */}
+                        <div className="flex-1 w-full py-1">
                           <div className="flex justify-between items-start">
                              <div className="font-extrabold text-base text-slate-800 pr-2">{d.name}</div>
                              <div className="flex space-x-2">
-                                 <button onClick={() => editDraft(d)} className="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm flex items-center space-x-1">
+                                 {/* stopPropagation agar saat tombol Edit diklik, checkbox tidak ikut tercentang */}
+                                 <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm flex items-center space-x-1">
                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                    <span>Edit</span>
                                  </button>
-                                 <button onClick={() => deleteDraft(d.id)} className="bg-rose-50 text-rose-600 border border-rose-200 p-1.5 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors shadow-sm flex items-center justify-center">
+                                 <button onClick={(e) => { e.stopPropagation(); deleteDraft(d.id); }} className="bg-rose-50 text-rose-600 border border-rose-200 p-1.5 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors shadow-sm flex items-center justify-center">
                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                  </button>
                              </div>
                           </div>
                           <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {d.kelurahan}</div>
-                          <div className="flex justify-between items-center mt-4 border-t border-slate-100 pt-3 text-xs">
+                          <div className="flex justify-between items-center mt-3 border-t border-slate-200/60 pt-3 text-xs">
                             <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.realGps.length} Log Satelit</span>
-                            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg font-bold">{d.condition}</span>
+                            <span className="bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-bold">{d.condition}</span>
                           </div>
                         </div>
                       </div>
-                    ))
+                    )})
                   )}
                 </div>
 
                 {drafts.length > 0 && (
                   <div className="pt-2 pb-6">
-                    <button onClick={syncDataToCloud} className={`w-full text-white py-4 rounded-2xl font-black text-base flex justify-center items-center space-x-2 shadow-xl ${isDbConnected ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400'}`}>
-                      {isDbConnected ? <span>UNGGAH SEMUA KE SUPABASE</span> : <span>SERVER SUPABASE TERPUTUS</span>}
+                    <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-full text-white py-4 rounded-2xl font-black text-base flex justify-center items-center space-x-2 shadow-xl transition-all ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400 cursor-not-allowed opacity-80'}`}>
+                      {isDbConnected ? <span>UNGGAH TERPILIH ({selectedDraftIds.length})</span> : <span>SERVER SUPABASE TERPUTUS</span>}
                     </button>
                   </div>
                 )}
