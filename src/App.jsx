@@ -1563,7 +1563,7 @@ export default function App() {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
 
-                <div className="w-full bg-black relative border-b border-slate-200/60 flex flex-col justify-center items-center h-48 md:h-56 lg:h-[260px] shrink-0">
+                <div className="w-full bg-black relative border-b border-slate-200/60 flex flex-col justify-center items-center aspect-video shrink-0">
                   {selectedRoad.videoUrl ? (
                     <>
                       <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain bg-black"></video>
