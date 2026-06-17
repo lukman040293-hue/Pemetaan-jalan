@@ -177,6 +177,8 @@ export default function App() {
   const [filterKelurahan, setFilterKelurahan] = useState('Semua');
   const [filterJenis, setFilterJenis] = useState('Semua'); 
   const [filterKondisi, setFilterKondisi] = useState('Semua');
+  const [isLegendOpen, setIsLegendOpen] = useState(true); // State untuk buka/tutup legenda peta
+  
   // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const adminMapContainerRef = useRef(null);
@@ -916,6 +918,8 @@ export default function App() {
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
         .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -1380,62 +1384,75 @@ export default function App() {
                 <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
                 {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta Leaflet...</div>}
                 
-                <div className="absolute top-4 md:top-6 right-4 bg-white/70 backdrop-blur-md p-2 md:p-3 rounded-xl border border-white/50 shadow-lg text-[10px] md:text-xs font-bold text-slate-700 z-[1000] pointer-events-none">
-                  <div className="mb-1 md:mb-2 text-[9px] md:text-[10px] text-slate-600 uppercase tracking-widest border-b border-slate-300/50 pb-1 flex justify-between">
-                     <span>Legenda Peta</span>
-                     <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
+                <div className="absolute top-4 md:top-6 right-4 bg-white/70 backdrop-blur-md p-2 md:p-3 rounded-xl border border-white/50 shadow-lg text-[10px] md:text-xs font-bold text-slate-700 z-[1000] transition-all duration-300">
+                  <div 
+                    className={`text-[9px] md:text-[10px] text-slate-600 uppercase tracking-widest flex justify-between items-center cursor-pointer ${isLegendOpen ? 'border-b border-slate-300/50 pb-1 mb-1 md:mb-2' : ''}`}
+                    onClick={() => setIsLegendOpen(!isLegendOpen)}
+                  >
+                     <div className="flex items-center space-x-1.5">
+                       <span>Legenda Peta</span>
+                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className={`w-3 h-3 transition-transform ${isLegendOpen ? 'rotate-180' : ''}`}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                     </div>
+                     {isLegendOpen && (
+                       <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
+                     )}
                   </div>
-                  <div className="flex flex-col space-y-1 md:space-y-2 mt-1 md:mt-2">
-                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#10B981] rounded-full shadow-sm"></span><span>Baik / Mulus</span></div>
-                       <span className="bg-emerald-100/80 text-emerald-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Baik' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
-                       </span>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#FBBF24] rounded-full shadow-sm"></span><span>Rusak Ringan</span></div>
-                       <span className="bg-amber-100/80 text-amber-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Rusak Ringan' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
-                       </span>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F97316] rounded-full shadow-sm"></span><span>Rusak Sedang</span></div>
-                       <span className="bg-orange-100/80 text-orange-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Rusak Sedang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
-                       </span>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full shadow-sm"></span><span>Rusak Parah</span></div>
-                       <span className="bg-red-100/80 text-red-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Rusak Parah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
-                       </span>
-                    </div>
-                  </div>
+                  
+                  {isLegendOpen && (
+                    <div className="animate-fade-in">
+                      <div className="flex flex-col space-y-1 md:space-y-2 mt-1 md:mt-2">
+                        <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                           <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#10B981] rounded-full shadow-sm"></span><span>Baik / Mulus</span></div>
+                           <span className="bg-emerald-100/80 text-emerald-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                              {syncedRoads.filter(r => r.condition === 'Baik' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                           </span>
+                        </div>
+                        <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                           <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#FBBF24] rounded-full shadow-sm"></span><span>Rusak Ringan</span></div>
+                           <span className="bg-amber-100/80 text-amber-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                              {syncedRoads.filter(r => r.condition === 'Rusak Ringan' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                           </span>
+                        </div>
+                        <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                           <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F97316] rounded-full shadow-sm"></span><span>Rusak Sedang</span></div>
+                           <span className="bg-orange-100/80 text-orange-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                              {syncedRoads.filter(r => r.condition === 'Rusak Sedang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                           </span>
+                        </div>
+                        <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                           <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full shadow-sm"></span><span>Rusak Parah</span></div>
+                           <span className="bg-red-100/80 text-red-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                              {syncedRoads.filter(r => r.condition === 'Rusak Parah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                           </span>
+                        </div>
+                      </div>
 
-                  {/* TAMBAHAN LEGENDA MATERIAL JALAN */}
-                  <div className="mt-2 md:mt-3 pt-2 border-t border-slate-300/50">
-                    <div className="mb-1.5 text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest">Material Jalan</div>
-                    <div className="flex flex-col space-y-1 md:space-y-2">
-                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🛣️</span><span>Aspal</span></div>
-                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                            {syncedRoads.filter(r => (r.jenisJalan === 'Aspal' || !r.jenisJalan) && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
-                         </span>
-                      </div>
-                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🧱</span><span>Beton</span></div>
-                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                            {syncedRoads.filter(r => r.jenisJalan === 'Beton' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
-                         </span>
-                      </div>
-                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none opacity-80">🟤</span><span>Tanah</span></div>
-                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                            {syncedRoads.filter(r => r.jenisJalan === 'Tanah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
-                         </span>
+                      {/* TAMBAHAN LEGENDA MATERIAL JALAN */}
+                      <div className="mt-2 md:mt-3 pt-2 border-t border-slate-300/50">
+                        <div className="mb-1.5 text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest">Material Jalan</div>
+                        <div className="flex flex-col space-y-1 md:space-y-2">
+                          <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                             <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🛣️</span><span>Aspal</span></div>
+                             <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                                {syncedRoads.filter(r => (r.jenisJalan === 'Aspal' || !r.jenisJalan) && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                             </span>
+                          </div>
+                          <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                             <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🧱</span><span>Beton</span></div>
+                             <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                                {syncedRoads.filter(r => r.jenisJalan === 'Beton' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                             </span>
+                          </div>
+                          <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                             <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none opacity-80">🟤</span><span>Tanah</span></div>
+                             <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                                {syncedRoads.filter(r => r.jenisJalan === 'Tanah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                             </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                 </div>
               </div>
