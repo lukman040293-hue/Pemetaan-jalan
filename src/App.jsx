@@ -231,7 +231,12 @@ export default function App() {
         };
       });
 
-      setSyncedRoads(formattedData);
+      setSyncedRoads(prev => {
+        // Mencegah pop-up tertutup paksa setiap 5 detik: 
+        // Hanya update state/render ulang peta jika ADA perubahan data sungguhan dari server.
+        if (JSON.stringify(prev) === JSON.stringify(formattedData)) return prev;
+        return formattedData;
+      });
       setIsDbConnected(true);
     } catch (error) {
       console.warn("Peringatan jaringan saat mengambil data dari Supabase:", error.message);
@@ -360,7 +365,7 @@ export default function App() {
           `;
           window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon })
             .addTo(layerGroup)
-            .bindPopup(popupContent);
+            .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
         }
         polyline.on('click', () => {
           setSelectedRoad(road);
@@ -424,9 +429,48 @@ export default function App() {
       map.setView([-0.425, 117.185], 13);
     }
 
-    map.on('click', (e) => {
+    map.on('click', async (e) => {
       setPinLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-      showToast("📍 Pin kerusakan diletakkan!");
+      showToast("📍 Pin diletakkan! Mendeteksi wilayah...");
+
+      // Coba lakukan Reverse Geocoding ke OpenStreetMap Nominatim
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=18&addressdetails=1`);
+        const data = await response.json();
+        
+        if (data && data.address) {
+          // Ambil berbagai kemungkinan nama wilayah dari response OSM
+          const possibleNames = [
+            data.address.village,
+            data.address.suburb,
+            data.address.neighbourhood,
+            data.address.city_district,
+            data.address.residential,
+            data.address.town
+          ].filter(Boolean);
+
+          let foundKelurahan = null;
+          
+          // Cocokkan dengan KELURAHAN_LIST kita
+          for (let name of possibleNames) {
+            // Normalisasi teks (hapus kata kelurahan/desa/kecamatan agar match)
+            const normalizedName = name.toLowerCase().replace(/kelurahan|desa|kecamatan/gi, '').trim();
+            const match = KELURAHAN_LIST.find(k => k.toLowerCase() === normalizedName);
+            
+            if (match) {
+              foundKelurahan = match;
+              break;
+            }
+          }
+
+          if (foundKelurahan) {
+            setFormData(prev => ({ ...prev, kelurahan: foundKelurahan }));
+            showToast(`✅ Otomatis diset: Kel. ${foundKelurahan}`);
+          }
+        }
+      } catch (err) {
+        console.warn("Gagal mendeteksi lokasi otomatis:", err);
+      }
     });
 
     if ('geolocation' in navigator) {
@@ -1349,12 +1393,12 @@ export default function App() {
               </div>
 
               {selectedRoad && (
-                <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-4xl bg-slate-900 rounded-2xl md:rounded-3xl shadow-2xl border border-slate-700 flex flex-col md:flex-row overflow-hidden z-[1000] animate-fade-in-up max-h-[85vh]">
-                  <button onClick={() => setSelectedRoad(null)} className="absolute top-2 right-2 md:top-4 md:right-4 text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full z-30">
+                <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-4xl bg-white rounded-2xl md:rounded-3xl shadow-2xl border border-slate-200 flex flex-col md:flex-row overflow-hidden z-[1000] animate-fade-in-up max-h-[85vh]">
+                  <button onClick={() => setSelectedRoad(null)} className="absolute top-2 right-2 md:top-4 md:right-4 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 p-1.5 rounded-full z-30 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
 
-                  <div className="w-full md:w-1/3 bg-black relative border-b md:border-b-0 md:border-r border-slate-800 flex flex-col justify-center items-center h-48 md:min-h-[260px] md:h-auto shrink-0">
+                  <div className="w-full md:w-1/3 bg-slate-100 relative border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-center items-center h-48 md:min-h-[260px] md:h-auto shrink-0">
                     {/* Prioritas Video di panel hitam */}
                     {selectedRoad.videoUrl ? (
                       <>
@@ -1374,38 +1418,38 @@ export default function App() {
                         </button>
                       </>
                     ) : selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 ? (
-                      <img src={selectedRoad.photoUrls[0]} alt="Foto Utama" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                      <img src={selectedRoad.photoUrls[0]} alt="Foto Utama" className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <div className="text-center p-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-10 md:h-10 text-slate-600 mb-1 md:mb-2 mx-auto"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.024-.983a1.125 1.125 0 010 1.966l-5.603 3.113A1.125 1.125 0 019 15.113V8.887c0-.857.921-1.4 1.671-.983l5.603 3.113z" clipRule="evenodd" /></svg>
-                        <span className="text-[10px] md:text-[11px] font-bold text-slate-500">Media Tidak Dilampirkan</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-10 md:h-10 text-slate-300 mb-1 md:mb-2 mx-auto"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.024-.983a1.125 1.125 0 010 1.966l-5.603 3.113A1.125 1.125 0 019 15.113V8.887c0-.857.921-1.4 1.671-.983l5.603 3.113z" clipRule="evenodd" /></svg>
+                        <span className="text-[10px] md:text-[11px] font-bold text-slate-400">Media Tidak Dilampirkan</span>
                       </div>
                     )}
                   </div>
                   
-                  <div className="w-full md:w-2/3 p-4 md:p-6 flex flex-col justify-between bg-slate-900 text-white overflow-y-auto">
+                  <div className="w-full md:w-2/3 p-4 md:p-6 flex flex-col justify-between bg-white text-slate-800 overflow-y-auto">
                     <div>
                       <div className="flex justify-between items-start mb-1">
-                        <div className="text-[10px] md:text-xs font-bold text-blue-400 uppercase tracking-widest">{selectedRoad.kelurahan}</div>
-                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-400 hover:text-rose-300 font-bold px-2 py-1 md:px-3 bg-rose-500/10 rounded-lg border border-rose-500/20">Hapus Rute</button>
+                        <div className="text-[10px] md:text-xs font-bold text-blue-600 uppercase tracking-widest">{selectedRoad.kelurahan}</div>
+                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1 md:px-3 bg-rose-50 hover:bg-rose-100 transition-colors rounded-lg border border-rose-200">Hapus Rute</button>
                       </div>
-                      <h4 className="text-xl md:text-2xl font-black mb-2 md:mb-3 leading-tight">{selectedRoad.name}</h4>
-                      <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-800/50 p-2.5 md:p-3 rounded-xl border border-slate-700/50 line-clamp-3 md:line-clamp-none">"{selectedRoad.notes || "Tidak ada catatan."}"</p>
+                      <h4 className="text-xl md:text-2xl font-black mb-2 md:mb-3 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                      <p className="text-xs md:text-sm text-slate-600 leading-relaxed bg-slate-50 p-2.5 md:p-3 rounded-xl border border-slate-200 line-clamp-3 md:line-clamp-none">"{selectedRoad.notes || "Tidak ada catatan."}"</p>
                       
                       {selectedRoad.pinLocation && selectedRoad.pinLocation.lat && selectedRoad.pinLocation.lng && (
-                        <div className="mt-2 md:mt-3 text-[10px] md:text-xs text-amber-300 bg-amber-500/10 p-2 md:p-2.5 rounded-lg border border-amber-500/20 inline-flex items-center">
+                        <div className="mt-2 md:mt-3 text-[10px] md:text-xs text-amber-700 bg-amber-50 p-2 md:p-2.5 rounded-lg border border-amber-200 inline-flex items-center">
                           <span className="mr-1.5 md:mr-2 text-sm md:text-base">📍</span> Pin: {selectedRoad.pinLocation.lat.toFixed(5)}, {selectedRoad.pinLocation.lng.toFixed(5)}
                         </div>
                       )}
 
                       {/* Galeri Foto di Dasbor Detail */}
                       {selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 && (
-                        <div className="mt-3 md:mt-4 border-t border-slate-700/50 pt-3 md:pt-4">
-                          <span className="text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
-                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
+                        <div className="mt-3 md:mt-4 border-t border-slate-100 pt-3 md:pt-4">
+                          <span className="text-[10px] md:text-xs font-bold text-slate-500 mb-1.5 md:mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
+                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300">
                             {selectedRoad.photoUrls.map((url, i) => (
                               <a href={url} target="_blank" rel="noreferrer" key={i} className="flex-shrink-0 relative group">
-                                <img src={url} className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-slate-600 hover:border-blue-400 transition-colors" />
+                                <img src={url} className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-slate-200 hover:border-blue-500 shadow-sm transition-colors" />
                                 <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
                                 </div>
@@ -1416,10 +1460,10 @@ export default function App() {
                       )}
                     </div>
                     
-                    <div className="flex gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-slate-400 mt-3 md:mt-4 flex-wrap">
-                      <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.date}</span>
-                      <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">Pjg: {formatLength(selectedRoad.length)}</span>
-                      <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.surveyor}</span>
+                    <div className="flex gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-slate-600 mt-3 md:mt-4 flex-wrap">
+                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.date}</span>
+                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">Pjg: {formatLength(selectedRoad.length)}</span>
+                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.surveyor}</span>
                     </div>
                   </div>
                 </div>
