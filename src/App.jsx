@@ -29,6 +29,13 @@ const getConditionColor = (condition) => {
   }
 };
 
+// --- HELPER: FORMAT NAMA KELURAHAN ---
+const formatKel = (nama) => {
+  if (!nama) return '-';
+  // Jika sudah ada kata "Kel." atau "Kelurahan" di database, jangan ditambahkan lagi
+  return /^(kel\.|kelurahan)\s/i.test(nama) ? nama : `Kel. ${nama}`;
+};
+
 // --- ALGORITMA SIMPLIFIKASI KOORDINAT (DOUGLAS-PEUCKER) ---
 const getSqDist = (p, p1, p2) => {
   let x = p1.lat, y = p1.lng, dx = p2.lat - x, dy = p2.lng - y;
@@ -292,11 +299,7 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
     
-    // Nonaktifkan zoomControl bawaan (topleft) agar bisa diset di topright
-    const map = window.L.map(adminMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 13);
-    
-    // Tambahkan Zoom Control & Layers ke KANAN ATAS agar tidak tertutup sidebar
-    window.L.control.zoom({ position: 'topright' }).addTo(map);
+    const map = window.L.map(adminMapContainerRef.current).setView([-0.425, 117.185], 13);
 
     const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
     const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
@@ -316,7 +319,7 @@ export default function App() {
       "Peta Gelap": gelap
     };
 
-    window.L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+    window.L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
     
     const layerGroup = window.L.layerGroup().addTo(map);
     adminMapInstanceRef.current = map;
@@ -373,39 +376,39 @@ export default function App() {
               <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">📍 ${road.name}</h4>
               <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600; width: 35%;">Kelurahan</th>
-                  <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${road.kelurahan}</td>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal; width: 35%;">Kelurahan</th>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: bold;">${formatKel(road.kelurahan)}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Jenis Jalan</th>
-                  <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${road.jenisJalan || '-'}</td>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Jenis Jalan</th>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: bold;">${road.jenisJalan || '-'}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Pjg. Rute</th>
-                  <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${formatLength(road.length)}</td>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Pjg. Rute</th>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: bold;">${formatLength(road.length)}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Kondisi</th>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Kondisi</th>
                   <td style="padding: 6px 4px;">
-                    <span style="background-color: ${getConditionColor(road.condition)}20; color: ${getConditionColor(road.condition)}; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 10px;">${road.condition}</span>
+                    <span style="background-color: ${getConditionColor(road.condition)}20; color: ${getConditionColor(road.condition)}; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">${road.condition}</span>
                   </td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600; vertical-align: top;">Catatan</th>
-                  <td style="padding: 6px 4px; color: #475569; font-style: italic;">${road.notes || '-'}</td>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal; vertical-align: top;">Catatan</th>
+                  <td style="padding: 6px 4px; color: #475569; font-style: italic; font-weight: bold;">${road.notes || '-'}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600; vertical-align: top;">Koordinat</th>
-                  <td style="padding: 6px 4px; color: #2563eb; font-family: monospace; font-size: 11px;">
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal; vertical-align: top;">Koordinat</th>
+                  <td style="padding: 6px 4px; color: #2563eb; font-family: monospace; font-weight: bold;">
                     ${road.pinLocation.lat.toFixed(6)}<br/>${road.pinLocation.lng.toFixed(6)}
                   </td>
                 </tr>
                 <tr>
-                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Tanggal</th>
-                  <td style="padding: 6px 4px; color: #475569; font-size: 11px;">${road.date}</td>
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Tanggal</th>
+                  <td style="padding: 6px 4px; color: #475569; font-weight: bold;">${road.date}</td>
                 </tr>
               </table>
-              ${road.photoUrls && road.photoUrls.length > 0 ? `<div style="font-size: 10px; text-align: center; margin-top: 8px; color: #3b82f6; font-weight: bold;">[+] Tersedia ${road.photoUrls.length} Foto Lampiran</div>` : ''}
+              ${road.photoUrls && road.photoUrls.length > 0 ? `<div style="font-size: 11px; text-align: center; margin-top: 8px; color: #3b82f6; font-weight: bold;">[+] Tersedia ${road.photoUrls.length} Foto Lampiran</div>` : ''}
             </div>
           `;
           window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon })
@@ -896,6 +899,14 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.8); }
 
+        /* Mendorong tombol Zoom & Layer ke kanan agar tidak tertutup sidebar */
+        .leaflet-left { transition: left 0.3s ease-in-out; }
+        .sidebar-open .leaflet-left { left: 395px !important; }
+        @media (max-width: 768px) {
+          /* Menggunakan vw agar lebih presisi di layar HP */
+          .sidebar-open .leaflet-left { left: calc(85vw + 15px) !important; }
+        }
+
         @media print {
           @page { size: A4; margin: 20mm; } 
           body { background-color: white !important; overflow: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1087,7 +1098,7 @@ export default function App() {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kelurahan</label>
                     <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
-                      {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
+                      {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
                     </select>
                   </div>
 
@@ -1269,7 +1280,7 @@ export default function App() {
                                  </button>
                              </div>
                           </div>
-                          <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {d.kelurahan}</div>
+                          <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {formatKel(d.kelurahan)}</div>
                           <div className="flex justify-between items-center mt-3 border-t border-slate-200/60 pt-3 text-xs">
                             <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.realGps.length} Log Satelit</span>
                             <span className="bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-bold">{d.condition}</span>
@@ -1334,12 +1345,13 @@ export default function App() {
 
           <main className="flex-1 relative overflow-hidden flex">
             {/* --- PETA FULL WIDTH DI BELAKANG SEMUA KOMPONEN --- */}
-            <section className="absolute inset-0 z-0 flex flex-col">
+            {/* Memindahkan trigger 'sidebar-open' ke parent wrapper agar React tidak merusak node peta Leaflet */}
+            <section className={`absolute inset-0 z-0 flex flex-col ${isSidebarOpen ? 'sidebar-open' : ''}`}>
               <div className="relative w-full h-full">
                 <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
                 {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta Leaflet...</div>}
                 
-                <div className="absolute top-28 md:top-32 right-4 bg-white/70 backdrop-blur-md p-2 md:p-3 rounded-xl border border-white/50 shadow-lg text-[10px] md:text-xs font-bold text-slate-700 z-[1000] pointer-events-none">
+                <div className="absolute top-4 md:top-6 right-4 bg-white/70 backdrop-blur-md p-2 md:p-3 rounded-xl border border-white/50 shadow-lg text-[10px] md:text-xs font-bold text-slate-700 z-[1000] pointer-events-none">
                   <div className="mb-1 md:mb-2 text-[9px] md:text-[10px] text-slate-600 uppercase tracking-widest border-b border-slate-300/50 pb-1 flex justify-between">
                      <span>Legenda Peta</span>
                      <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
@@ -1370,6 +1382,32 @@ export default function App() {
                        </span>
                     </div>
                   </div>
+
+                  {/* TAMBAHAN LEGENDA MATERIAL JALAN */}
+                  <div className="mt-2 md:mt-3 pt-2 border-t border-slate-300/50">
+                    <div className="mb-1.5 text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest">Material Jalan</div>
+                    <div className="flex flex-col space-y-1 md:space-y-2">
+                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🛣️</span><span>Aspal</span></div>
+                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                            {syncedRoads.filter(r => (r.jenisJalan === 'Aspal' || !r.jenisJalan) && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                         </span>
+                      </div>
+                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none grayscale opacity-80">🧱</span><span>Beton</span></div>
+                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                            {syncedRoads.filter(r => r.jenisJalan === 'Beton' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                         </span>
+                      </div>
+                      <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                         <div className="flex items-center space-x-1.5 md:space-x-2"><span className="text-sm leading-none opacity-80">🟤</span><span>Tanah</span></div>
+                         <span className="bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                            {syncedRoads.filter(r => r.jenisJalan === 'Tanah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}
+                         </span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </section>
@@ -1396,7 +1434,7 @@ export default function App() {
                 <div className="p-4 md:p-5 border-b border-white/30 bg-white/30 space-y-3">
                   <select value={filterKelurahan} onChange={(e) => setFilterKelurahan(e.target.value)} className="w-full bg-white/40 backdrop-blur-sm border border-white/50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Wilayah</option>
-                    {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
+                    {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
                   </select>
                   <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)} className="w-full bg-white/40 backdrop-blur-sm border border-white/50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Jenis Jalan</option>
@@ -1471,7 +1509,7 @@ export default function App() {
                             <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate pr-2 mb-1.5">{road.name}</h4>
                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                               <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm" style={{ backgroundColor: getConditionColor(road.condition)}}>{road.condition}</span>
-                              <span className="text-[10px] font-semibold text-slate-600 truncate">{road.jenisJalan || 'Aspal'} • {road.kelurahan}</span>
+                              <span className="text-[10px] font-semibold text-slate-600 truncate">{road.jenisJalan || 'Aspal'} • {formatKel(road.kelurahan)}</span>
                             </div>
                             <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500">
                               <span>{road.date}</span>
@@ -1527,7 +1565,7 @@ export default function App() {
                 <div className="w-full md:w-2/3 p-5 md:p-8 flex flex-col justify-between bg-white/80 text-slate-800 overflow-y-auto">
                   <div>
                     <div className="flex justify-between items-start mb-2 pr-12 md:pr-16">
-                      <div className="text-[10px] md:text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1.5">{selectedRoad.kelurahan}</div>
+                      <div className="text-[10px] md:text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1.5">{formatKel(selectedRoad.kelurahan)}</div>
                       <div className="flex space-x-1">
                          <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-100/80 font-medium px-3 py-1.5 transition-colors rounded-full flex items-center bg-blue-50/50">
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
@@ -1591,7 +1629,7 @@ export default function App() {
            <table className="w-full mb-6 text-sm border-collapse">
               <tbody>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold w-1/3 text-slate-600">Nama Rute / Jalan</td><td className="py-2.5 font-black text-base">: {selectedRoad.name}</td></tr>
-                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kelurahan Wilayah</td><td className="py-2.5 font-bold">: {selectedRoad.kelurahan}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kelurahan Wilayah</td><td className="py-2.5 font-bold">: {formatKel(selectedRoad.kelurahan)}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Jenis Material Jalan</td><td className="py-2.5 font-bold">: {selectedRoad.jenisJalan || '-'}</td></tr>
                 <tr className="border-b border-slate-200">
                    <td className="py-2.5 font-bold text-slate-600">Kondisi Dominan</td>
