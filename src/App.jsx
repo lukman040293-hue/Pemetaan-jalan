@@ -8,14 +8,23 @@ const SUPABASE_URL = 'https://crgckrqueqpgrakkzfmp.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Dmd8dOeZaAs0IGC4kXrSSg_it8dY8nB'; 
 
 // --- DATA RUJUKAN ---
-const KELURAHAN_LIST = ["Lempake", "Mugirejo", "Sempaja Utara", "Sempaja Selatan", "Karang Mumus"];
+const KELURAHAN_LIST = [
+  "Air Hitam", "Air Putih", "Bandara", "Baqa", "Bayur", "Budaya Pampang", "Bugis", "Bukit Pinang", "Bukuan", "Dadi Mulya", 
+  "Gunung Kelua", "Gunung Panjang", "Handil Bakti", "Harapan Baru", "Jawa", "Karang Anyar", "Karang Asam Ilir", 
+  "Karang Asam Ulu", "Karang Mumus", "Lempake", "Loa Bahu", "Loa Bakung", "Loa Buah", "Makroman", "Mangkupalas", 
+  "Mesjid", "Mugirejo", "Pasar Pagi", "Pelabuhan", "Pelita", "Pulau Atas", "Rapak Dalam", "Rawa Makmur", "Sambutan", 
+  "Selili", "Sempaja Barat", "Sempaja Selatan", "Sempaja Timur", "Sempaja Utara", "Sengkotek", "Sidodadi", "Sidodamai", 
+  "Sidomulyo", "Simpang Pasir", "Simpang Tiga", "Sindang Sari", "Sungai Dama", "Sungai Kapih", "Sungai Keledang", 
+  "Sungai Pinang Dalam", "Sungai Pinang Luar", "Sungai Siring", "Tanah Merah", "Tani Aman", "Teluk Lerong Ilir", 
+  "Teluk Lerong Ulu", "Temindung Permai", "Tenun"
+];
 
 const getConditionColor = (condition) => {
   switch (condition) {
-    case 'Aspal/Baik': return '#10B981'; 
-    case 'Berbatu': return '#F59E0B';    
-    case 'Licin/Buruk': return '#EF4444'; 
-    case 'Tanah/Rusak': return '#B45309'; 
+    case 'Baik': return '#10B981';        // Hijau
+    case 'Bergelombang': return '#F59E0B'; // Kuning/Oranye
+    case 'Berlubang': return '#EF4444';    // Merah
+    case 'Berlumpur': return '#B45309';    // Coklat
     default: return '#6B7280';
   }
 };
@@ -64,6 +73,14 @@ const getDistanceMeters = (lat1, lon1, lat2, lon2) => {
   const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
+};
+
+// --- HELPER: FORMAT PANJANG JALAN ---
+const formatLength = (kmString) => {
+  if (!kmString) return '-';
+  const km = parseFloat(kmString);
+  if (isNaN(km) || km === 0) return '-';
+  return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(2) + ' km';
 };
 // --- AKHIR ALGORITMA ---
 
@@ -120,6 +137,7 @@ export default function App() {
 
   // --- STATE ADMIN ---
   const [filterKelurahan, setFilterKelurahan] = useState('Semua');
+  const [filterJenis, setFilterJenis] = useState('Semua'); // <-- Filter Baru
   const [filterKondisi, setFilterKondisi] = useState('Semua');
   // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
@@ -145,8 +163,9 @@ export default function App() {
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
 
   const [formData, setFormData] = useState({
-    name: '', kelurahan: KELURAHAN_LIST[0], condition: 'Tanah/Rusak', notes: ''
+    name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: ''
   });
+  const [editingDraftId, setEditingDraftId] = useState(null); // <-- TAMBAHAN: Melacak draft yang sedang diedit
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -280,6 +299,7 @@ export default function App() {
 
     const filteredRoads = syncedRoads.filter(road => {
       return (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) &&
+             (filterJenis === 'Semua' || road.jenisJalan === filterJenis) &&
              (filterKondisi === 'Semua' || road.condition === filterKondisi);
     });
 
@@ -302,6 +322,14 @@ export default function App() {
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <th style="padding: 6px 4px; color: #64748b; font-weight: 600; width: 35%;">Kelurahan</th>
                   <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${road.kelurahan}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Jenis Jalan</th>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${road.jenisJalan || '-'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Pjg. Rute</th>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${formatLength(road.length)}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Kondisi</th>
@@ -382,7 +410,10 @@ export default function App() {
 
     if (realGpsPoints.length > 0) {
       const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
-      window.L.polyline(latlngs, { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+      
+      // Mengubah warna jalur sesuai kondisi yang dipilih di form
+      window.L.polyline(latlngs, { color: getConditionColor(formData.condition), weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+      
       window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
       window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, fillColor: '#EF4444', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
       map.fitBounds(window.L.latLngBounds(latlngs), { padding: [30, 30] });
@@ -414,56 +445,23 @@ export default function App() {
       surveyorMarkerRef.current = null;
       currentLocationMarkerRef.current = null;
     };
-  }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints]);
+  }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     const map = surveyorMapInstanceRef.current;
 
     if (pinLocation) {
-      const popupContent = `
-        <div style="min-width: 240px; font-family: sans-serif;">
-          <div style="font-size: 10px; font-weight: bold; color: #ef4444; margin-bottom: 4px; text-transform: uppercase;">Pratinjau Lokasi</div>
-          <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">📍 ${formData.name || 'Nama Jalan Belum Diisi'}</h4>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <th style="padding: 6px 4px; color: #64748b; font-weight: 600; width: 35%;">Kelurahan</th>
-              <td style="padding: 6px 4px; color: #334155; font-weight: 700;">${formData.kelurahan}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <th style="padding: 6px 4px; color: #64748b; font-weight: 600;">Kondisi</th>
-              <td style="padding: 6px 4px;">
-                <span style="background-color: ${getConditionColor(formData.condition)}20; color: ${getConditionColor(formData.condition)}; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 10px;">${formData.condition}</span>
-              </td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <th style="padding: 6px 4px; color: #64748b; font-weight: 600; vertical-align: top;">Catatan</th>
-              <td style="padding: 6px 4px; color: #475569; font-style: italic;">${formData.notes || '-'}</td>
-            </tr>
-            <tr>
-              <th style="padding: 6px 4px; color: #64748b; font-weight: 600; vertical-align: top;">Koordinat</th>
-              <td style="padding: 6px 4px; color: #059669; font-family: monospace; font-size: 11px;">
-                ${pinLocation.lat.toFixed(6)}<br/>${pinLocation.lng.toFixed(6)}
-              </td>
-            </tr>
-          </table>
-        </div>
-      `;
-
       if (surveyorMarkerRef.current) {
         surveyorMarkerRef.current.setLatLng([pinLocation.lat, pinLocation.lng]);
-        surveyorMarkerRef.current.setPopupContent(popupContent);
-        surveyorMarkerRef.current.openPopup();
       } else {
         const pinIcon = window.L.divIcon({
           className: 'custom-pin-mobile',
           html: `<div style="background-color: ${getConditionColor(formData.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
-          iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -18]
+          iconSize: [18, 18], iconAnchor: [9, 18]
         });
         surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon })
-          .addTo(map)
-          .bindPopup(popupContent)
-          .openPopup();
+          .addTo(map);
       }
     }
 
@@ -497,6 +495,7 @@ export default function App() {
     setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null);
+    setEditingDraftId(null); // Reset mode edit
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -586,6 +585,22 @@ export default function App() {
     setUploadedPhotoUrls(prev => prev.filter((_, i) => i !== index));
   };
 
+  // --- Fungsi Edit Draft ---
+  const editDraft = (draft) => {
+    setFormData({
+      name: draft.name, kelurahan: draft.kelurahan, jenisJalan: draft.jenisJalan || 'Aspal', condition: draft.condition, notes: draft.notes
+    });
+    setRealGpsPoints(draft.realGps);
+    setTotalDistance(parseFloat(draft.length) * 1000 || 0); // Kembalikan jarak ke meter
+    setPinLocation(draft.pinLocation);
+    setUploadedVideoFile(draft.videoFile || null);
+    setUploadedVideoUrl(draft.localVideoUrl || null);
+    setUploadedPhotoFiles(draft.photoFiles || []);
+    setUploadedPhotoUrls(draft.localPhotoUrls || []);
+    
+    setEditingDraftId(draft.id); // Tandai ID draft yang sedang diedit
+    setMobileScreen('form');     // Buka formulir
+  };
 
   const saveDraft = (e) => {
     e.preventDefault();
@@ -596,25 +611,33 @@ export default function App() {
     const compressionRate = Math.round((1 - (simplifiedGps.length / realGpsPoints.length)) * 100);
 
     const newDraft = {
-      id: "DRAFT-" + Math.floor(Math.random() * 100000),
-      name: formData.name, kelurahan: formData.kelurahan, condition: formData.condition, notes: formData.notes,
+      id: editingDraftId || ("DRAFT-" + Math.floor(Math.random() * 100000)), // Gunakan ID lama jika sedang edit
+      name: formData.name, kelurahan: formData.kelurahan, jenisJalan: formData.jenisJalan, condition: formData.condition, notes: formData.notes,
       realGps: simplifiedGps, pinLocation: pinLocation, 
       videoFile: uploadedVideoFile, localVideoUrl: uploadedVideoUrl, 
       photoFiles: uploadedPhotoFiles, localPhotoUrls: uploadedPhotoUrls,
-      length: (totalDistance / 1000).toFixed(3), // Menyimpan panjang asli jalan dalam km
+      length: (totalDistance / 1000).toFixed(3), 
       date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
       surveyor: "Tim PUPR",
     };
     
-    setDrafts(prev => [...prev, newDraft]);
-    setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], condition: 'Tanah/Rusak', notes: '' });
+    if (editingDraftId) {
+       // Timpa draft yang lama dengan yang baru diedit
+       setDrafts(prev => prev.map(d => d.id === editingDraftId ? newDraft : d));
+       showToast("Draft berhasil diperbarui!");
+    } else {
+       // Buat draft baru
+       setDrafts(prev => [...prev, newDraft]);
+       if (compressionRate > 0) showToast(`Tersimpan! GPS dikompresi ${compressionRate}% (${realGpsPoints.length} ➔ ${simplifiedGps.length} titik)`);
+       else showToast("Data Tersimpan ke Draf Luring!");
+    }
+
+    setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
     setUploadedVideoFile(null); setUploadedVideoUrl(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null);
-    setMobileScreen('home'); 
-    
-    if (compressionRate > 0) showToast(`Tersimpan! GPS dikompresi ${compressionRate}% (${realGpsPoints.length} ➔ ${simplifiedGps.length} titik)`);
-    else showToast("Data Tersimpan ke Draf Luring!");
+    setEditingDraftId(null);
+    setMobileScreen('drafts'); // Arahkan kembali ke daftar draft setelah simpan
   };
 
   // --- SUPABASE: UPLOAD DATA & MEDIA ---
@@ -877,10 +900,22 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {['Tanah/Rusak', 'Licin/Buruk', 'Berbatu', 'Aspal/Baik'].map(cond => (
-                        <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`p-3 rounded-2xl border text-sm font-extrabold transition-all ${formData.condition === cond ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}>{cond}</button>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Jenis Material Jalan</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Tanah', 'Aspal', 'Beton'].map(jenis => (
+                        <button key={jenis} type="button" onClick={() => setFormData({...formData, jenisJalan: jenis})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all ${formData.jenisJalan === jenis ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{jenis}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan (Opsional)</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['Baik', 'Berlubang', 'Bergelombang', 'Berlumpur'].map(cond => (
+                        <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all flex items-center justify-center space-x-1.5 ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getConditionColor(cond) }}></span>
+                          <span>{cond}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -964,13 +999,16 @@ export default function App() {
                   </div>
 
                   <div className="pt-4 pb-8 flex flex-col space-y-3">
-                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl">Simpan ke Memori Luring (Draft)</button>
+                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl">
+                      {editingDraftId ? 'Simpan Perubahan Draft' : 'Simpan ke Memori Luring (Draft)'}
+                    </button>
                     <button type="button" onClick={() => {
-                      setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], condition: 'Tanah/Rusak', notes: '' });
+                      setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
                       setUploadedVideoFile(null); setUploadedVideoUrl(null); 
                       setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
                       setPinLocation(null);
-                      setMobileScreen('home');
+                      setMobileScreen(editingDraftId ? 'drafts' : 'home');
+                      setEditingDraftId(null);
                     }} className="w-full bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-2xl font-bold text-base shadow-sm hover:bg-slate-50">
                       Batal & Kembali
                     </button>
@@ -1025,13 +1063,19 @@ export default function App() {
                     <div className="text-center text-slate-400 mt-10 text-base font-medium border-2 border-dashed border-slate-300 rounded-3xl p-8">Belum ada survei yang disimpan.</div>
                   ) : (
                     drafts.map(d => (
-                      <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                      <div key={d.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden flex">
                         <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: getConditionColor(d.condition)}}></div>
-                        <div className="pl-3">
-                          <div className="font-extrabold text-base text-slate-800">{d.name}</div>
-                          <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.kelurahan}</div>
+                        <div className="pl-3 w-full">
+                          <div className="flex justify-between items-start">
+                             <div className="font-extrabold text-base text-slate-800 pr-2">{d.name}</div>
+                             <button onClick={() => editDraft(d)} className="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm flex items-center space-x-1">
+                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                               <span>Edit</span>
+                             </button>
+                          </div>
+                          <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {d.kelurahan}</div>
                           <div className="flex justify-between items-center mt-4 border-t border-slate-100 pt-3 text-xs">
-                            <span className="font-bold text-slate-600">{d.realGps.length} Log Satelit</span>
+                            <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.realGps.length} Log Satelit</span>
                             <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg font-bold">{d.condition}</span>
                           </div>
                         </div>
@@ -1113,12 +1157,18 @@ export default function App() {
                     <option value="Semua">Semua Wilayah</option>
                     {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
                   </select>
+                  <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+                    <option value="Semua">Semua Jenis Jalan</option>
+                    <option value="Tanah">Tanah</option>
+                    <option value="Aspal">Aspal</option>
+                    <option value="Beton">Beton</option>
+                  </select>
                   <select value={filterKondisi} onChange={(e) => setFilterKondisi(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Kondisi</option>
-                    <option value="Tanah/Rusak">Kritis (Tanah/Rusak)</option>
-                    <option value="Licin/Buruk">Bahaya (Licin/Buruk)</option>
-                    <option value="Berbatu">Sedang (Berbatu)</option>
-                    <option value="Aspal/Baik">Mulus (Aspal)</option>
+                    <option value="Baik">Kondisi Baik</option>
+                    <option value="Bergelombang">Bergelombang (Kuning)</option>
+                    <option value="Berlubang">Berlubang (Merah)</option>
+                    <option value="Berlumpur">Berlumpur (Coklat)</option>
                   </select>
                 </div>
 
@@ -1126,7 +1176,7 @@ export default function App() {
                 <div className="mb-3 flex justify-between items-end px-1">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Laporan Masuk</span>
                   <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                    {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length} Data
+                    {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length} Data
                   </span>
                 </div>
 
@@ -1137,7 +1187,7 @@ export default function App() {
                     </div>
                   ) : (
                     syncedRoads
-                      .filter(road => (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) && (filterKondisi === 'Semua' || road.condition === filterKondisi))
+                      .filter(road => (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || road.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || road.condition === filterKondisi))
                       .map((road) => (
                       <div key={road.dbId || road.id} onClick={() => {
                           setSelectedRoad(road);
@@ -1183,11 +1233,13 @@ export default function App() {
                             <h4 className="font-extrabold text-sm text-slate-800 leading-tight truncate pr-2 mb-1.5">{road.name}</h4>
                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                               <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: getConditionColor(road.condition)}}>{road.condition}</span>
-                              <span className="text-[10px] font-semibold text-slate-500 truncate">{road.kelurahan}</span>
+                              <span className="text-[10px] font-semibold text-slate-500 truncate">{road.jenisJalan || 'Aspal'} • {road.kelurahan}</span>
                             </div>
                             <div className="mt-auto flex items-center justify-between text-[10px] text-slate-400">
                               <span>{road.date}</span>
-                              <span className="font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 text-slate-500 font-bold">GPS: {road.realGps?.length || 0}</span>
+                              <span className="font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 text-slate-500 font-bold">
+                                {formatLength(road.length)} • {road.realGps?.length || 0} GPS
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1207,31 +1259,31 @@ export default function App() {
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-xl border border-slate-200 shadow-lg text-[10px] md:text-xs font-bold text-slate-700 z-[1000] pointer-events-none">
                   <div className="mb-1 md:mb-2 text-[9px] md:text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1 flex justify-between">
                      <span>Legenda Peta</span>
-                     <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
+                     <span className="font-extrabold text-blue-600 ml-4">Total: {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length}</span>
                   </div>
                   <div className="flex flex-col space-y-1 md:space-y-2 mt-1 md:mt-2">
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#10B981] rounded-full"></span><span>Aspal (Mulus)</span></div>
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#10B981] rounded-full"></span><span>Baik / Mulus</span></div>
                        <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Aspal/Baik' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                          {syncedRoads.filter(r => r.condition === 'Baik' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F59E0B] rounded-full"></span><span>Berbatu (Sedang)</span></div>
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F59E0B] rounded-full"></span><span>Bergelombang</span></div>
                        <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Berbatu' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                          {syncedRoads.filter(r => r.condition === 'Bergelombang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#B45309] rounded-full"></span><span>Tanah (Rusak)</span></div>
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full"></span><span>Berlubang</span></div>
+                       <span className="bg-[#EF4444] bg-opacity-20 text-[#EF4444] px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Berlubang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                       </span>
+                    </div>
+                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#B45309] rounded-full"></span><span>Berlumpur</span></div>
                        <span className="bg-[#B45309] bg-opacity-20 text-[#B45309] px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Tanah/Rusak' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
-                       </span>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full"></span><span>Licin (Bahaya)</span></div>
-                       <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Licin/Buruk' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan)).length}
+                          {syncedRoads.filter(r => r.condition === 'Berlumpur' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                   </div>
@@ -1308,6 +1360,7 @@ export default function App() {
                     
                     <div className="flex gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-slate-400 mt-3 md:mt-4 flex-wrap">
                       <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.date}</span>
+                      <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">Pjg: {formatLength(selectedRoad.length)}</span>
                       <span className="bg-slate-800 px-2.5 py-1 md:py-1.5 rounded-lg">{selectedRoad.surveyor}</span>
                     </div>
                   </div>
