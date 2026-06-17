@@ -21,10 +21,10 @@ const KELURAHAN_LIST = [
 
 const getConditionColor = (condition) => {
   switch (condition) {
-    case 'Baik': return '#10B981';        // Hijau
-    case 'Bergelombang': return '#F59E0B'; // Kuning/Oranye
-    case 'Berlubang': return '#EF4444';    // Merah
-    case 'Berlumpur': return '#B45309';    // Coklat
+    case 'Baik': return '#10B981';         // Hijau
+    case 'Rusak Ringan': return '#FBBF24'; // Kuning/Amber
+    case 'Rusak Sedang': return '#F97316'; // Oranye
+    case 'Rusak Parah': return '#EF4444';  // Merah
     default: return '#6B7280';
   }
 };
@@ -875,6 +875,12 @@ export default function App() {
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
         /* Memaksa font cantik khas Tailwind untuk selalu aktif dan mencegah pull-to-refresh di HP */
         body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; }
+        
+        /* Kustomisasi Scrollbar untuk Laporan Masuk */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
       `}} />
 
       {toastMessage && (
@@ -1079,7 +1085,7 @@ export default function App() {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan (Opsional)</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {['Baik', 'Berlubang', 'Bergelombang', 'Berlumpur'].map(cond => (
+                      {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
                         <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all flex items-center justify-center space-x-1.5 ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getConditionColor(cond) }}></span>
                           <span>{cond}</span>
@@ -1346,21 +1352,21 @@ export default function App() {
                   <select value={filterKondisi} onChange={(e) => setFilterKondisi(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                     <option value="Semua">Semua Kondisi</option>
                     <option value="Baik">Kondisi Baik</option>
-                    <option value="Bergelombang">Bergelombang (Kuning)</option>
-                    <option value="Berlubang">Berlubang (Merah)</option>
-                    <option value="Berlumpur">Berlumpur (Coklat)</option>
+                    <option value="Rusak Ringan">Rusak Ringan</option>
+                    <option value="Rusak Sedang">Rusak Sedang</option>
+                    <option value="Rusak Parah">Rusak Parah</option>
                   </select>
                 </div>
 
-              <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
-                <div className="mb-3 flex justify-between items-end px-1">
+              <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200/60 flex justify-between items-end bg-white/50 z-10 shrink-0">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Laporan Masuk</span>
-                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
                     {syncedRoads.filter(r => (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || r.condition === filterKondisi)).length} Data
                   </span>
                 </div>
 
-                <div className="space-y-3 pb-8">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-8 custom-scrollbar">
                   {syncedRoads.length === 0 ? (
                     <div className="text-center text-slate-400 mt-10 text-sm p-4 border border-dashed border-slate-300 rounded-2xl">
                        Tabel kosong. Menunggu data dari Supabase PostgreSQL.
@@ -1449,21 +1455,21 @@ export default function App() {
                        </span>
                     </div>
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F59E0B] rounded-full"></span><span>Bergelombang</span></div>
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#FBBF24] rounded-full"></span><span>Rusak Ringan</span></div>
                        <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Bergelombang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                          {syncedRoads.filter(r => r.condition === 'Rusak Ringan' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full"></span><span>Berlubang</span></div>
-                       <span className="bg-[#EF4444] bg-opacity-20 text-[#EF4444] px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Berlubang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#F97316] rounded-full"></span><span>Rusak Sedang</span></div>
+                       <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Rusak Sedang' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                     <div className="flex items-center justify-between space-x-2 md:space-x-3">
-                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#B45309] rounded-full"></span><span>Berlumpur</span></div>
-                       <span className="bg-[#B45309] bg-opacity-20 text-[#B45309] px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
-                          {syncedRoads.filter(r => r.condition === 'Berlumpur' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
+                       <div className="flex items-center space-x-1.5 md:space-x-2"><span className="w-3 h-1 md:w-4 md:h-1.5 bg-[#EF4444] rounded-full"></span><span>Rusak Parah</span></div>
+                       <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                          {syncedRoads.filter(r => r.condition === 'Rusak Parah' && (filterKelurahan === 'Semua' || r.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || r.jenisJalan === filterJenis)).length}
                        </span>
                     </div>
                   </div>
