@@ -133,7 +133,7 @@ export default function App() {
   const [syncedRoads, setSyncedRoads] = useState([]); 
   const [drafts, setDrafts] = useState([]); 
   const [selectedRoad, setSelectedRoad] = useState(null);
-  const [videoSnapshot, setVideoSnapshot] = useState(null); // State khusus menyimpan screenshot video untuk di-print
+  const [videoSnapshot, setVideoSnapshot] = useState([]); // Diubah menjadi array untuk menampung 4 cuplikan
   
   // Status Upload Cloud
   const [isSyncing, setIsSyncing] = useState(false);
@@ -416,7 +416,7 @@ export default function App() {
         }
         polyline.on('click', () => {
           setSelectedRoad(road);
-          setVideoSnapshot(null); // Reset snapshot jika berpindah rute
+          setVideoSnapshot([]); // Reset array snapshot jika berpindah rute
           // Auto close sidebar on mobile to view map details
           if (window.innerWidth < 768) {
              setIsSidebarOpen(false);
@@ -877,34 +877,78 @@ export default function App() {
      }
   };
 
-  // --- FUNGSI CETAK LAPORAN (PRINT TO PDF) ---
+  // --- FUNGSI CETAK LAPORAN (PRINT TO PDF) & EKSTRAK 4 FRAME VIDEO ---
   const handlePrint = async () => {
     if (!selectedRoad) return;
     
-    // Jika ada video, coba ambil cuplikan frame-nya menggunakan elemen Canvas yang tersembunyi
+    let snapshots = [];
+
+    // Jika laporan ini menggunakan video, sistem akan mencoba memutar dan menangkap 4 frame
     if (selectedRoad.videoUrl) {
       try {
         const videoEl = document.getElementById('admin-vid-player');
-        if (videoEl && videoEl.readyState >= 2) { // Pastikan video memiliki data frame yang siap
-          const canvas = document.createElement('canvas');
-          canvas.width = videoEl.videoWidth;
-          canvas.height = videoEl.videoHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-          const snapshotUrl = canvas.toDataURL('image/jpeg');
-          setVideoSnapshot(snapshotUrl);
+        // Validasi apakah video valid dan durasinya dapat dibaca
+        if (videoEl && videoEl.readyState >= 2 && !isNaN(videoEl.duration) && videoEl.duration > 0) { 
+          
+          showToast("Mengekstrak 4 cuplikan video untuk dicetak...");
+          
+          // Simpan status pemutaran video saat ini
+          const originalTime = videoEl.currentTime;
+          const isPaused = videoEl.paused;
+          const duration = videoEl.duration;
+          
+          // Titik waktu: 10%, 35%, 60%, 85% dari total durasi video
+          const times = [duration * 0.1, duration * 0.35, duration * 0.6, duration * 0.85];
+
+          // Lakukan perulangan untuk memindah durasi dan menangkap Canvas secara Asynchronous
+          for (let t of times) {
+             await new Promise(resolve => {
+                // Fungsi dieksekusi saat video selesai berpindah ke durasi t
+                const onSeeked = () => {
+                   videoEl.removeEventListener('seeked', onSeeked);
+                   clearTimeout(fallback); // Matikan fallback jika berhasil
+
+                   try {
+                     const canvas = document.createElement('canvas');
+                     canvas.width = videoEl.videoWidth;
+                     canvas.height = videoEl.videoHeight;
+                     const ctx = canvas.getContext('2d');
+                     ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                     // Simpan ke array
+                     snapshots.push(canvas.toDataURL('image/jpeg', 0.8));
+                   } catch(e) {
+                     console.warn("CORS/Tangkapan diblokir:", e);
+                   }
+                   resolve();
+                };
+                
+                // Fallback (Jaga-jaga jika internet ngelag dan video tidak selesai 'seek')
+                const fallback = setTimeout(() => {
+                   videoEl.removeEventListener('seeked', onSeeked);
+                   resolve();
+                }, 1500); 
+
+                videoEl.addEventListener('seeked', onSeeked);
+                videoEl.currentTime = t; // Geser waktu video
+             });
+          }
+
+          // Kembalikan video ke kondisi awal saat Admin menonton
+          videoEl.currentTime = originalTime;
+          if (!isPaused) videoEl.play();
         }
       } catch (err) {
-        console.warn("Gagal mengambil tangkapan layar video (mungkin terblokir kebijakan CORS Supabase):", err);
+        console.warn("Gagal mengekstrak frame video otomatis:", err);
       }
-    } else {
-      setVideoSnapshot(null); // Kosongkan jika bukan video
-    }
+    } 
 
-    // Beri waktu 0.5 detik agar state React ter-update memuat gambar cuplikan tersebut ke DOM sebelum jendela Print muncul
+    // Simpan semua array gambar ke state untuk dirender di template print
+    setVideoSnapshot(snapshots);
+
+    // Beri jeda 800ms agar React sempat me-render 4 gambar tersebut sebelum jendela PDF terbuka
     setTimeout(() => {
       window.print();
-    }, 500);
+    }, 800);
   };
 
 
@@ -1430,7 +1474,7 @@ export default function App() {
                       .map((road) => (
                       <div key={road.dbId || road.id} onClick={() => {
                           setSelectedRoad(road);
-                          setVideoSnapshot(null); // Reset snapshot jika berpindah rute
+                          setVideoSnapshot([]); // Reset array snapshot jika berpindah rute
                           // Auto close sidebar on mobile so they can see the map
                           if (window.innerWidth < 768) {
                              setIsSidebarOpen(false);
@@ -1656,27 +1700,27 @@ export default function App() {
            <div className="page-break-inside-avoid">
               <h3 className="font-bold text-slate-800 border-b-2 border-slate-300 pb-1 mb-4 inline-block">Lampiran Media Visual</h3>
               <div className="grid grid-cols-2 gap-4">
-                 {/* Print Foto */}
+                 {/* Print Foto (Jika ada) */}
                  {selectedRoad.photoUrls && selectedRoad.photoUrls.map((url, i) => (
                     <div key={i} className="flex flex-col items-center">
-                       <img src={url} className="w-full h-56 object-cover rounded-lg border-2 border-slate-200" alt="Lampiran" />
+                       <img src={url} className="w-full h-48 object-cover rounded-lg border-2 border-slate-200" alt="Lampiran" />
                        <span className="text-[10px] text-slate-500 mt-1 font-bold">Lampiran Foto {i+1}</span>
                     </div>
                  ))}
                  
-                 {/* Print Tangkapan Layar Video */}
-                 {videoSnapshot && (
-                    <div className="flex flex-col items-center">
+                 {/* Print Tangkapan Layar Video (4 Frame) */}
+                 {videoSnapshot && videoSnapshot.length > 0 && videoSnapshot.map((snap, i) => (
+                    <div key={`vid-snap-${i}`} className="flex flex-col items-center">
                        <div className="relative w-full">
-                         <img src={videoSnapshot} className="w-full h-56 object-cover rounded-lg border-2 border-blue-200 shadow-sm" alt="Cuplikan Video" />
-                         <div className="absolute top-2 left-2 bg-black text-white text-[9px] font-bold px-2 py-1 rounded">CUPLIKAN VIDEO</div>
+                         <img src={snap} className="w-full h-48 object-cover rounded-lg border-2 border-blue-200 shadow-sm" alt={`Cuplikan Video ${i+1}`} />
+                         <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded">CUPLIKAN VIDEO {i+1}</div>
                        </div>
-                       <span className="text-[10px] text-slate-500 mt-1 font-bold">Hasil Tangkapan Layar Otomatis</span>
+                       <span className="text-[10px] text-slate-500 mt-1 font-bold">Hasil Ekstraksi Otomatis Frame {i+1}</span>
                     </div>
-                 )}
+                 ))}
                  
-                 {/* Jika Kosong */}
-                 {(!selectedRoad.photoUrls || selectedRoad.photoUrls.length === 0) && !videoSnapshot && (
+                 {/* Jika Kosong (Tanpa foto dan tanpa video) */}
+                 {(!selectedRoad.photoUrls || selectedRoad.photoUrls.length === 0) && (!videoSnapshot || videoSnapshot.length === 0) && (
                     <div className="col-span-2 text-center p-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 text-sm font-bold">
                        Tidak ada media visual (Foto/Video) yang dilampirkan pada laporan ini.
                     </div>
