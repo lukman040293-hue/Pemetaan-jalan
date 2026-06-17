@@ -556,18 +556,39 @@ export default function App() {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy, speed } = position.coords;
-          setRealGpsPoints(prev => {
-            if (prev.length > 0) {
-              const last = prev[prev.length - 1];
-              const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
-              setTotalDistance(d => d + dist);
-            }
-            return [...prev, { lat: latitude, lng: longitude }];
-          });
+          
           setGpsAccuracy(Math.round(accuracy));
           if (speed) setCurrentSpeed(Math.round(speed * 3.6)); 
+
+          // 🛡️ 1. FILTER AKURASI TINGGI (Abaikan data sampah yang melenceng)
+          // Jika akurasi lebih besar dari 20 meter (misal karena di dalam gang), jangan direkam.
+          if (accuracy > 20) return;
+
+          setRealGpsPoints(prev => {
+            if (prev.length === 0) return [{ lat: latitude, lng: longitude }];
+
+            const last = prev[prev.length - 1];
+            const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
+
+            // 🛡️ 2. ANTI-DRIFT (Diperkecil agar tikungan tetap presisi)
+            // Jika pergeseran kurang dari 1 meter, anggap diam (sebelumnya 3m, sekarang lebih rapat)
+            if (dist < 1) return prev;
+            
+            // 🛡️ 3. SPIKE FILTER (Anti-Lompat)
+            // Jika tiba-tiba melompat > 100 meter dalam 1 detik (Glitch Satelit), abaikan
+            if (dist > 100) return prev;
+
+            // Update Total Jarak
+            setTotalDistance(d => d + dist);
+
+            // 🛡️ 4. MENGGUNAKAN TITIK ASLI TANPA SMOOTHING (Sesuai Permintaan)
+            // Mematikan algoritma Low-Pass agar tikungan jalan terekam lebih presisi sesuai aslinya
+            return [...prev, { lat: latitude, lng: longitude }];
+          });
         },
-        () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+        () => {}, 
+        // maximumAge: 0 memaksa HP mengambil data real-time, bukan cache
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     }
   };
@@ -678,7 +699,9 @@ export default function App() {
     if (!formData.name.trim()) return showToast("Nama jalan wajib diisi!");
     if (realGpsPoints.length < 2) return showToast("Data GPS tidak mencukupi.");
 
-    const simplifiedGps = simplifyGpsData(realGpsPoints, 0.00003); 
+    // Toleransi kompresi diturunkan dari 0.00003 menjadi 0.00001 (mendekati 1 meter)
+    // agar lekuk tikungan tetap terbentuk sempurna saat disimpan
+    const simplifiedGps = simplifyGpsData(realGpsPoints, 0.00001); 
     const compressionRate = Math.round((1 - (simplifiedGps.length / realGpsPoints.length)) * 100);
 
     const newDraft = {
@@ -908,9 +931,17 @@ export default function App() {
                     <span>LIVE GPS REC</span>
                   </div>
 
+                  {/* 🔴 INDIKATOR SINYAL LEMAH */}
+                  {gpsAccuracy > 20 && gpsAccuracy !== '-' && (
+                    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center space-x-2 border border-amber-400 backdrop-blur-sm z-50 whitespace-nowrap">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span>Sinyal Terhalang ({gpsAccuracy}m) - Menunggu Akurasi...</span>
+                    </div>
+                  )}
+
                   <div className="absolute top-6 left-6 bg-black/60 px-4 py-3 rounded-xl text-xs font-bold font-mono backdrop-blur-md border border-white/10">
                     <div className="text-emerald-400 font-bold mb-1 border-b border-white/20 pb-1">SENSOR DATA:</div>
-                    <div>Akurasi: {gpsAccuracy} m</div>
+                    <div className={gpsAccuracy > 20 ? "text-amber-400" : "text-white"}>Akurasi: {gpsAccuracy} m</div>
                     <div>Speed: {currentSpeed} km/h</div>
                     <div>Jarak: {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
                     <div>Log Disimpan: {realGpsPoints.length}</div>
