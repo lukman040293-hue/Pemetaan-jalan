@@ -1558,12 +1558,12 @@ export default function App() {
 
             {/* --- SELECTED ROAD POPUP (Muncul di tengah bawah) --- */}
             {selectedRoad && (
-              <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-4xl bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-2xl border border-white/60 flex flex-col md:flex-row overflow-hidden z-[1000] animate-fade-in-up max-h-[85vh]">
-                <button onClick={() => setSelectedRoad(null)} className="absolute top-3 right-3 md:top-5 md:right-5 text-slate-500 hover:text-slate-900 bg-slate-100/80 hover:bg-slate-200 p-2 rounded-full z-30 transition-colors">
+              <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-2xl bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-2xl border border-white/60 flex flex-col overflow-hidden z-[1000] animate-fade-in-up max-h-[90vh]">
+                <button onClick={() => setSelectedRoad(null)} className="absolute top-3 right-3 md:top-4 md:right-4 text-white hover:text-white bg-black/40 hover:bg-rose-600 backdrop-blur-md p-2 rounded-full z-30 transition-colors border border-white/20 shadow-lg">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
 
-                <div className="w-full md:w-1/3 bg-slate-100 relative border-b md:border-b-0 md:border-r border-slate-200/60 flex flex-col justify-center items-center h-48 md:min-h-[260px] md:h-auto shrink-0">
+                <div className="w-full bg-black relative border-b border-slate-200/60 flex flex-col justify-center items-center h-48 md:h-56 lg:h-[260px] shrink-0">
                   {selectedRoad.videoUrl ? (
                     <>
                       <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain bg-black"></video>
@@ -1585,13 +1585,13 @@ export default function App() {
                     <img src={selectedRoad.photoUrls[0]} alt="Foto Utama" className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="text-center p-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-10 md:h-10 text-slate-300 mb-1 md:mb-2 mx-auto"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.024-.983a1.125 1.125 0 010 1.966l-5.603 3.113A1.125 1.125 0 019 15.113V8.887c0-.857.921-1.4 1.671-.983l5.603 3.113z" clipRule="evenodd" /></svg>
-                      <span className="text-[10px] md:text-[11px] font-bold text-slate-400">Media Tidak Dilampirkan</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-10 md:h-10 text-slate-600 mb-1 md:mb-2 mx-auto"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.024-.983a1.125 1.125 0 010 1.966l-5.603 3.113A1.125 1.125 0 019 15.113V8.887c0-.857.921-1.4 1.671-.983l5.603 3.113z" clipRule="evenodd" /></svg>
+                      <span className="text-[10px] md:text-[11px] font-bold text-slate-500">Media Tidak Dilampirkan</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="w-full md:w-2/3 p-5 md:p-8 flex flex-col justify-between bg-white/80 text-slate-800 overflow-y-auto">
+                <div className="w-full p-5 md:p-6 flex flex-col justify-between bg-white/80 text-slate-800 overflow-y-auto">
                   <div>
                     <div className="flex justify-between items-start mb-2 pr-12 md:pr-16">
                       <div className="text-[10px] md:text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1.5">{formatKel(selectedRoad.kelurahan)}</div>
@@ -1604,9 +1604,9 @@ export default function App() {
                       </div>
                     </div>
                     
-                    <h4 className="text-2xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                    <h4 className="text-xl md:text-2xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
                     
-                    <p className="text-sm text-slate-600 leading-relaxed font-normal mb-3">
+                    <p className="text-sm md:text-base text-slate-600 leading-relaxed font-normal mb-3">
                       "{selectedRoad.notes || "Tidak ada catatan."}"
                     </p>
                     
@@ -1617,14 +1617,14 @@ export default function App() {
                     )}
 
                     {selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 && (
-                      <div className="mt-5 pt-4">
-                        <span className="text-[10px] md:text-xs font-medium text-slate-500 mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
+                      <div className="mt-4 pt-4 border-t border-slate-200/60">
+                        <span className="text-[10px] md:text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300">
                           {selectedRoad.photoUrls.map((url, i) => (
                             <a href={url} target="_blank" rel="noreferrer" key={i} className="flex-shrink-0 relative group">
-                              <img src={url} className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-slate-200 hover:border-blue-300 shadow-sm transition-colors" />
+                              <img src={url} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-slate-200 hover:border-blue-300 shadow-sm transition-colors" />
                               <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
                               </div>
                             </a>
                           ))}
@@ -1633,7 +1633,7 @@ export default function App() {
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 text-xs font-normal text-slate-500 mt-5 pt-4 border-t border-slate-200/60">
+                  <div className="flex items-center gap-2 text-[10px] md:text-xs font-normal text-slate-500 mt-4 pt-4 border-t border-slate-200/60">
                     <span>{selectedRoad.date}</span>
                     <span className="text-slate-300">•</span>
                     <span>Pjg: {formatLength(selectedRoad.length)}</span>
