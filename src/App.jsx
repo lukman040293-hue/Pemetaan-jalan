@@ -371,6 +371,8 @@ export default function App() {
             html: `<div style="background-color: ${getConditionColor(road.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
             iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -18]
           });
+          
+          const uniqueId = road.id || road.dbId || Math.floor(Math.random() * 1000000);
           const popupContent = `
             <div style="min-width: 240px; font-family: sans-serif;">
               <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">📍 ${road.name}</h4>
@@ -409,12 +411,34 @@ export default function App() {
                 </tr>
               </table>
               ${road.photoUrls && road.photoUrls.length > 0 ? `<div style="font-size: 11px; text-align: center; margin-top: 8px; color: #3b82f6; font-weight: bold;">[+] Tersedia ${road.photoUrls.length} Foto Lampiran</div>` : ''}
+              
+              <button id="btn-detail-${uniqueId}" class="btn-detail-popup">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 14px; height: 14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                Lihat Detail Laporan
+              </button>
             </div>
           `;
-          window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon })
+          
+          const marker = window.L.marker([road.pinLocation.lat, road.pinLocation.lng], { icon: pinIcon })
             .addTo(layerGroup)
             .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
+            
+          // Memasang event listener klik ke tombol Detail di dalam popup HTML
+          marker.on('popupopen', () => {
+            const btn = document.getElementById(`btn-detail-${uniqueId}`);
+            if (btn) {
+              btn.onclick = () => {
+                setSelectedRoad(road);
+                setVideoSnapshot([]); 
+                // Jika di layar HP, sidebar di close agar layar tidak penuh
+                if (window.innerWidth < 768) {
+                   setIsSidebarOpen(false);
+                }
+              };
+            }
+          });
         }
+        
         polyline.on('click', () => {
           setSelectedRoad(road);
           setVideoSnapshot([]); 
@@ -906,6 +930,11 @@ export default function App() {
           /* Menggunakan vw agar lebih presisi di layar HP */
           .sidebar-open .leaflet-left { left: calc(85vw + 15px) !important; }
         }
+
+        /* Tombol Detail di dalam Popup */
+        .btn-detail-popup { margin-top: 12px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .btn-detail-popup:hover { background-color: #2563eb; }
+        .btn-detail-popup:active { transform: scale(0.98); }
 
         @media print {
           @page { size: A4; margin: 20mm; } 
