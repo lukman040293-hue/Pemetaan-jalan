@@ -107,6 +107,15 @@ export default function App() {
 
   // --- INISIALISASI PUSTAKA & SUPABASE (CDN) ---
   useEffect(() => {
+    // Mencegah Auto-Zoom di Mobile secara paksa pada viewport
+    let metaViewport = document.querySelector('meta[name="viewport"]');
+    if (!metaViewport) {
+      metaViewport = document.createElement('meta');
+      metaViewport.name = 'viewport';
+      document.head.appendChild(metaViewport);
+    }
+    metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script');
       script.id = 'tailwind-cdn';
@@ -612,14 +621,20 @@ export default function App() {
           const { latitude, longitude, accuracy, speed } = position.coords;
           setGpsAccuracy(Math.round(accuracy));
           if (speed) setCurrentSpeed(Math.round(speed * 3.6)); 
-          if (accuracy > 20) return;
+          
+          // 🛡️ FILTER AKURASI DILONGGARKAN (Dari 20m ke 40m)
+          // Memungkinkan GPS merekam titik awal meskipun sensor masih "pemanasan" (warm-up)
+          if (accuracy > 40) return;
 
           setRealGpsPoints(prev => {
             if (prev.length === 0) return [{ lat: latitude, lng: longitude }];
             const last = prev[prev.length - 1];
             const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
-            if (dist < 1) return prev;
-            if (dist > 100) return prev;
+            
+            // 🛡️ ANTI-DRIFT Disesuaikan
+            if (dist < 1.5) return prev; // Abaikan pergeseran kecil < 1.5m saat berdiri diam
+            if (dist > 100) return prev; // Abaikan lompatan sinyal gila > 100m
+            
             setTotalDistance(d => d + dist);
             return [...prev, { lat: latitude, lng: longitude }];
           });
@@ -927,6 +942,11 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.8); }
 
+        /* Mencegah auto-zoom di HP (terutama iOS/iPhone) saat klik input form */
+        @media screen and (max-width: 768px) {
+          input, select, textarea { font-size: 16px !important; }
+        }
+
         /* Mendorong tombol Zoom & Layer ke kanan agar tidak tertutup sidebar */
         .leaflet-left { transition: left 0.3s ease-in-out; }
         .sidebar-open .leaflet-left { left: 395px !important; }
@@ -1047,7 +1067,8 @@ export default function App() {
                     <span>LIVE GPS REC</span>
                   </div>
 
-                  {gpsAccuracy > 20 && gpsAccuracy !== '-' && (
+                  {/* Sesuaikan peringatan sinyal dengan batas akurasi baru (40m) */}
+                  {gpsAccuracy > 40 && gpsAccuracy !== '-' && (
                     <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center space-x-2 border border-amber-400 backdrop-blur-sm z-50 whitespace-nowrap">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       <span>Sinyal Terhalang ({gpsAccuracy}m) - Menunggu Akurasi...</span>
@@ -1056,7 +1077,7 @@ export default function App() {
 
                   <div className="absolute top-6 left-6 bg-black/80 px-4 py-3 rounded-xl text-xs font-bold font-mono backdrop-blur-md border border-white/10">
                     <div className="text-emerald-400 font-bold mb-1 border-b border-white/20 pb-1">SENSOR DATA:</div>
-                    <div className={gpsAccuracy > 20 ? "text-amber-400" : "text-white"}>Akurasi: {gpsAccuracy} m</div>
+                    <div className={gpsAccuracy > 40 ? "text-amber-400" : "text-white"}>Akurasi: {gpsAccuracy} m</div>
                     <div>Speed: {currentSpeed} km/h</div>
                     <div>Jarak: {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
                     <div>Log Disimpan: {realGpsPoints.length}</div>
@@ -1125,12 +1146,12 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jalan</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 p-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 p-4 rounded-2xl text-base focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
                   </div>
                   
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kelurahan</label>
-                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-base bg-white outline-none focus:ring-2 focus:ring-blue-500">
                       {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
                     </select>
                   </div>
@@ -1158,7 +1179,7 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Catatan Tambahan</label>
-                    <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                    <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-base outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
                   </div>
 
                   <div>
@@ -1269,22 +1290,26 @@ export default function App() {
             )}
 
             {mobileScreen === 'drafts' && (
-              <div className="flex-1 p-6 flex flex-col bg-slate-100 text-left">
-                <div className="flex justify-between items-center mb-4 mt-2">
-                  <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
-                  <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
+              <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
+                {/* Area Header (Tetap/Tidak ikut ter-scroll) */}
+                <div className="px-6 pt-6 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                  <div className="flex justify-between items-center mb-4 mt-2">
+                    <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
+                    <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
+                  </div>
+
+                  {drafts.length > 0 && (
+                     <div className="mb-2 flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={selectAllDrafts}>
+                       <span className="text-sm font-bold text-slate-700">Pilih Semua ({drafts.length})</span>
+                       <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                          {selectedDraftIds.length === drafts.length && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                       </div>
+                     </div>
+                  )}
                 </div>
 
-                {drafts.length > 0 && (
-                   <div className="mb-4 flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={selectAllDrafts}>
-                     <span className="text-sm font-bold text-slate-700">Pilih Semua ({drafts.length})</span>
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
-                        {selectedDraftIds.length === drafts.length && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
-                     </div>
-                   </div>
-                )}
-
-                <div className="flex-1 space-y-4 overflow-y-auto pb-4">
+                {/* Area Daftar (Bisa di-scroll tanpa batas) */}
+                <div className="flex-1 space-y-4 overflow-y-auto px-6 pb-4 pt-2 custom-scrollbar">
                   {drafts.length === 0 ? (
                     <div className="text-center text-slate-400 mt-10 text-base font-medium border-2 border-dashed border-slate-300 rounded-3xl p-8">Belum ada survei yang disimpan.</div>
                   ) : (
@@ -1324,8 +1349,9 @@ export default function App() {
                   )}
                 </div>
 
+                {/* Area Tombol Bawah (Sticky, selalu muncul di bawah) */}
                 {drafts.length > 0 && (
-                  <div className="pt-2 pb-6">
+                  <div className="p-6 flex-shrink-0 bg-white border-t border-slate-200 z-10 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
                     <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-full text-white py-4 rounded-2xl font-black text-base flex justify-center items-center space-x-2 shadow-xl transition-all ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400 cursor-not-allowed opacity-80'}`}>
                       {isDbConnected ? <span>UNGGAH TERPILIH ({selectedDraftIds.length})</span> : <span>SERVER SUPABASE TERPUTUS</span>}
                     </button>
