@@ -927,7 +927,7 @@ export default function App() {
   // RENDER STRUKTUR UTAMA
   // =========================================================================
   return (
-    <div className="w-full h-screen h-[100dvh] overflow-hidden bg-slate-900 relative text-slate-900 font-sans print:h-auto print:overflow-visible print:bg-white">
+    <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print:relative print:h-auto print:overflow-visible print:bg-white">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
@@ -968,7 +968,7 @@ export default function App() {
       `}} />
 
       {toastMessage && (
-        <div className="fixed top-[calc(env(safe-area-inset-top,0px)+1.5rem)] left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
+        <div className="fixed top-14 md:top-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
@@ -1028,9 +1028,9 @@ export default function App() {
             </div>
           )}
 
-          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-4">
+          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-12 pb-4 md:pt-5 md:pb-4">
             <h1 className="font-black text-slate-900 text-lg tracking-tight">R-Map Surveyor</h1>
-            <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-3 py-1.5 rounded-lg">Keluar</button>
+            <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors">Keluar</button>
           </header>
 
           <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
@@ -1062,20 +1062,20 @@ export default function App() {
                 <div className="flex-1 relative bg-slate-900 flex items-center justify-center overflow-hidden">
                   <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover"/>
                   
-                  <div className="absolute top-6 right-6 bg-red-600 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse flex items-center space-x-1.5 shadow-lg">
+                  <div className="absolute top-12 md:top-6 right-6 bg-red-600 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse flex items-center space-x-1.5 shadow-lg">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                     <span>LIVE GPS REC</span>
                   </div>
 
                   {/* Sesuaikan peringatan sinyal dengan batas akurasi baru (40m) */}
                   {gpsAccuracy > 40 && gpsAccuracy !== '-' && (
-                    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center space-x-2 border border-amber-400 backdrop-blur-sm z-50 whitespace-nowrap">
+                    <div className="absolute top-24 md:top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center space-x-2 border border-amber-400 backdrop-blur-sm z-50 whitespace-nowrap">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       <span>Sinyal Terhalang ({gpsAccuracy}m) - Menunggu Akurasi...</span>
                     </div>
                   )}
 
-                  <div className="absolute top-6 left-6 bg-black/80 px-4 py-3 rounded-xl text-xs font-bold font-mono backdrop-blur-md border border-white/10">
+                  <div className="absolute top-12 md:top-6 left-6 bg-black/80 px-4 py-3 rounded-xl text-xs font-bold font-mono backdrop-blur-md border border-white/10">
                     <div className="text-emerald-400 font-bold mb-1 border-b border-white/20 pb-1">SENSOR DATA:</div>
                     <div className={gpsAccuracy > 40 ? "text-amber-400" : "text-white"}>Akurasi: {gpsAccuracy} m</div>
                     <div>Speed: {currentSpeed} km/h</div>
@@ -1083,7 +1083,7 @@ export default function App() {
                     <div>Log Disimpan: {realGpsPoints.length}</div>
                   </div>
 
-                  <div className="absolute top-24 right-6">
+                  <div className="absolute top-32 md:top-24 right-6">
                     <button onClick={() => { if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; } }} className="bg-black/80 hover:bg-black/90 text-white px-4 py-2 rounded-xl text-xs font-bold backdrop-blur-md border border-white/20">Matikan Kamera</button>
                   </div>
 
@@ -1109,7 +1109,7 @@ export default function App() {
             )}
 
             {mobileScreen === 'form' && (
-              <div className="flex-1 p-6 overflow-y-auto bg-slate-50 text-left">
+              <div className="flex-1 p-6 overflow-y-auto bg-slate-50 text-left custom-scrollbar">
                 <h3 className="text-xl font-black text-slate-800 mb-1">Form Survei Lapangan</h3>
                 <p className="text-sm text-slate-500 mb-5">Verifikasi informasi rute yang direkam.</p>
                 
@@ -1258,7 +1258,7 @@ export default function App() {
 
             {mobileScreen === 'pin_map' && (
               <div className="flex-1 flex flex-col bg-slate-100 relative">
-                <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm">
+                <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm pt-12 md:pt-4">
                   <div><h3 className="font-extrabold text-slate-800 text-base">Tandai Lokasi</h3><p className="text-xs text-slate-500">Ketuk garis biru untuk meletakkan pin</p></div>
                   <button onClick={() => setMobileScreen('form')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-bold text-sm shadow-md transition-colors">Selesai</button>
                 </div>
@@ -1292,7 +1292,7 @@ export default function App() {
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
                 {/* Area Header (Tetap/Tidak ikut ter-scroll) */}
-                <div className="px-6 pt-6 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                <div className="px-6 pt-14 md:pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
                   <div className="flex justify-between items-center mb-4 mt-2">
                     <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
                     <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
@@ -1367,7 +1367,7 @@ export default function App() {
       {appRole === 'admin' && (
         <div className="h-full bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
           
-          <header className="bg-white border-b border-slate-200 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm relative pt-[env(safe-area-inset-top,0px)] h-[calc(4rem+env(safe-area-inset-top,0px))]">
+          <header className="bg-white border-b border-slate-200 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm relative pt-10 pb-2 h-20 md:pt-0 md:pb-0 md:h-16">
             <div className="flex items-center space-x-2 md:space-x-3">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500" title="Tampilkan/Sembunyikan Menu">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 md:w-6 md:h-6">
