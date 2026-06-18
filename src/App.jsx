@@ -114,7 +114,7 @@ export default function App() {
       metaViewport.name = 'viewport';
       document.head.appendChild(metaViewport);
     }
-    metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script');
@@ -968,7 +968,7 @@ export default function App() {
       `}} />
 
       {toastMessage && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
+        <div className="fixed top-[calc(env(safe-area-inset-top,0px)+1.5rem)] left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
@@ -1028,7 +1028,7 @@ export default function App() {
             </div>
           )}
 
-          <header className="bg-white border-b border-slate-200 py-4 px-5 flex justify-between items-center sticky top-0 z-40">
+          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-4">
             <h1 className="font-black text-slate-900 text-lg tracking-tight">R-Map Surveyor</h1>
             <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-3 py-1.5 rounded-lg">Keluar</button>
           </header>
@@ -1367,7 +1367,7 @@ export default function App() {
       {appRole === 'admin' && (
         <div className="h-full bg-[#F8FAFC] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
           
-          <header className="bg-white border-b border-slate-200 h-16 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm relative">
+          <header className="bg-white border-b border-slate-200 px-4 md:px-6 flex justify-between items-center flex-shrink-0 z-40 shadow-sm relative pt-[env(safe-area-inset-top,0px)] h-[calc(4rem+env(safe-area-inset-top,0px))]">
             <div className="flex items-center space-x-2 md:space-x-3">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500" title="Tampilkan/Sembunyikan Menu">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 md:w-6 md:h-6">
