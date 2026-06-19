@@ -1702,7 +1702,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-[#FBBF24] border border-white shadow-sm ring-2 ring-[#FBBF24]/20"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">R. Ringan</span>
+                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Ringan</span>
                            <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                         </div>
                       </div>
@@ -1710,7 +1710,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-[#F97316] border border-white shadow-sm ring-2 ring-[#F97316]/20"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">R. Sedang</span>
+                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Sedang</span>
                            <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
                         </div>
                       </div>
@@ -1718,7 +1718,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-[#EF4444] border border-white shadow-sm ring-2 ring-[#EF4444]/20"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">R. Parah</span>
+                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Parah</span>
                            <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
                         </div>
                       </div>
