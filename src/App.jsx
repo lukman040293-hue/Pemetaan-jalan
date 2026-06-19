@@ -211,6 +211,22 @@ export default function App() {
   const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
 
+  // --- FITUR STRAVA (LIVE MAP, PAUSE, AUTO-PAUSE) ---
+  const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, locating, ready, recording, paused, auto_paused
+  const recordingStatusRef = useRef('idle');
+  const lastMoveTimeRef = useRef(Date.now());
+  const [recordTab, setRecordTab] = useState('camera'); // 'camera' or 'map'
+
+  const liveMapContainerRef = useRef(null);
+  const liveMapInstanceRef = useRef(null);
+  const liveMapMarkerRef = useRef(null);
+  const liveMapPolylineRef = useRef(null);
+
+  // Sync ref untuk digunakan di dalam closure GPS WatchPosition
+  useEffect(() => {
+      recordingStatusRef.current = recordingStatus;
+  }, [recordingStatus]);
+
   // State untuk memilih draft offline mana saja yang akan diunggah
   const [selectedDraftIds, setSelectedDraftIds] = useState([]);
 
@@ -600,12 +616,17 @@ export default function App() {
 
   // --- FUNGSI UTILITI & PERKAKASAN ---
   const startRealHardware = async () => {
-    setRealGpsPoints([]); setIsRecording(true); setMobileScreen('record');
+    setRealGpsPoints([]); 
+    setIsRecording(true); 
+    setMobileScreen('record');
+    setRecordingStatus('locating'); // Mulai dengan mencari sinyal
+    setRecordTab('map'); // Buka Peta Live sebagai default agar terlihat akurasi posisinya
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null);
     setEditingDraftId(null); 
+    setCurrentLocation(null);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -619,28 +640,58 @@ export default function App() {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy, speed } = position.coords;
-          setGpsAccuracy(Math.round(accuracy));
-          if (speed) setCurrentSpeed(Math.round(speed * 3.6)); 
+          const currentSpeedKmh = speed ? Math.round(speed * 3.6) : 0;
           
-          // 🛡️ FILTER AKURASI DILONGGARKAN (Dari 20m ke 40m)
-          // Memungkinkan GPS merekam titik awal meskipun sensor masih "pemanasan" (warm-up)
-          if (accuracy > 40) return;
+          setGpsAccuracy(Math.round(accuracy));
+          setCurrentSpeed(currentSpeedKmh);
+          setCurrentLocation({ lat: latitude, lng: longitude });
+          
+          // FASE WARM-UP (Mencari Sinyal Hijau ala Strava)
+          if (recordingStatusRef.current === 'locating' && accuracy <= 25) {
+             setRecordingStatus('ready');
+             showToast("Sinyal GPS Bagus! Siap Memulai.");
+          } else if (recordingStatusRef.current === 'ready' && accuracy > 40) {
+             setRecordingStatus('locating'); // Sinyal hilang sebelum mulai
+          }
 
-          setRealGpsPoints(prev => {
-            if (prev.length === 0) return [{ lat: latitude, lng: longitude }];
-            const last = prev[prev.length - 1];
-            const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
-            
-            // 🛡️ ANTI-DRIFT Disesuaikan
-            if (dist < 1.5) return prev; // Abaikan pergeseran kecil < 1.5m saat berdiri diam
-            if (dist > 100) return prev; // Abaikan lompatan sinyal gila > 100m
-            
-            setTotalDistance(d => d + dist);
-            return [...prev, { lat: latitude, lng: longitude }];
-          });
+          // FASE RECORDING (Termasuk Auto-Pause & Resume)
+          if (recordingStatusRef.current === 'recording' || recordingStatusRef.current === 'auto_paused') {
+            if (accuracy > 40) return; // Abaikan titik dengan akurasi buruk saat merekam
+
+            setRealGpsPoints(prev => {
+              if (prev.length === 0) {
+                 lastMoveTimeRef.current = Date.now();
+                 return [{ lat: latitude, lng: longitude }];
+              }
+              
+              const last = prev[prev.length - 1];
+              const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
+              
+              // Logika Auto-Pause (Jika pergerakan sangat kecil / diam)
+              if (dist < 3.5) {
+                 if (Date.now() - lastMoveTimeRef.current > 10000 && recordingStatusRef.current === 'recording') {
+                    // 10 detik tidak bergerak signifikan = Auto Pause
+                    setRecordingStatus('auto_paused');
+                    showToast("Terdeteksi Berhenti: Auto-Pause aktif.");
+                 }
+                 return prev;
+              }
+              if (dist > 100) return prev; // Filter loncatan GPS ekstrim
+              
+              // Pergerakan Signifikan (Auto-Resume)
+              if (recordingStatusRef.current === 'auto_paused') {
+                 setRecordingStatus('recording');
+                 showToast("Bergerak: Melanjutkan rekaman otomatis.");
+              }
+              
+              lastMoveTimeRef.current = Date.now();
+              setTotalDistance(d => d + dist);
+              return [...prev, { lat: latitude, lng: longitude }];
+            });
+          }
         },
         () => {}, 
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
       );
     }
   };
@@ -648,19 +699,25 @@ export default function App() {
   const simulateGpsMovement = () => {
     let currentLat = -0.425; let currentLng = 117.185;
     setGpsAccuracy("Simulasi"); setCurrentSpeed(15); setTotalDistance(0);
+    setRecordingStatus('ready'); // Langsung siap
+    
     if (watchIdRef.current !== null && typeof watchIdRef.current !== 'number') navigator.geolocation.clearWatch(watchIdRef.current);
     watchIdRef.current = setInterval(() => {
         const oldLat = currentLat;
         const oldLng = currentLng;
         currentLat += (Math.random() * 0.0005) - 0.0001;
         currentLng += (Math.random() * 0.0005) - 0.0002;
-        setRealGpsPoints(prev => {
-            if (prev.length > 0) {
-                const dist = getDistanceMeters(oldLat, oldLng, currentLat, currentLng);
-                setTotalDistance(d => d + dist);
-            }
-            return [...prev, { lat: currentLat, lng: currentLng }];
-        });
+        setCurrentLocation({ lat: currentLat, lng: currentLng });
+
+        if (recordingStatusRef.current === 'recording') {
+           setRealGpsPoints(prev => {
+               if (prev.length > 0) {
+                   const dist = getDistanceMeters(oldLat, oldLng, currentLat, currentLng);
+                   setTotalDistance(d => d + dist);
+               }
+               return [...prev, { lat: currentLat, lng: currentLng }];
+           });
+        }
     }, 1000);
   };
 
@@ -671,7 +728,9 @@ export default function App() {
       else navigator.geolocation.clearWatch(watchIdRef.current); 
       watchIdRef.current = null;
     }
-    setIsRecording(false); setMobileScreen('form');
+    setIsRecording(false); 
+    setRecordingStatus('idle');
+    setMobileScreen('form');
   };
 
   const cancelRecording = () => {
@@ -681,8 +740,67 @@ export default function App() {
         else navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
     }
-    setIsRecording(false); setMobileScreen('home');
+    setIsRecording(false); 
+    setRecordingStatus('idle');
+    setMobileScreen('home');
   };
+
+  // --- EFEK: INISIALISASI PETA LIVE (DI LAYAR REKAM) ---
+  useEffect(() => {
+    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
+    
+    const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    liveMapInstanceRef.current = map;
+    
+    liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 300);
+
+    return () => {
+       map.remove();
+       liveMapInstanceRef.current = null;
+       liveMapPolylineRef.current = null;
+       liveMapMarkerRef.current = null;
+    };
+  }, [mobileScreen, isLeafletLoaded]);
+
+  // --- EFEK: UPDATE PETA LIVE (DI LAYAR REKAM) ---
+  useEffect(() => {
+    if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
+    const map = liveMapInstanceRef.current;
+
+    if (currentLocation) {
+       if (liveMapMarkerRef.current) {
+          liveMapMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+       } else {
+          const blueDotIcon = window.L.divIcon({
+              className: 'live-location-dot',
+              html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`,
+              iconSize: [16, 16], iconAnchor: [8, 8]
+          });
+          liveMapMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon: blueDotIcon, zIndexOffset: 1000 }).addTo(map);
+          map.setView([currentLocation.lat, currentLocation.lng], 17);
+       }
+       
+       // Center otomatis jika di tab peta dan sedang merekam / siap
+       if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) {
+           map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
+       }
+    }
+
+    if (liveMapPolylineRef.current) {
+        liveMapPolylineRef.current.setLatLngs(realGpsPoints.map(pt => [pt.lat, pt.lng]));
+    }
+  }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
+
+  // Hindari bug peta abu-abu saat pindah tab
+  useEffect(() => {
+     if (recordTab === 'map' && liveMapInstanceRef.current) {
+        setTimeout(() => { liveMapInstanceRef.current.invalidateSize(); }, 100);
+     }
+  }, [recordTab]);
+
 
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files);
@@ -1059,51 +1177,126 @@ export default function App() {
 
             {mobileScreen === 'record' && (
               <div className="flex-1 bg-black flex flex-col relative text-white">
-                <div className="flex-1 relative bg-slate-900 flex items-center justify-center overflow-hidden">
-                  <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover"/>
+                
+                {/* --- HEADER TABS: KAMERA VS PETA LIVE --- */}
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/60 backdrop-blur-md rounded-full p-1.5 flex shadow-2xl border border-white/20">
+                    <button onClick={() => setRecordTab('camera')} className={`px-5 py-2 rounded-full text-xs font-black transition-all ${recordTab === 'camera' ? 'bg-white text-black shadow-md' : 'text-slate-300 hover:text-white'}`}>Kamera Mode</button>
+                    <button onClick={() => setRecordTab('map')} className={`px-5 py-2 rounded-full text-xs font-black transition-all flex items-center space-x-1.5 ${recordTab === 'map' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}>
+                        <span>Peta Live</span>
+                        {recordingStatus === 'recording' && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                    </button>
+                </div>
+
+                {/* --- KONTEN TAMPILAN --- */}
+                <div className="flex-1 relative overflow-hidden bg-slate-900">
+                  {/* Layer Kamera */}
+                  <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${recordTab === 'camera' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}/>
                   
-                  <div className="absolute top-12 md:top-6 right-6 bg-red-600 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse flex items-center space-x-1.5 shadow-lg">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <span>LIVE GPS REC</span>
+                  {/* Layer Peta Live */}
+                  <div ref={liveMapContainerRef} className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${recordTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}></div>
+
+                  {/* OVERLAY: Status Perekaman/GPS Tengah Atas */}
+                  <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none w-full px-4">
+                     {recordingStatus === 'locating' && (
+                         <div className="bg-amber-500/95 px-5 py-2.5 rounded-full text-xs font-black flex items-center space-x-2 shadow-xl backdrop-blur-md border border-amber-400 text-white w-auto max-w-full">
+                             <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                             <span>Mencari Sinyal GPS... ({gpsAccuracy}m)</span>
+                         </div>
+                     )}
+                     {recordingStatus === 'ready' && (
+                         <div className="bg-emerald-500/95 px-5 py-2.5 rounded-full text-xs font-black flex items-center space-x-2 shadow-xl backdrop-blur-md border border-emerald-400 text-white animate-pulse">
+                             <span className="text-sm">✅</span>
+                             <span>GPS Siap! Tekan Mulai ({gpsAccuracy}m)</span>
+                         </div>
+                     )}
+                     {recordingStatus === 'recording' && (
+                         <div className="bg-red-600/90 px-4 py-1.5 rounded-full text-[11px] font-black flex items-center space-x-2 shadow-xl backdrop-blur-md border border-red-500 animate-pulse text-white">
+                            <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                            <span>MEREKAM JALUR AKTIF</span>
+                         </div>
+                     )}
+                     {recordingStatus === 'paused' && (
+                         <div className="bg-amber-500/90 px-5 py-2 rounded-full text-xs font-black shadow-xl backdrop-blur-md text-white border border-amber-400">
+                            ⏸️ JEDA REKAMAN (Posisi tidak di-log)
+                         </div>
+                     )}
+                     {recordingStatus === 'auto_paused' && (
+                         <div className="bg-orange-500/95 px-5 py-2 rounded-full text-xs font-black shadow-xl backdrop-blur-md text-white border border-orange-400 flex items-center space-x-2">
+                            <span>⏸️</span>
+                            <span>Auto-Pause (Berhenti Bergerak)</span>
+                         </div>
+                     )}
                   </div>
 
-                  {/* Sesuaikan peringatan sinyal dengan batas akurasi baru (40m) */}
-                  {gpsAccuracy > 40 && gpsAccuracy !== '-' && (
-                    <div className="absolute top-24 md:top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center space-x-2 border border-amber-400 backdrop-blur-sm z-50 whitespace-nowrap">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span>Sinyal Terhalang ({gpsAccuracy}m) - Menunggu Akurasi...</span>
+                  {/* OVERLAY: Statistik Bawah (Jarak, Kecepatan, Akurasi) */}
+                  <div className="absolute bottom-6 left-4 right-4 bg-black/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 flex justify-between z-20 shadow-2xl">
+                      <div className="text-center w-1/3">
+                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Jarak Perekaman</div>
+                          <div className="text-2xl font-black text-white">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-300">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
+                      </div>
+                      <div className="w-px bg-white/10"></div>
+                      <div className="text-center w-1/3">
+                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
+                          <div className="text-2xl font-black text-white">{currentSpeed} <span className="text-xs font-medium text-slate-300">km/h</span></div>
+                      </div>
+                      <div className="w-px bg-white/10"></div>
+                      <div className="text-center w-1/3">
+                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Akurasi GPS</div>
+                          <div className={`text-2xl font-black ${gpsAccuracy < 15 ? 'text-emerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
+                      </div>
+                  </div>
+                  
+                  {/* Tombol Matikan Kamera (Hanya tampil di tab kamera) */}
+                  {recordTab === 'camera' && (
+                    <div className="absolute top-20 right-4 z-20">
+                      <button onClick={() => { if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; } }} className="bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold backdrop-blur-sm border border-white/20 transition-colors">Matikan Video</button>
                     </div>
                   )}
 
-                  <div className="absolute top-12 md:top-6 left-6 bg-black/80 px-4 py-3 rounded-xl text-xs font-bold font-mono backdrop-blur-md border border-white/10">
-                    <div className="text-emerald-400 font-bold mb-1 border-b border-white/20 pb-1">SENSOR DATA:</div>
-                    <div className={gpsAccuracy > 40 ? "text-amber-400" : "text-white"}>Akurasi: {gpsAccuracy} m</div>
-                    <div>Speed: {currentSpeed} km/h</div>
-                    <div>Jarak: {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
-                    <div>Log Disimpan: {realGpsPoints.length}</div>
-                  </div>
-
-                  <div className="absolute top-32 md:top-24 right-6">
-                    <button onClick={() => { if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; } }} className="bg-black/80 hover:bg-black/90 text-white px-4 py-2 rounded-xl text-xs font-bold backdrop-blur-md border border-white/20">Matikan Kamera</button>
-                  </div>
-
-                  <div className="absolute bottom-8 w-full px-6 space-y-3">
-                    {realGpsPoints.length === 0 && (
-                      <button onClick={simulateGpsMovement} className="w-full bg-slate-800 text-white text-xs py-3 rounded-xl font-bold shadow-lg">Gagal Sinyal GPS? Gunakan Simulasi</button>
-                    )}
-                    <div className="bg-black/85 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-left text-xs font-mono h-24 overflow-hidden flex flex-col justify-end">
-                      <div className="text-blue-400 font-bold mb-1">Koordinat Terakhir:</div>
-                      {realGpsPoints.slice(-2).map((pt, i) => <div key={i} className="text-emerald-300">► {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}</div>)}
-                      {realGpsPoints.length === 0 && <div className="text-slate-400 animate-pulse mt-2">Mencari satelit...</div>}
-                    </div>
-                  </div>
+                  {/* Tombol Simulasi Darurat jika GPS tidak kunjung dapat */}
+                  {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
+                      <button onClick={simulateGpsMovement} className="absolute bottom-32 right-4 bg-slate-800/90 text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
+                  )}
                 </div>
 
-                <div className="p-6 bg-slate-950 flex justify-between items-center z-10 pb-8">
-                  <button onClick={cancelRecording} className="text-slate-400 hover:text-white font-bold text-sm">Batal</button>
-                  <button onClick={stopRealHardware} className="bg-white text-black px-8 py-4 rounded-full font-black text-sm shadow-xl flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div><span>Selesai & Lapor</span>
-                  </button>
+                {/* --- KONTROL TOMBOL UTAMA --- */}
+                <div className="p-5 bg-slate-950 flex flex-col items-center z-30 border-t border-white/10 pb-8">
+                  
+                  {recordingStatus === 'locating' || recordingStatus === 'ready' ? (
+                     <div className="w-full flex space-x-3">
+                         <button onClick={cancelRecording} className="w-1/3 bg-slate-800 text-slate-300 hover:text-white rounded-2xl py-4 font-bold text-sm transition-colors">Batal</button>
+                         <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-4 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-all ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white hover:bg-emerald-600 scale-100' : 'bg-slate-800 text-slate-500 cursor-not-allowed scale-95'}`}>
+                             {recordingStatus === 'locating' ? <span>Mencari GPS...</span> : <span>MULAI JALAN</span>}
+                         </button>
+                     </div>
+                  ) : (
+                     <div className="w-full flex space-x-3">
+                         {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
+                             <>
+                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                     <span>JEDA</span>
+                                 </button>
+                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                     <div className="w-4 h-4 bg-white rounded-sm"></div>
+                                     <span>SELESAI LAPOR</span>
+                                 </button>
+                             </>
+                         )}
+                         {recordingStatus === 'paused' && (
+                             <>
+                                 <button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                     <span>LANJUTKAN</span>
+                                 </button>
+                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                     <div className="w-4 h-4 bg-white rounded-sm"></div>
+                                     <span>SELESAI LAPOR</span>
+                                 </button>
+                             </>
+                         )}
+                     </div>
+                  )}
                 </div>
               </div>
             )}
