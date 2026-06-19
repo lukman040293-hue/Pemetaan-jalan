@@ -1172,6 +1172,10 @@ export default function App() {
           .sidebar-open .leaflet-left { left: calc(85vw + 15px) !important; }
         }
 
+        /* Menyelaraskan kotak Layer Peta dengan Zoom Control (+/-) */
+        .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
+        .leaflet-touch .leaflet-control-layers-toggle { width: 34px !important; height: 34px !important; background-size: 18px !important; }
+
         /* Tombol Detail di dalam Popup */
         .btn-detail-popup { margin-top: 12px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
@@ -1738,66 +1742,66 @@ export default function App() {
                  </div>
 
                  {/* Container Kotak Legenda (Flex Wrap untuk kotak individual) */}
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1.5 md:gap-3 pointer-events-auto pr-2 md:pr-4 pl-[52px] md:pl-[64px] pb-4`}>
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1.5 md:gap-2 pointer-events-auto pr-2 md:pr-4 pl-[52px] md:pl-[56px] pb-4`}>
                     
                     {/* --- KELOMPOK KONDISI JALAN --- */}
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="w-2 h-2 md:w-3 md:h-3 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">Baik</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Baik</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="w-2 h-2 md:w-3 md:h-3 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">R. Ringan</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Ringan</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="w-2 h-2 md:w-3 md:h-3 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">R. Sedang</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Sedang</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="w-2 h-2 md:w-3 md:h-3 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">R. Parah</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Parah</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
                        </div>
                     </div>
 
                     {/* Pembatas Visual Halus antara Kondisi dan Material (Hanya di Desktop) */}
-                    <div className="hidden lg:block w-1.5 h-10 bg-slate-400/30 rounded-full mx-1"></div>
+                    <div className="hidden lg:block w-1.5 h-6 bg-slate-400/30 rounded-full mx-1"></div>
 
                     {/* --- KELOMPOK MATERIAL JALAN --- */}
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="text-sm md:text-2xl leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xs md:text-lg leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">Aspal</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Aspal</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="text-sm md:text-2xl leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xs md:text-lg leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">Beton</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Beton</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[70px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center justify-center md:justify-start gap-1.5 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
-                       <span className="text-sm md:text-2xl leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
+                    <div className="flex-1 min-w-[60px] md:flex-none bg-white/80 backdrop-blur-xl shadow-md border border-white/60 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center justify-center md:justify-start gap-1 md:gap-2 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xs md:text-lg leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
                        <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[7px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 md:mb-1 whitespace-nowrap">Tanah</span>
-                          <span className="text-[17px] md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
+                          <span className="text-[6px] md:text-[8px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Tanah</span>
+                          <span className="text-sm md:text-xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
                        </div>
                     </div>
 
