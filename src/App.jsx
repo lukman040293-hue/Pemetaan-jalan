@@ -1674,79 +1674,68 @@ export default function App() {
             <section className={`absolute inset-0 z-0 flex flex-col ${isSidebarOpen ? 'sidebar-open' : ''}`}>
               
               {/* --- FLOATING WIDGETS (KOTAK LEGENDA MENGAMBANG) --- */}
-              <div className={`absolute top-4 md:top-6 z-[400] flex items-center gap-3 overflow-x-auto hide-scrollbar pointer-events-none transition-all duration-300 px-4 right-0 ${isSidebarOpen ? 'left-0 md:left-[380px]' : 'left-0'}`}>
-                 <div className="flex items-center gap-3 pointer-events-auto shrink-0 ml-12 md:ml-14">
-                    {/* ml-12 memberi jarak agar tidak menabrak tombol zoom + - Leaflet di pojok kiri */}
+              <div className={`absolute top-3 md:top-5 z-[400] w-full pointer-events-none transition-all duration-300 ${isSidebarOpen ? 'md:pl-[380px]' : 'pl-0'}`}>
+                 {/* Container yg bisa di-scroll, padding kiri agar tidak menabrak tombol Zoom Leaflet */}
+                 <div className="flex items-center gap-2 md:gap-3 overflow-x-auto hide-scrollbar pointer-events-auto pr-4 pl-[52px] md:pl-[64px] pb-4">
                     
-                    {/* Kotak Total */}
-                    <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-white/80 px-4 py-2.5 rounded-2xl flex items-center gap-3 shrink-0 hover:-translate-y-1 transition-transform cursor-default">
-                      <div className="bg-blue-50 text-blue-600 p-2 rounded-xl shadow-inner border border-blue-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Rute</div>
-                        <div className="text-base font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.total} /> Data</div>
-                      </div>
-                    </div>
-
                     {/* Kotak Kondisi */}
-                    <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-white/80 px-4 py-2.5 rounded-2xl flex items-center gap-4 shrink-0 hover:-translate-y-1 transition-transform cursor-default">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#10B981] border border-white shadow-sm ring-2 ring-[#10B981]/20"></span>
+                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0 hover:-translate-y-0.5 transition-transform cursor-default">
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#10B981] shadow-sm"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Baik</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Baik</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
                         </div>
                       </div>
-                      <div className="w-px h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#FBBF24] border border-white shadow-sm ring-2 ring-[#FBBF24]/20"></span>
+                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FBBF24] shadow-sm"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Ringan</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Ringan</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                         </div>
                       </div>
-                      <div className="w-px h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#F97316] border border-white shadow-sm ring-2 ring-[#F97316]/20"></span>
+                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#F97316] shadow-sm"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Sedang</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Sedang</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
                         </div>
                       </div>
-                      <div className="w-px h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#EF4444] border border-white shadow-sm ring-2 ring-[#EF4444]/20"></span>
+                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#EF4444] shadow-sm"></span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Rusak Parah</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Parah</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
                         </div>
                       </div>
                     </div>
 
                     {/* Kotak Material */}
-                    <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-white/80 px-4 py-2.5 rounded-2xl flex items-center gap-4 shrink-0 hover:-translate-y-1 transition-transform cursor-default">
-                       <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
+                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0 hover:-translate-y-0.5 transition-transform cursor-default">
+                       <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Aspal</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Aspal</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
                         </div>
                       </div>
-                      <div className="w-px h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
+                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Beton</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Beton</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
                         </div>
                       </div>
-                      <div className="w-px h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none opacity-80 drop-shadow-sm">🟤</span>
+                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <span className="text-sm md:text-lg leading-none opacity-80 drop-shadow-sm">🟤</span>
                         <div className="flex flex-col">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Tanah</span>
-                           <span className="text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
+                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Tanah</span>
+                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
                         </div>
                       </div>
                     </div>
