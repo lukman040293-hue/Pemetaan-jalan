@@ -1245,6 +1245,18 @@ export default function App() {
                           <div className={`text-2xl font-black ${gpsAccuracy < 15 ? 'text-emerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
                       </div>
                   </div>
+
+                  {/* OVERLAY: Log Koordinat Terakhir */}
+                  <div className="absolute bottom-28 left-4 right-4 md:left-auto md:w-64 bg-black/70 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-left text-[10px] font-mono z-20 pointer-events-none shadow-lg transition-all">
+                    <div className="flex justify-between items-center mb-1.5 border-b border-white/20 pb-1">
+                      <span className="text-blue-400 font-bold">Log Koordinat Aktif</span>
+                      <span className="text-white font-bold bg-white/20 px-1.5 py-0.5 rounded">{realGpsPoints.length} Titik</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      {realGpsPoints.slice(-2).map((pt, i) => <div key={i} className="text-emerald-300">► {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}</div>)}
+                      {realGpsPoints.length === 0 && <div className="text-slate-400 animate-pulse">Menunggu data titik satelit...</div>}
+                    </div>
+                  </div>
                   
                   {/* Tombol Matikan Kamera (Hanya tampil di tab kamera) */}
                   {recordTab === 'camera' && (
