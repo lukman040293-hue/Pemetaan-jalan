@@ -431,16 +431,6 @@ export default function App() {
           lineCap: 'round', 
           lineJoin: 'round'
         }).addTo(layerGroup);
-        
-        latlngs.forEach(coord => {
-          window.L.circleMarker(coord, { 
-            radius: 2, 
-            fillColor: '#ffffff', 
-            color: getConditionColor(road.condition), 
-            weight: 1.5, 
-            fillOpacity: 1 
-          }).addTo(layerGroup);
-        });
 
         // Pin Awal (Hijau) & Akhir (Merah)
         window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#ffffff', weight: 2, fillOpacity: 1 }).addTo(layerGroup);
@@ -1747,86 +1737,70 @@ export default function App() {
                     </button>
                  </div>
 
-                 {/* Container Kotak Legenda (Bisa full width di mobile) */}
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 pointer-events-auto pr-4 pl-[52px] md:pl-[64px] pb-4`}>
+                 {/* Container Kotak Legenda (Flex Wrap untuk kotak individual) */}
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-center gap-2 md:gap-3 pointer-events-auto pr-4 pl-[52px] md:pl-[64px] pb-4`}>
                     
-                    {/* Kotak Kondisi */}
-                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-3 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex-1 md:flex-none hover:-translate-y-0.5 transition-transform cursor-default">
-                       <div className="grid grid-cols-2 md:flex md:flex-row items-center gap-3 md:gap-4">
-                          {/* Baik */}
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#10B981] shadow-sm"></span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Baik</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
-                             </div>
-                          </div>
-                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
-
-                          {/* Rusak Ringan */}
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FBBF24] shadow-sm"></span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Ringan</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
-                             </div>
-                          </div>
-                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
-
-                          {/* Rusak Sedang */}
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#F97316] shadow-sm"></span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Sedang</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
-                             </div>
-                          </div>
-                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
-
-                          {/* Rusak Parah */}
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#EF4444] shadow-sm"></span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Parah</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
-                             </div>
-                          </div>
+                    {/* --- KELOMPOK KONDISI JALAN --- */}
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-3 h-3 md:w-4 md:h-4 rounded-full shadow-sm bg-[#10B981]"></span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">Baik</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
                        </div>
                     </div>
 
-                    {/* Kotak Material */}
-                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-3 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex-1 md:flex-none hover:-translate-y-0.5 transition-transform cursor-default">
-                       <div className="grid grid-cols-3 md:flex md:flex-row items-center gap-2 md:gap-4">
-                          {/* Aspal */}
-                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
-                             <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Aspal</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
-                             </div>
-                          </div>
-                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
-
-                          {/* Beton */}
-                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
-                             <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Beton</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
-                             </div>
-                          </div>
-                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
-
-                          {/* Tanah */}
-                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
-                             <span className="text-sm md:text-lg leading-none opacity-80 drop-shadow-sm">🟤</span>
-                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Tanah</span>
-                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
-                             </div>
-                          </div>
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-3 h-3 md:w-4 md:h-4 rounded-full shadow-sm bg-[#FBBF24]"></span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">R. Ringan</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                        </div>
                     </div>
+
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-3 h-3 md:w-4 md:h-4 rounded-full shadow-sm bg-[#F97316]"></span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">R. Sedang</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                       </div>
+                    </div>
+
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="w-3 h-3 md:w-4 md:h-4 rounded-full shadow-sm bg-[#EF4444]"></span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">R. Parah</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                       </div>
+                    </div>
+
+                    {/* Pembatas Visual Halus antara Kondisi dan Material (Hanya di Desktop) */}
+                    <div className="hidden lg:block w-1.5 h-10 bg-slate-400/30 rounded-full mx-1"></div>
+
+                    {/* --- KELOMPOK MATERIAL JALAN --- */}
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xl md:text-2xl leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">Aspal</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
+                       </div>
+                    </div>
+
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xl md:text-2xl leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">Beton</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
+                       </div>
+                    </div>
+
+                    <div className="bg-white/75 backdrop-blur-xl shadow-lg border border-white/60 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 hover:-translate-y-1 transition-transform cursor-default">
+                       <span className="text-xl md:text-2xl leading-none opacity-80 drop-shadow-sm">🟤</span>
+                       <div className="flex flex-col">
+                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-1">Tanah</span>
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
+                       </div>
+                    </div>
+
                  </div>
               </div>
 
