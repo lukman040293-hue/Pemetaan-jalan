@@ -217,6 +217,9 @@ export default function App() {
   
   // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  // Tambahan state untuk menyembunyikan legenda yang mengambang
+  const [showFloatingLegend, setShowFloatingLegend] = useState(window.innerWidth >= 768);
+
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
   const adminLayerGroupRef = useRef(null);
@@ -1295,7 +1298,7 @@ export default function App() {
                       <div className="w-px bg-white/10"></div>
                       <div className="text-center w-1/3">
                           <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Akurasi GPS</div>
-                          <div className={`text-2xl font-black ${gpsAccuracy < 15 ? 'text-emerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
+                          <div className={`text-2xl font-black ${gpsAccuracy < 15 ? 'textemerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
                       </div>
                   </div>
 
@@ -1675,71 +1678,101 @@ export default function App() {
               
               {/* --- FLOATING WIDGETS (KOTAK LEGENDA MENGAMBANG) --- */}
               <div className={`absolute top-3 md:top-5 z-[400] w-full pointer-events-none transition-all duration-300 ${isSidebarOpen ? 'md:pl-[380px]' : 'pl-0'}`}>
-                 {/* Container yg bisa di-scroll, padding kiri agar tidak menabrak tombol Zoom Leaflet */}
-                 <div className="flex items-center gap-2 md:gap-3 overflow-x-auto hide-scrollbar pointer-events-auto pr-4 pl-[52px] md:pl-[64px] pb-4">
+                 
+                 {/* Tombol Toggle Legenda (Hanya Mobile) */}
+                 <div className="pl-[52px] pr-4 mb-2 pointer-events-auto md:hidden">
+                    <button 
+                       onClick={() => setShowFloatingLegend(!showFloatingLegend)}
+                       className="bg-white/90 backdrop-blur-md shadow-sm border border-white/50 px-3 py-2 rounded-xl text-[10px] font-extrabold text-slate-700 flex items-center justify-between w-full transition-colors hover:bg-slate-50"
+                    >
+                       <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+                          <span>{showFloatingLegend ? 'Sembunyikan Legenda' : 'Tampilkan Legenda'}</span>
+                       </div>
+                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className={`w-3.5 h-3.5 transition-transform duration-300 ${showFloatingLegend ? 'rotate-180' : ''}`}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                    </button>
+                 </div>
+
+                 {/* Container Kotak Legenda (Bisa full width di mobile) */}
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 pointer-events-auto pr-4 pl-[52px] md:pl-[64px] pb-4`}>
                     
                     {/* Kotak Kondisi */}
-                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0 hover:-translate-y-0.5 transition-transform cursor-default">
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#10B981] shadow-sm"></span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Baik</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
-                        </div>
-                      </div>
-                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FBBF24] shadow-sm"></span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Ringan</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
-                        </div>
-                      </div>
-                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#F97316] shadow-sm"></span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Sedang</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
-                        </div>
-                      </div>
-                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#EF4444] shadow-sm"></span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Parah</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
-                        </div>
-                      </div>
+                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-3 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex-1 md:flex-none hover:-translate-y-0.5 transition-transform cursor-default">
+                       <div className="grid grid-cols-2 md:flex md:flex-row items-center gap-3 md:gap-4">
+                          {/* Baik */}
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#10B981] shadow-sm"></span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Baik</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
+                             </div>
+                          </div>
+                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
+
+                          {/* Rusak Ringan */}
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FBBF24] shadow-sm"></span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Ringan</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
+                             </div>
+                          </div>
+                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
+
+                          {/* Rusak Sedang */}
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#F97316] shadow-sm"></span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Sedang</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                             </div>
+                          </div>
+                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
+
+                          {/* Rusak Parah */}
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                             <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#EF4444] shadow-sm"></span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Rusak Parah</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                             </div>
+                          </div>
+                       </div>
                     </div>
 
                     {/* Kotak Material */}
-                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Aspal</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
-                        </div>
-                      </div>
-                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Beton</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
-                        </div>
-                      </div>
-                      <div className="w-px h-5 md:h-6 bg-slate-200"></div>
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <span className="text-sm md:text-lg leading-none opacity-80 drop-shadow-sm">🟤</span>
-                        <div className="flex flex-col">
-                           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Tanah</span>
-                           <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
-                        </div>
-                      </div>
-                    </div>
+                    <div className="bg-white/85 backdrop-blur-md shadow-md border border-white/50 px-3 py-3 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl flex-1 md:flex-none hover:-translate-y-0.5 transition-transform cursor-default">
+                       <div className="grid grid-cols-3 md:flex md:flex-row items-center gap-2 md:gap-4">
+                          {/* Aspal */}
+                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
+                             <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🛣️</span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Aspal</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
+                             </div>
+                          </div>
+                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
 
+                          {/* Beton */}
+                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
+                             <span className="text-sm md:text-lg leading-none grayscale opacity-80 drop-shadow-sm">🧱</span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Beton</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
+                             </div>
+                          </div>
+                          <div className="hidden md:block w-px h-5 md:h-6 bg-slate-200"></div>
+
+                          {/* Tanah */}
+                          <div className="flex items-center justify-center md:justify-start gap-1.5 md:gap-2">
+                             <span className="text-sm md:text-lg leading-none opacity-80 drop-shadow-sm">🟤</span>
+                             <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase leading-none mb-0.5">Tanah</span>
+                                <span className="text-xs md:text-sm font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
                  </div>
               </div>
 
