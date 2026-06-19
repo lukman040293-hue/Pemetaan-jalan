@@ -1976,53 +1976,76 @@ export default function App() {
                     )}
                   </div>
                   
-                  <div className="w-full p-5 md:p-6 flex flex-col justify-between bg-white/80 text-slate-800 overflow-y-auto">
-                    <div>
-                      <div className="flex justify-between items-start mb-2 pr-12 md:pr-16">
-                        <div className="text-[10px] md:text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1.5">{formatKel(selectedRoad.kelurahan)}</div>
-                        <div className="flex space-x-1">
-                           <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-100/80 font-medium px-3 py-1.5 transition-colors rounded-full flex items-center bg-blue-50/50">
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
-                             Cetak PDF
-                           </button>
-                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:bg-rose-100/80 font-medium px-3 py-1.5 transition-colors rounded-full bg-rose-50/50">Hapus Rute</button>
-                        </div>
+                  <div className="w-full p-5 md:p-6 flex flex-col justify-start bg-white/80 text-slate-800 overflow-y-auto flex-1 min-h-0">
+                    <div className="flex justify-end items-start mb-3 pr-12 md:pr-16">
+                      <div className="flex space-x-1">
+                         <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-100/80 font-medium px-3 py-1.5 transition-colors rounded-full flex items-center bg-blue-50/50 shadow-sm border border-blue-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
+                           Cetak PDF
+                         </button>
+                         <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:bg-rose-100/80 font-medium px-3 py-1.5 transition-colors rounded-full bg-rose-50/50 shadow-sm border border-rose-100">Hapus Rute</button>
                       </div>
-                      
-                      <h4 className="text-xl md:text-2xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
-                      
-                      <p className="text-sm md:text-base text-slate-600 leading-relaxed font-normal mb-3">
-                        "{selectedRoad.notes || "Tidak ada catatan."}"
-                      </p>
-                      
-                      {selectedRoad.pinLocation && selectedRoad.pinLocation.lat && selectedRoad.pinLocation.lng && (
-                        <div className="text-xs text-slate-500 font-normal inline-flex items-center">
-                          <span className="mr-1.5 text-amber-500">📍</span> Pin: {selectedRoad.pinLocation.lat.toFixed(5)}, {selectedRoad.pinLocation.lng.toFixed(5)}
-                        </div>
-                      )}
-
-                      {selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-slate-200/60">
-                          <span className="text-[10px] md:text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
-                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300">
-                            {selectedRoad.photoUrls.map((url, i) => (
-                              <a href={url} target="_blank" rel="noreferrer" key={i} className="flex-shrink-0 relative group">
-                                <img src={url} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-slate-200 hover:border-blue-300 shadow-sm transition-colors" />
-                                <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
-                                </div>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
-                    <div className="flex items-center gap-2 text-[10px] md:text-xs font-normal text-slate-500 mt-4 pt-4 border-t border-slate-200/60">
-                      <span>{selectedRoad.date}</span>
-                      <span className="text-slate-300">•</span>
-                      <span>Pjg: {formatLength(selectedRoad.length)}</span>
+                    <h4 className="text-xl md:text-2xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                    <p className="text-sm md:text-base text-slate-600 font-normal mb-4 border-b border-slate-200/60 pb-3 italic">
+                      "{selectedRoad.notes || 'Tidak ada catatan.'}"
+                    </p>
+                    
+                    <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/70 shadow-sm mb-2">
+                      <table className="w-full text-left text-[11px] md:text-sm border-collapse">
+                        <tbody className="divide-y divide-slate-200/60">
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 w-[35%] md:w-[30%] bg-slate-50/50">Kelurahan</th>
+                            <td className="py-2.5 px-3 md:px-4 font-normal text-slate-700">{formatKel(selectedRoad.kelurahan)}</td>
+                          </tr>
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 bg-slate-50/50">Jenis Jalan</th>
+                            <td className="py-2.5 px-3 md:px-4 font-normal text-slate-700">{selectedRoad.jenisJalan || '-'}</td>
+                          </tr>
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 bg-slate-50/50">Pjg. Rute</th>
+                            <td className="py-2.5 px-3 md:px-4 font-normal text-slate-700">{formatLength(selectedRoad.length)}</td>
+                          </tr>
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 bg-slate-50/50">Kondisi</th>
+                            <td className="py-2.5 px-3 md:px-4">
+                              <span className="px-2 py-0.5 rounded text-[10px] md:text-xs font-normal whitespace-nowrap" style={{ color: getConditionColor(selectedRoad.condition), backgroundColor: `${getConditionColor(selectedRoad.condition)}20` }}>
+                                {selectedRoad.condition}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 bg-slate-50/50 align-top">Koordinat Pin</th>
+                            <td className="py-2.5 px-3 md:px-4 text-slate-700 font-normal">
+                              {selectedRoad.pinLocation && selectedRoad.pinLocation.lat ? (
+                                <>{selectedRoad.pinLocation.lat.toFixed(6)}, {selectedRoad.pinLocation.lng.toFixed(6)}</>
+                              ) : '-'}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th className="py-2.5 px-3 md:px-4 font-normal text-slate-500 bg-slate-50/50">Tanggal</th>
+                            <td className="py-2.5 px-3 md:px-4 font-normal text-slate-700">{selectedRoad.date}</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
+
+                    {selectedRoad.photoUrls && selectedRoad.photoUrls.length > 0 && (
+                      <div className="mt-2 pt-4 border-t border-slate-200/60">
+                        <span className="text-[10px] md:text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Galeri Foto ({selectedRoad.photoUrls.length})</span>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300">
+                          {selectedRoad.photoUrls.map((url, i) => (
+                            <a href={url} target="_blank" rel="noreferrer" key={i} className="flex-shrink-0 relative group">
+                              <img src={url} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-slate-200 hover:border-blue-300 shadow-sm transition-colors" />
+                              <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 text-white drop-shadow-md"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
