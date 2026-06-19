@@ -1918,15 +1918,6 @@ export default function App() {
                               <span className="text-[10px] font-semibold text-slate-600 truncate">{road.jenisJalan || 'Aspal'} • {formatKel(road.kelurahan)}</span>
                             </div>
                             
-                            <div className="text-[10px] text-slate-500 italic truncate mb-1">
-                              "{road.notes || 'Tidak ada catatan'}"
-                            </div>
-                            
-                            <div className="text-[9px] font-mono text-blue-600 font-medium mb-1.5 flex items-center truncate">
-                              <span className="mr-1 text-amber-500">📍</span>
-                              {road.pinLocation && road.pinLocation.lat ? `${road.pinLocation.lat.toFixed(5)}, ${road.pinLocation.lng.toFixed(5)}` : 'Tidak ada pin lokasi'}
-                            </div>
-
                             <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">
                               <span>{road.date}</span>
                               <span className="font-mono bg-white/60 px-1.5 py-0.5 rounded border border-white/50 text-slate-600 font-bold shadow-sm">
