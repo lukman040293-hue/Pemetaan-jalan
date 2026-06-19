@@ -1728,10 +1728,10 @@ export default function App() {
               <div className={`absolute top-3 md:top-5 z-[400] w-full pointer-events-none transition-all duration-300 ${isSidebarOpen ? 'md:pl-[380px]' : 'pl-0'}`}>
                  
                  {/* Tombol Toggle Legenda (Hanya Mobile) */}
-                 <div className="pl-[52px] pr-2 mb-1 pointer-events-auto md:hidden">
+                 <div className="pl-[52px] pr-2 mb-1 pointer-events-none md:hidden">
                     <button 
                        onClick={() => setShowFloatingLegend(!showFloatingLegend)}
-                       className="bg-white/90 backdrop-blur-md shadow-sm border border-white/50 px-2 py-1 rounded-md text-[8px] font-extrabold text-slate-700 flex items-center justify-between w-full transition-colors hover:bg-slate-50"
+                       className="pointer-events-auto bg-white/90 backdrop-blur-md shadow-sm border border-white/50 px-2 py-1 rounded-md text-[8px] font-extrabold text-slate-700 flex items-center justify-between w-full transition-colors hover:bg-slate-50"
                     >
                        <div className="flex items-center gap-1.5">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3 h-3 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
@@ -1742,10 +1742,10 @@ export default function App() {
                  </div>
 
                  {/* Container Kotak Legenda (Flex Wrap untuk kotak individual) */}
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1 md:gap-1.5 pointer-events-auto pr-2 md:pr-4 pl-[52px] md:pl-[56px] pb-2`}>
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1 md:gap-1.5 pointer-events-none pr-2 md:pr-4 pl-[52px] md:pl-[56px] pb-2`}>
                     
                     {/* --- KELOMPOK KONDISI JALAN --- */}
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Baik</span>
@@ -1753,7 +1753,7 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Ringan</span>
@@ -1761,7 +1761,7 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Sedang</span>
@@ -1769,7 +1769,7 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Parah</span>
@@ -1781,7 +1781,7 @@ export default function App() {
                     <div className="hidden lg:block w-1 h-5 bg-slate-400/30 rounded-full mx-0.5"></div>
 
                     {/* --- KELOMPOK MATERIAL JALAN --- */}
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="text-[10px] md:text-sm leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Aspal</span>
@@ -1789,7 +1789,7 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="text-[10px] md:text-sm leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Beton</span>
@@ -1797,7 +1797,7 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
+                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
                        <span className="text-[10px] md:text-sm leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
                        <div className="flex flex-col items-center md:items-start">
                           <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Tanah</span>
@@ -1884,9 +1884,9 @@ export default function App() {
                              const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
                              adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(latlngs), { padding: [40, 40] });
                           }
-                      }} className={`p-3 rounded-2xl border bg-white/50 backdrop-blur-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:bg-white/70 ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500 bg-white/80' : 'border-white/60 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
+                      }} className={`p-3 rounded-2xl border bg-white/50 backdrop-blur-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:bg-white/70 flex flex-col gap-2 ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500 bg-white/80' : 'border-white/60 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
                         <div className="flex gap-3">
-                          <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100/50 relative border border-white/60 shadow-sm">
+                          <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100/50 relative border border-white/60 shadow-sm">
                             {road.photoUrls && road.photoUrls.length > 0 ? (
                               <>
                                 <img src={road.photoUrls[0]} alt="Foto" className="w-full h-full object-cover" />
@@ -1912,14 +1912,24 @@ export default function App() {
                           </div>
 
                           <div className="flex-1 flex flex-col min-w-0 py-0.5">
-                            <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate pr-2 mb-1.5">{road.name}</h4>
-                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                            <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate pr-2 mb-1">{road.name}</h4>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                               <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm" style={{ backgroundColor: getConditionColor(road.condition)}}>{road.condition}</span>
                               <span className="text-[10px] font-semibold text-slate-600 truncate">{road.jenisJalan || 'Aspal'} • {formatKel(road.kelurahan)}</span>
                             </div>
-                            <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500">
+                            
+                            <div className="text-[10px] text-slate-500 italic truncate mb-1">
+                              "{road.notes || 'Tidak ada catatan'}"
+                            </div>
+                            
+                            <div className="text-[9px] font-mono text-blue-600 font-medium mb-1.5 flex items-center truncate">
+                              <span className="mr-1 text-amber-500">📍</span>
+                              {road.pinLocation && road.pinLocation.lat ? `${road.pinLocation.lat.toFixed(5)}, ${road.pinLocation.lng.toFixed(5)}` : 'Tidak ada pin lokasi'}
+                            </div>
+
+                            <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">
                               <span>{road.date}</span>
-                              <span className="font-mono bg-white/60 px-1.5 py-0.5 rounded border border-white/50 text-slate-600 font-bold">
+                              <span className="font-mono bg-white/60 px-1.5 py-0.5 rounded border border-white/50 text-slate-600 font-bold shadow-sm">
                                 {formatLength(road.length)} • {road.realGps?.length || 0} GPS
                               </span>
                             </div>
@@ -1952,6 +1962,14 @@ export default function App() {
                     {selectedRoad.videoUrl ? (
                       <>
                         <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain bg-black"></video>
+                        
+                        {/* Watermark Tanggal */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[5]">
+                          <span className="text-white/50 text-[10px] md:text-xs font-black tracking-widest uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] select-none">
+                            {selectedRoad.date}
+                          </span>
+                        </div>
+
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
