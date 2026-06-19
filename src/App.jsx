@@ -433,8 +433,8 @@ export default function App() {
         }).addTo(layerGroup);
 
         // Pin Awal (Hijau) & Akhir (Merah)
-        window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#ffffff', weight: 2, fillOpacity: 1 }).addTo(layerGroup);
-        window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, fillColor: '#EF4444', color: '#ffffff', weight: 2, fillOpacity: 1 }).addTo(layerGroup);
+        window.L.circleMarker(latlngs[0], { radius: 3, fillColor: '#10B981', color: '#ffffff', weight: 1.5, fillOpacity: 1 }).addTo(layerGroup);
+        window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 3, fillColor: '#EF4444', color: '#ffffff', weight: 1.5, fillOpacity: 1 }).addTo(layerGroup);
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
@@ -591,8 +591,8 @@ export default function App() {
     if (realGpsPoints.length > 0) {
       const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
       window.L.polyline(latlngs, { color: getConditionColor(formData.condition), weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-      window.L.circleMarker(latlngs[0], { radius: 5, fillColor: '#10B981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
-      window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, fillColor: '#EF4444', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+      window.L.circleMarker(latlngs[0], { radius: 3, fillColor: '#10B981', color: '#fff', weight: 1.5, fillOpacity: 1 }).addTo(map);
+      window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 3, fillColor: '#EF4444', color: '#fff', weight: 1.5, fillOpacity: 1 }).addTo(map);
       map.fitBounds(window.L.latLngBounds(latlngs), { padding: [30, 30] });
     } else {
       map.setView([-0.425, 117.185], 13);
@@ -1166,10 +1166,10 @@ export default function App() {
 
         /* Mendorong tombol Zoom & Layer ke kanan agar tidak tertutup sidebar */
         .leaflet-left { transition: left 0.3s ease-in-out; }
-        .sidebar-open .leaflet-left { left: 395px !important; }
+        .sidebar-open .leaflet-left { left: 380px !important; }
         @media (max-width: 768px) {
           /* Menggunakan vw agar lebih presisi di layar HP */
-          .sidebar-open .leaflet-left { left: calc(85vw + 15px) !important; }
+          .sidebar-open .leaflet-left { left: calc(85vw + 10px) !important; }
         }
 
         /* Menyelaraskan kotak Layer Peta dengan Zoom Control (+/-) */
@@ -1728,7 +1728,7 @@ export default function App() {
               <div className={`absolute top-3 md:top-5 z-[400] w-full pointer-events-none transition-all duration-300 ${isSidebarOpen ? 'md:pl-[380px]' : 'pl-0'}`}>
                  
                  {/* Tombol Toggle Legenda (Hanya Mobile) */}
-                 <div className="pl-[52px] pr-2 mb-1 pointer-events-none md:hidden">
+                 <div className="pl-[60px] pr-2 mb-1 pointer-events-none md:hidden">
                     <button 
                        onClick={() => setShowFloatingLegend(!showFloatingLegend)}
                        className="pointer-events-auto bg-white/90 backdrop-blur-md shadow-sm border border-white/50 px-2 py-1 rounded-md text-[8px] font-extrabold text-slate-700 flex items-center justify-between w-full transition-colors hover:bg-slate-50"
@@ -1742,7 +1742,7 @@ export default function App() {
                  </div>
 
                  {/* Container Kotak Legenda (Flex Wrap untuk kotak individual) */}
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1 md:gap-1.5 pointer-events-none pr-2 md:pr-4 pl-[52px] md:pl-[56px] pb-2`}>
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1 md:gap-1.5 pointer-events-none pr-2 md:pr-4 pl-[60px] md:pl-[72px] pb-2`}>
                     
                     {/* --- KELOMPOK KONDISI JALAN --- */}
                     <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
