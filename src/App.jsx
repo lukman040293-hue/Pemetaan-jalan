@@ -438,10 +438,26 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
+          // --- PERUBAHAN IKON PIN ADMIN (Gaya Bulat/Lolipop) ---
+          const conditionColor = getConditionColor(road.condition);
+          // Menggunakan SVG Inline untuk bentuk pin bulat bertangkai dengan pantulan cahaya
+          const pinSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="14" height="24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); transition: all 0.2s ease;">
+              <!-- Tiang Penyangga -->
+              <rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" />
+              <!-- Lingkaran Utama (Berwarna sesuai kondisi) -->
+              <circle cx="12" cy="12" r="12" fill="${conditionColor}" />
+              <!-- Titik Pantulan Cahaya di kiri atas -->
+              <circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" />
+            </svg>
+          `;
+
           const pinIcon = window.L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="background-color: ${getConditionColor(road.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
-            iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -18]
+            className: 'custom-pin-svg', // Nama class baru
+            html: pinSvg,
+            iconSize: [14, 24], // Ukuran ikon diperkecil lagi
+            iconAnchor: [7, 24], // Titik jangkar di tengah bawah tiang
+            popupAnchor: [0, -24] // Popup muncul di atas pin
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -653,12 +669,30 @@ export default function App() {
 
     if (pinLocation) {
       if (surveyorMarkerRef.current) {
-        surveyorMarkerRef.current.setLatLng([pinLocation.lat, pinLocation.lng]);
-      } else {
+        // Hapus marker lama agar bisa dibuat ulang dengan warna yang di-update
+        surveyorMarkerRef.current.remove();
+        surveyorMarkerRef.current = null; 
+      }
+      
+      if (!surveyorMarkerRef.current) {
+        // --- PERUBAHAN IKON PIN SURVEYOR (Gaya Bulat/Lolipop - Sedikit Lebih Besar untuk Mobile) ---
+        const conditionColor = getConditionColor(formData.condition);
+        const pinSvgMobile = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="18" height="30" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); transition: all 0.2s ease;">
+            <!-- Tiang Penyangga -->
+            <rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" />
+            <!-- Lingkaran Utama -->
+            <circle cx="12" cy="12" r="12" fill="${conditionColor}" />
+            <!-- Titik Pantulan Cahaya -->
+            <circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" />
+          </svg>
+        `;
+
         const pinIcon = window.L.divIcon({
-          className: 'custom-pin-mobile',
-          html: `<div style="background-color: ${getConditionColor(formData.condition)}; width: 18px; height: 18px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 2px 2px 5px rgba(0,0,0,0.5);"></div>`,
-          iconSize: [18, 18], iconAnchor: [9, 18]
+          className: 'custom-pin-mobile-svg',
+          html: pinSvgMobile,
+          iconSize: [18, 30], // Diperkecil juga
+          iconAnchor: [9, 30] // Titik jangkar di tengah bawah tiang
         });
         surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon })
           .addTo(map);
