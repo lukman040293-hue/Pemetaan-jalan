@@ -615,14 +615,70 @@ export default function App() {
           return;
        }
 
-       const dotIcon = window.L.divIcon({
-          className: 'moving-dot',
-          html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8]
+       // Fungsi pembantu menghitung arah hadap mobil (Bearing dalam derajat)
+       const getBearing = (lat1, lng1, lat2, lng2) => {
+           const toRad = deg => deg * Math.PI / 180;
+           const toDeg = rad => rad * 180 / Math.PI;
+           const dLng = toRad(lng2 - lng1);
+           const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+           const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+           return (toDeg(Math.atan2(y, x)) + 360) % 360;
+       };
+
+       // Sudut awal mobil menghadap titik kedua
+       let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+
+       // Menyelaraskan warna mobil dengan kondisi jalan
+       const carColor = getConditionColor(selectedRoad.condition);
+       
+       const carIcon = window.L.divIcon({
+          className: 'moving-car-icon',
+          html: `
+            <div id="anim-car-wrapper" style="width: 26px; height: 42px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+                    <!-- Ban Bantet -->
+                    <rect x="5" y="30" width="15" height="25" rx="6" fill="#1e293b"/>
+                    <rect x="80" y="30" width="15" height="25" rx="6" fill="#1e293b"/>
+                    <rect x="5" y="105" width="15" height="25" rx="6" fill="#1e293b"/>
+                    <rect x="80" y="105" width="15" height="25" rx="6" fill="#1e293b"/>
+                    
+                    <!-- Bodi Bulat (Bubble Car) -->
+                    <rect x="10" y="10" width="80" height="140" rx="40" fill="${carColor}" stroke="#ffffff" stroke-width="3"/>
+                    
+                    <!-- Atap Kaca Lucu -->
+                    <rect x="22" y="60" width="56" height="50" rx="20" fill="rgba(255,255,255,0.25)"/>
+
+                    <!-- Kaca Depan Melengkung -->
+                    <path d="M 18 55 Q 50 35 82 55 L 75 75 Q 50 65 25 75 Z" fill="#0f172a" opacity="0.85"/>
+                    
+                    <!-- Kaca Belakang -->
+                    <path d="M 25 120 Q 50 135 75 120 L 70 105 Q 50 115 30 105 Z" fill="#0f172a" opacity="0.85"/>
+
+                    <!-- Mata Bulat Besar (Lampu) -->
+                    <circle cx="28" cy="26" r="10" fill="#ffffff"/>
+                    <circle cx="28" cy="26" r="5" fill="#fef08a"/>
+                    
+                    <circle cx="72" cy="26" r="10" fill="#ffffff"/>
+                    <circle cx="72" cy="26" r="5" fill="#fef08a"/>
+
+                    <!-- Pipi Merona Lucu -->
+                    <circle cx="16" cy="36" r="4.5" fill="#fca5a5" opacity="0.8"/>
+                    <circle cx="84" cy="36" r="4.5" fill="#fca5a5" opacity="0.8"/>
+
+                    <!-- Bemper Senyum -->
+                    <path d="M 38 16 Q 50 24 62 16" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+                    <!-- Lampu Rem Bulat Kecil -->
+                    <circle cx="28" cy="138" r="6" fill="#ef4444"/>
+                    <circle cx="72" cy="138" r="6" fill="#ef4444"/>
+                </svg>
+            </div>
+          `,
+          iconSize: [26, 42],  // Dibuat lebih lebar/bantet sedikit
+          iconAnchor: [13, 21] // Titik pusat rotasi disesuaikan
        });
 
-       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: dotIcon, zIndexOffset: 1000 }).addTo(map);
+       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
        
        // Paskan map untuk melihat keseluruhan rute berjalan secara stabil
        const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
@@ -645,8 +701,26 @@ export default function App() {
           
           const pt = points[currentIndex];
           animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
-          // Kamera map tidak lagi mengikuti titik (panTo) agar pandangan ke seluruh rute stabil
           
+          // Mengatur arah hadap mobil (rotasi) berdasarkan koordinat berikutnya
+          if (currentIndex < points.length - 1) {
+              const nextPt = points[currentIndex + 1];
+              const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
+              
+              // Mencegah mobil berputar terbalik mundur 360 derajat (mencari rute putaran terpendek)
+              let diff = targetBearing - (currentAngle % 360);
+              if (diff > 180) diff -= 360;
+              if (diff < -180) diff += 360;
+              currentAngle += diff;
+
+              const carWrapper = document.getElementById('anim-car-wrapper');
+              if (carWrapper) {
+                  const currentDelay = 500 / animationSpeedRef.current;
+                  carWrapper.style.transition = `transform ${currentDelay * 0.8}ms ease-out`;
+                  carWrapper.style.transform = `rotate(${currentAngle}deg)`;
+              }
+          }
+
           // Kalkulasi jarak berjalan
           if (currentIndex > 0) {
               const prevPt = points[currentIndex - 1];
