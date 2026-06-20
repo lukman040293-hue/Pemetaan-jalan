@@ -89,6 +89,62 @@ const formatLength = (kmString) => {
   if (isNaN(km) || km === 0) return '-';
   return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(2) + ' km';
 };
+
+// --- HELPER: KOMPRESI GAMBAR (CANVAS) ---
+const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Kalkulasi rasio aspek untuk mempertahankan proporsi gambar
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        // Gambar ulang di atas canvas dengan resolusi baru
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Kompres menjadi file JPEG
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Gagal mengonversi canvas ke Blob'));
+              return;
+            }
+            // Ubah tipe ke image/jpeg dan simpan dengan nama baru
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality // Nilai 0.7 biasanya menghasilkan size ~200kb untuk dimensi 1000px
+        );
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
 // --- AKHIR ALGORITMA ---
 
 // --- KOMPONEN ANGKA ANIMASI (ROLLING NUMBER) ---
@@ -306,6 +362,10 @@ export default function App() {
   const surveyorMarkerRef = useRef(null);
   const currentLocationMarkerRef = useRef(null); 
   const watchLocationIdRef = useRef(null); 
+
+  // Timeout untuk fallback GPS jika lama tidak mendapat sinyal
+  const locatingTimeoutRef = useRef(null);
+  const isGpsForcedRef = useRef(false);
 
   // --- 1. INISIALISASI PUSTAKA LEAFLET ---
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
@@ -903,6 +963,18 @@ export default function App() {
     setEditingDraftId(null); 
     setCurrentLocation(null);
 
+    isGpsForcedRef.current = false;
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+
+    // Fallback: Jika setelah 15 detik GPS masih belum "ready", paksa tombol "Mulai" agar aktif
+    locatingTimeoutRef.current = setTimeout(() => {
+      if (recordingStatusRef.current === 'locating') {
+        showToast("⏳ Sinyal GPS sulit didapat. Tombol 'Mulai' diaktifkan paksa dengan toleransi rendah.");
+        isGpsForcedRef.current = true;
+        setRecordingStatus('ready');
+      }
+    }, 15000);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       streamRef.current = stream;
@@ -923,15 +995,16 @@ export default function App() {
           
           // FASE WARM-UP (Mencari Sinyal Hijau ala Strava)
           if (recordingStatusRef.current === 'locating' && accuracy <= 25) {
+             if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
              setRecordingStatus('ready');
              showToast("Sinyal GPS Bagus! Siap Memulai.");
-          } else if (recordingStatusRef.current === 'ready' && accuracy > 40) {
+          } else if (recordingStatusRef.current === 'ready' && accuracy > 40 && !isGpsForcedRef.current) {
              setRecordingStatus('locating'); // Sinyal hilang sebelum mulai
           }
 
           // FASE RECORDING (Termasuk Auto-Pause & Resume)
           if (recordingStatusRef.current === 'recording' || recordingStatusRef.current === 'auto_paused') {
-            if (accuracy > 40) return; // Abaikan titik dengan akurasi buruk saat merekam
+            if (accuracy > 40 && !isGpsForcedRef.current) return; // Abaikan titik dengan akurasi buruk saat merekam (kecuali dipaksa)
 
             setRealGpsPoints(prev => {
               if (prev.length === 0) {
@@ -997,6 +1070,7 @@ export default function App() {
   };
 
   const stopRealHardware = () => {
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) {
       if (typeof watchIdRef.current === 'number' && gpsAccuracy === "Simulasi") clearInterval(watchIdRef.current); 
@@ -1009,6 +1083,7 @@ export default function App() {
   };
 
   const cancelRecording = () => {
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     if (watchIdRef.current !== null) {
         if (typeof watchIdRef.current === 'number' && gpsAccuracy === "Simulasi") clearInterval(watchIdRef.current);
@@ -1076,20 +1151,34 @@ export default function App() {
      }
   }, [recordTab]);
 
-
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
     const currentCount = uploadedPhotoFiles.length;
     const allowedCount = 4 - currentCount;
-    const newFiles = files.slice(0, allowedCount);
+    const newFilesToProcess = files.slice(0, allowedCount);
 
     if (files.length > allowedCount) {
        showToast(`Maksimal 4 foto. Hanya ${allowedCount} foto yang ditambahkan.`);
     }
 
-    const newUrls = newFiles.map(f => URL.createObjectURL(f));
-    setUploadedPhotoFiles(prev => [...prev, ...newFiles]);
-    setUploadedPhotoUrls(prev => [...prev, ...newUrls]);
+    showToast("⏳ Mengompresi foto...");
+
+    try {
+      // Proses semua file secara paralel menggunakan helper kompresi kita
+      const compressedFiles = await Promise.all(
+        newFilesToProcess.map(file => compressImage(file, 1000, 1000, 0.7))
+      );
+
+      const newUrls = compressedFiles.map(f => URL.createObjectURL(f));
+      setUploadedPhotoFiles(prev => [...prev, ...compressedFiles]);
+      setUploadedPhotoUrls(prev => [...prev, ...newUrls]);
+      showToast("✅ Foto berhasil dikompresi!");
+    } catch (error) {
+      console.warn("Error kompresi:", error);
+      showToast("⚠️ Gagal mengompresi beberapa foto.");
+    }
   };
 
   const removePhoto = (index) => {
