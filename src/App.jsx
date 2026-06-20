@@ -216,6 +216,25 @@ export default function App() {
   const [filterKondisi, setFilterKondisi] = useState('Semua');
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
   
+  // State untuk Animasi Rute
+  const [isAnimatingMap, setIsAnimatingMap] = useState(false);
+  const [isAnimPaused, setIsAnimPaused] = useState(false);
+  const isAnimPausedRef = useRef(false);
+  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1);
+  const animationSpeedRef = useRef(1);
+  const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
+  const animatedMarkerRef = useRef(null);
+  const animationTimeoutRef = useRef(null);
+
+  // Menyinkronkan state kecepatan animasi dengan ref agar bisa dibaca di dalam closure setTimeout
+  useEffect(() => {
+      animationSpeedRef.current = animationSpeedMultiplier;
+  }, [animationSpeedMultiplier]);
+
+  useEffect(() => {
+      isAnimPausedRef.current = isAnimPaused;
+  }, [isAnimPaused]);
+
   // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   // Tambahan state untuk menyembunyikan legenda yang mengambang
@@ -230,9 +249,11 @@ export default function App() {
   useEffect(() => {
     if (!selectedRoad) {
       setHighlightedRoadId(null);
+      setIsAnimatingMap(false);
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
       setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId);
+      setIsAnimatingMap(false);
     }
   }, [selectedRoad]);
 
@@ -579,6 +600,79 @@ export default function App() {
       setTimeout(() => { adminMapInstanceRef.current.invalidateSize(); }, 300); 
     }
   }, [isSidebarOpen, appRole]);
+
+  // --- EFEK: ANIMASI RUTE DI ADMIN ---
+  useEffect(() => {
+    if (isAnimatingMap && selectedRoad && adminMapInstanceRef.current) {
+       const map = adminMapInstanceRef.current;
+       const points = selectedRoad.realGps;
+       let currentIndex = 0;
+       let accumulatedDistance = 0;
+
+       if (!points || points.length < 2) {
+          setIsAnimatingMap(false);
+          showToast("Titik rute terlalu sedikit untuk dianimasikan.");
+          return;
+       }
+
+       const dotIcon = window.L.divIcon({
+          className: 'moving-dot',
+          html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+       });
+
+       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: dotIcon, zIndexOffset: 1000 }).addTo(map);
+       
+       // Paskan map untuk melihat keseluruhan rute berjalan secara stabil
+       const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
+       // Memberikan padding bawah lebih besar agar rute tidak tertutup panel kontrol di bawah
+       map.fitBounds(routeBounds, { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
+
+       const animate = () => {
+          if (currentIndex >= points.length) {
+             setIsAnimatingMap(false);
+             setIsAnimPaused(false);
+             showToast("Animasi rute selesai.");
+             return;
+          }
+
+          if (isAnimPausedRef.current) {
+              // Jika di-pause, loop menunggu 100ms tanpa memajukan index
+              animationTimeoutRef.current = setTimeout(animate, 100);
+              return;
+          }
+          
+          const pt = points[currentIndex];
+          animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
+          // Kamera map tidak lagi mengikuti titik (panTo) agar pandangan ke seluruh rute stabil
+          
+          // Kalkulasi jarak berjalan
+          if (currentIndex > 0) {
+              const prevPt = points[currentIndex - 1];
+              const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+              accumulatedDistance += dist;
+              setCurrentAnimDistance(accumulatedDistance);
+          }
+
+          currentIndex++;
+          
+          // Kecepatan animasi (basis 500ms per koordinat dibagi multiplier) - Default jauh lebih lambat
+          const currentDelay = 500 / animationSpeedRef.current;
+          animationTimeoutRef.current = setTimeout(animate, currentDelay); 
+       };
+
+       animationTimeoutRef.current = setTimeout(animate, 1000); // Tunggu 1 detik sebelum bergerak
+    }
+
+    return () => {
+       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+       if (animatedMarkerRef.current && adminMapInstanceRef.current) {
+           adminMapInstanceRef.current.removeLayer(animatedMarkerRef.current);
+           animatedMarkerRef.current = null;
+       }
+    };
+  }, [isAnimatingMap, selectedRoad]);
 
   // --- EFEK PETA SURVEYOR ---
   // (Sama seperti sebelumnya, dikurangi untuk ringkasnya, tidak ada perubahan logika GPS)
@@ -1094,6 +1188,95 @@ export default function App() {
         console.warn("Peringatan hapus:", err);
         showToast("Gagal menghapus data."); 
      }
+  };
+
+  const handleExportKML = () => {
+    if (!selectedRoad || !selectedRoad.realGps || selectedRoad.realGps.length === 0) {
+      showToast("Tidak ada data rute GPS untuk diekspor.");
+      return;
+    }
+
+    const coordinates = selectedRoad.realGps.map(pt => `${pt.lng},${pt.lat},0`).join(' ');
+    let colorHex = getConditionColor(selectedRoad.condition).replace('#', '');
+    let kmlColor = colorHex.length === 6 ? `ff${colorHex.substring(4,6)}${colorHex.substring(2,4)}${colorHex.substring(0,2)}` : 'ffff0000';
+
+    let pinPlacemark = '';
+    if (selectedRoad.pinLocation && selectedRoad.pinLocation.lat) {
+      pinPlacemark = `
+    <Placemark>
+      <name>Titik Lokasi: ${selectedRoad.name}</name>
+      <description>Kondisi: ${selectedRoad.condition}</description>
+      <Point>
+        <coordinates>${selectedRoad.pinLocation.lng},${selectedRoad.pinLocation.lat},0</coordinates>
+      </Point>
+    </Placemark>`;
+    }
+
+    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${selectedRoad.name}</name>
+    <description>Kelurahan: ${formatKel(selectedRoad.kelurahan)} | Kondisi: ${selectedRoad.condition}</description>
+    <Style id="routeStyle">
+      <LineStyle>
+        <color>${kmlColor}</color>
+        <width>5</width>
+      </LineStyle>
+    </Style>
+    <Placemark>
+      <name>Jalur Rute</name>
+      <styleUrl>#routeStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>
+          ${coordinates}
+        </coordinates>
+      </LineString>
+    </Placemark>${pinPlacemark}
+  </Document>
+</kml>`;
+
+    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Rute_${selectedRoad.name.replace(/\s+/g, '_')}.kml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("File KML berhasil diunduh.");
+  };
+
+  const handleShareLocation = () => {
+    if (!selectedRoad || !selectedRoad.pinLocation || !selectedRoad.pinLocation.lat) {
+      showToast("Titik pin lokasi tidak tersedia.");
+      return;
+    }
+    const lat = selectedRoad.pinLocation.lat;
+    const lng = selectedRoad.pinLocation.lng;
+    const mapLink = `https://www.google.com/maps?q=${lat},${lng}`;
+    const shareText = `Kerusakan Jalan: ${selectedRoad.name} (${selectedRoad.condition}). Cek di peta: ${mapLink}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: `Lokasi: ${selectedRoad.name}`,
+        text: shareText,
+        url: mapLink
+      }).catch(err => console.warn("Share batal/gagal:", err));
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = shareText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Tautan Google Maps disalin ke clipboard!");
+      } catch (err) {
+         showToast("Gagal menyalin tautan.");
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const handlePrint = async () => {
@@ -1970,7 +2153,7 @@ export default function App() {
             </aside>
 
             {/* --- SELECTED ROAD POPUP (Muncul di tengah bawah) --- */}
-            {selectedRoad && (
+            {selectedRoad && !isAnimatingMap && (
               <>
                 {/* Backdrop transparan untuk menutup popup jika area luar diklik */}
                 <div 
@@ -2020,13 +2203,35 @@ export default function App() {
                   </div>
                   
                   <div className="w-full p-5 md:p-6 flex flex-col justify-start bg-white/80 text-slate-800 overflow-y-auto flex-1 min-h-0">
-                    <div className="flex justify-end items-start mb-3 pr-12 md:pr-16">
-                      <div className="flex space-x-1">
-                         <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-100/80 font-medium px-3 py-1.5 transition-colors rounded-full flex items-center bg-blue-50/50 shadow-sm border border-blue-100">
-                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
-                           Cetak PDF
+                    <div className="flex justify-end items-start mb-3 pr-8 md:pr-12">
+                      <div className="flex flex-wrap gap-1.5 justify-end">
+                         <button onClick={() => { 
+                             if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); // Menutup popup marker di peta
+                             setIsAnimatingMap(true); 
+                             setIsAnimPaused(false);
+                             setCurrentAnimDistance(0);
+                             setAnimationSpeedMultiplier(1);
+                             if(window.innerWidth < 768) setIsSidebarOpen(false); 
+                         }} className="text-[10px] md:text-xs text-amber-600 hover:bg-amber-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-amber-50/50 shadow-sm border border-amber-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>
+                           Play Rute
                          </button>
-                         <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:bg-rose-100/80 font-medium px-3 py-1.5 transition-colors rounded-full bg-rose-50/50 shadow-sm border border-rose-100">Hapus Rute</button>
+                         <button onClick={handleShareLocation} className="text-[10px] md:text-xs text-emerald-600 hover:bg-emerald-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-emerald-50/50 shadow-sm border border-emerald-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" /></svg>
+                           Bagikan
+                         </button>
+                         <button onClick={handleExportKML} className="text-[10px] md:text-xs text-indigo-600 hover:bg-indigo-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-indigo-50/50 shadow-sm border border-indigo-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                           KML
+                         </button>
+                         <button onClick={handlePrint} className="text-[10px] md:text-xs text-blue-600 hover:bg-blue-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-blue-50/50 shadow-sm border border-blue-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.724.092m6.524-4.659A15.45 15.45 0 0112 9c-1.39 0-2.73.19-4.008.537m13.064 3.018a4.5 4.5 0 01-1.532 2.656c-1.22.956-2.822 1.49-4.524 1.49-1.703 0-3.305-.534-4.524-1.49a4.5 4.5 0 01-1.532-2.656m12.088-3.018c.24-.03.484-.062.724-.092a1.5 1.5 0 001.276-1.48v-2.31a1.5 1.5 0 00-1.276-1.48c-.24-.03-.484-.062-.724-.092m-12.088 3.018c-.24.03-.48.062-.724.092a1.5 1.5 0 01-1.276-1.48v-2.31a1.5 1.5 0 011.276-1.48c.24-.03.48-.062.724-.092M12 2.25v1m0 17.5v1" /></svg>
+                           PDF
+                         </button>
+                         <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[10px] md:text-xs text-rose-600 hover:bg-rose-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-rose-50/50 shadow-sm border border-rose-100">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                           Hapus
+                         </button>
                       </div>
                     </div>
                     
@@ -2092,6 +2297,40 @@ export default function App() {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
+            {selectedRoad && isAnimatingMap && (
+               <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] bg-black/85 backdrop-blur-md px-5 py-4 rounded-2xl flex flex-col shadow-2xl border border-white/20 animate-fade-in-up w-auto min-w-[280px]">
+                   <div className="flex justify-between items-center mb-3 border-b border-white/20 pb-2">
+                     <span className="text-white text-xs md:text-sm font-bold flex items-center">
+                       <div className={`w-2.5 h-2.5 rounded-full mr-2 ${isAnimPaused ? 'bg-amber-500' : 'bg-rose-500 animate-pulse'}`}></div> 
+                       {isAnimPaused ? 'Rute Dijeda' : 'Rute Berjalan...'}
+                     </span>
+                     <span className="text-emerald-400 font-mono text-sm md:text-base font-bold bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-900 ml-4">
+                        {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                     </span>
+                   </div>
+                   <div className="flex items-center justify-between space-x-3">
+                       <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`px-4 py-2 rounded-lg text-xs font-black transition-colors shadow-lg flex items-center ${isAnimPaused ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}>
+                           {isAnimPaused ? '▶ Lanjut' : '⏸ Jeda'}
+                       </button>
+                       <div className="flex space-x-1 bg-white/10 rounded-lg p-1.5 border border-white/10">
+                           <button onClick={() => {
+                               const speeds = [0.25, 0.5, 1, 2, 4];
+                               setAnimationSpeedMultiplier(prev => speeds[Math.max(0, speeds.indexOf(prev) - 1)] || prev);
+                           }} className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded font-bold text-xs transition-colors">Slower</button>
+                           
+                           <div className="px-3 py-1 text-white text-xs font-bold min-w-[3rem] text-center">{animationSpeedMultiplier}x</div>
+                           
+                           <button onClick={() => {
+                               const speeds = [0.25, 0.5, 1, 2, 4];
+                               setAnimationSpeedMultiplier(prev => speeds[Math.min(speeds.length - 1, speeds.indexOf(prev) + 1)] || prev);
+                           }} className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded font-bold text-xs transition-colors">Faster</button>
+                       </div>
+                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); }} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-black hover:bg-rose-700 transition-colors shadow-lg">Tutup</button>
+                   </div>
+               </div>
             )}
           </main>
         </div>
