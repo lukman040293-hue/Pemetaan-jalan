@@ -1900,21 +1900,21 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 50MB)</label>
-                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Jika video terlalu besar, silahkan kirim ke WA dan download kembali agar ukuran video mencukupi.</p>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 150MB)</label>
+                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Batas ukuran telah dinaikkan ke 150MB. Pada banyak HP modern, video akan terkompres secara otomatis jika direkam langsung.</p>
                     <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors">
-                      <input type="file" accept="video/*" onChange={(e) => { 
+                      <input type="file" accept="video/mp4,video/quicktime,video/*" onChange={(e) => { 
                           const f = e.target.files[0]; 
                           if(f){ 
-                            const maxSizeBytes = 50 * 1024 * 1024; 
+                            const maxSizeBytes = 150 * 1024 * 1024; // Naikkan limit ke 150MB
                             if (f.size > maxSizeBytes) {
-                               showToast("⚠️ Gagal: Ukuran video terlalu besar! Maksimal 50 MB.");
+                               showToast("⚠️ Gagal: Ukuran video masih terlalu besar! Maksimal 150 MB.");
                                e.target.value = ''; 
                                return; 
                             }
                             setUploadedVideoUrl(URL.createObjectURL(f));
                             setUploadedVideoFile(f); 
-                            showToast("Video siap dilampirkan."); 
+                            showToast("✅ Video siap dilampirkan."); 
                           } 
                         }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                       {uploadedVideoUrl ? (
