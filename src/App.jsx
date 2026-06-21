@@ -276,8 +276,8 @@ export default function App() {
   const [isAnimatingMap, setIsAnimatingMap] = useState(false);
   const [isAnimPaused, setIsAnimPaused] = useState(false);
   const isAnimPausedRef = useRef(false);
-  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.5);
-  const animationSpeedRef = useRef(1.5);
+  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
+  const animationSpeedRef = useRef(1.0);
   const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
   const [showSpeedControl, setShowSpeedControl] = useState(false);
   const [animIconType, setAnimIconType] = useState('car'); // State baru untuk tipe ikon ('car', 'motorcycle', 'runner')
@@ -678,6 +678,10 @@ export default function App() {
 
   // --- EFEK: ANIMASI RUTE DI ADMIN ---
   useEffect(() => {
+    // Deklarasikan referensi event listener di luar block if agar bisa diakses saat unmount (cleanup)
+    let onInteractionStart = null;
+    let onInteractionEnd = null;
+
     if (isAnimatingMap && selectedRoad && adminMapInstanceRef.current) {
        const map = adminMapInstanceRef.current;
        const points = selectedRoad.realGps;
@@ -833,6 +837,22 @@ export default function App() {
        const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
        map.fitBounds(routeBounds, { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
 
+       // --- FIX: MATIKAN TRANSISI CSS SAAT PETA DI-ZOOM/DIGESER ---
+       let isInteracting = false;
+       onInteractionStart = () => { 
+           isInteracting = true; 
+           if(animatedMarkerRef.current) { 
+               const el = animatedMarkerRef.current.getElement(); 
+               if(el) el.style.transition = 'none'; 
+           } 
+       };
+       onInteractionEnd = () => { isInteracting = false; };
+       
+       map.on('zoomstart', onInteractionStart);
+       map.on('zoomend', onInteractionEnd);
+       map.on('dragstart', onInteractionStart);
+       map.on('dragend', onInteractionEnd);
+
        const animate = () => {
           if (currentIndex >= points.length) {
              setIsAnimatingMap(false);
@@ -857,8 +877,8 @@ export default function App() {
               accumulatedDistance += dist;
               setCurrentAnimDistance(accumulatedDistance);
 
-              // Kecepatan dasar visual: ~25 meter per detik (skala 1x)
-              const baseVisualSpeedMps = 25; 
+              // Kecepatan dasar visual dipercepat ekstrim: ~75 meter per detik (skala 1.0x)
+              const baseVisualSpeedMps = 75; 
               let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / animationSpeedRef.current;
               
               // Batasi delay antara 30ms (Sangat Cepat/Dekat) dan 8000ms (Jarak jauh trek lurus)
@@ -869,8 +889,12 @@ export default function App() {
           if (animatedMarkerRef.current) {
               const el = animatedMarkerRef.current.getElement();
               if (el && currentIndex > 0) {
-                  // Menerapkan linear transition membuat mobil meluncur dengan lancar mengikuti koordinat
-                  el.style.transition = `transform ${segmentDelay}ms linear`;
+                  // Jika user sedang zoom/geser, hapus transisi agar mobil tidak "terbang" dari jalur
+                  if (isInteracting) {
+                      el.style.transition = 'none';
+                  } else {
+                      el.style.transition = `transform ${segmentDelay}ms linear`;
+                  }
               }
               animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
           }
@@ -906,6 +930,12 @@ export default function App() {
        if (animatedMarkerRef.current && adminMapInstanceRef.current) {
            adminMapInstanceRef.current.removeLayer(animatedMarkerRef.current);
            animatedMarkerRef.current = null;
+       }
+       if (adminMapInstanceRef.current && onInteractionStart && onInteractionEnd) {
+           adminMapInstanceRef.current.off('zoomstart', onInteractionStart);
+           adminMapInstanceRef.current.off('zoomend', onInteractionEnd);
+           adminMapInstanceRef.current.off('dragstart', onInteractionStart);
+           adminMapInstanceRef.current.off('dragend', onInteractionEnd);
        }
     };
   }, [isAnimatingMap, selectedRoad, animIconType]);
@@ -2225,66 +2255,80 @@ export default function App() {
                  </div>
 
                  {/* Container Kotak Legenda (Flex Wrap untuk kotak individual) */}
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-stretch md:items-center gap-1 md:gap-1.5 pointer-events-none pr-2 md:pr-4 pl-[60px] md:pl-[72px] pb-2`}>
+                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-wrap items-center gap-1.5 md:gap-2 pointer-events-none pr-2 md:pr-4 pl-[60px] md:pl-[72px] pb-2`}>
                     
                     {/* --- KELOMPOK KONDISI JALAN --- */}
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Baik</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">Baik</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
                        </div>
                     </div>
 
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Ringan</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">R. Ringan</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                        </div>
                     </div>
 
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Sedang</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">R. Sedang</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
                        </div>
                     </div>
 
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">R. Parah</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">R. Parah</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
                        </div>
                     </div>
 
                     {/* Pembatas Visual Halus antara Kondisi dan Material (Hanya di Desktop) */}
-                    <div className="hidden lg:block w-1 h-5 bg-slate-400/30 rounded-full mx-0.5"></div>
+                    <div className="hidden lg:block w-1 h-6 bg-slate-300/50 rounded-full mx-1"></div>
 
                     {/* --- KELOMPOK MATERIAL JALAN --- */}
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="text-[10px] md:text-sm leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Aspal</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="text-[8px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">Aspal</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
                        </div>
                     </div>
 
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="text-[10px] md:text-sm leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Beton</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="text-[8px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">Beton</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
                        </div>
                     </div>
 
-                    <div className="pointer-events-auto flex-1 min-w-[45px] md:flex-none bg-white/80 backdrop-blur-xl shadow-sm border border-white/60 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg flex items-center justify-center md:justify-start gap-1 hover:-translate-y-0.5 transition-transform cursor-default">
-                       <span className="text-[10px] md:text-sm leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
-                       <div className="flex flex-col items-center md:items-start">
-                          <span className="text-[6px] md:text-[7px] font-extrabold text-slate-500 uppercase tracking-wider leading-none mb-0.5 whitespace-nowrap">Tanah</span>
-                          <span className="text-xs md:text-base font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
+                    <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default w-[100px] md:w-[135px] shrink-0 bg-white/95 backdrop-blur-md">
+                       <div className="flex-1 flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 md:py-2 border-r border-slate-200/80">
+                          <span className="text-[8px] md:text-xs leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
+                          <span className="text-[8px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-normal leading-tight break-words">Tanah</span>
+                       </div>
+                       <div className="flex items-center justify-center bg-slate-100/90 px-2 md:px-3 min-w-[32px] md:min-w-[40px]">
+                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
                        </div>
                     </div>
 
@@ -2476,7 +2520,7 @@ export default function App() {
                              setIsAnimatingMap(true); 
                              setIsAnimPaused(false);
                              setCurrentAnimDistance(0);
-                             setAnimationSpeedMultiplier(1.5);
+                             setAnimationSpeedMultiplier(1.0);
                              setShowSpeedControl(false);
                              if(window.innerWidth < 768) setIsSidebarOpen(false); 
                          }} className="text-[10px] md:text-xs text-amber-600 hover:bg-amber-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-amber-50/50 shadow-sm border border-amber-100">
@@ -2594,7 +2638,7 @@ export default function App() {
                    
                    {/* Info Jarak & Pilihan Kendaraan/Ikon */}
                    <div className="mt-3 flex space-x-2">
-                       <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 flex items-center justify-center text-emerald-700 font-mono text-sm font-bold shadow-sm">
+                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 flex items-center justify-center text-slate-800 font-mono text-sm font-normal shadow-sm">
                            {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
                        </div>
                        
@@ -2625,7 +2669,7 @@ export default function App() {
                                <input 
                                    type="range" 
                                    min="0.25" 
-                                   max="2.0" 
+                                   max="3.0" 
                                    step="0.25" 
                                    value={animationSpeedMultiplier} 
                                    onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))}
@@ -2633,11 +2677,11 @@ export default function App() {
                                    style={{ accentColor: '#2563eb' }}
                                />
                                
-                               <button onClick={() => setAnimationSpeedMultiplier(Math.min(2.0, animationSpeedMultiplier + 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">+</button>
+                               <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">+</button>
                            </div>
 
                            <div className="flex justify-between space-x-1.5">
-                               {[0.5, 0.75, 1.0, 1.5, 2.0].map(speed => (
+                               {[1.0, 1.5, 2.0, 2.5, 3.0].map(speed => (
                                    <button 
                                        key={speed} 
                                        onClick={() => setAnimationSpeedMultiplier(speed)} 
