@@ -405,13 +405,14 @@ export default function App() {
 
     return {
       ...road,
+      id: road.id || road.dbId,
       realGps: parsedGps,
       pinLocation: parsedPin,
       photoUrls: parsedPhotos
     };
   };
 
-  // --- 2. SUPABASE: TARIK DATA ---
+  // --- 2. SUPABASE: TARIK DATA & POLLING ---
   const fetchRoads = async () => {
     if (!supabase) return;
     try {
@@ -419,7 +420,7 @@ export default function App() {
         .from('mapped_roads')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100); // 🔴 BATASI HANYA 100 RUTE TERBARU DEMI PERFORMA & KEAMANAN KUOTA
+        .limit(100); // Batasi 100 rute terbaru
         
       if (error) throw error;
 
@@ -435,9 +436,7 @@ export default function App() {
       setIsDbConnected(false);
       
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-         showToast("Gagal menyambung. Server Supabase Anda mungkin sedang 'Paused' (Jeda). Silakan aktifkan kembali di dasbor.");
-      } else if (error.message.includes("does not exist")) {
-         showToast("Tabel 'mapped_roads' belum dibuat di Supabase Anda.");
+         showToast("Gagal menyambung ke Supabase. Periksa koneksi internet Anda.");
       }
     }
   };
@@ -445,12 +444,10 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return;
 
-    // 1. Tarik data awal (maksimal 100 terbaru)
+    // 1. Tarik data awal
     fetchRoads();
 
-    // 2. Gunakan Polling ringan (15 detik) sebagai pengganti WebSocket.
-    // Lingkungan preview Canvas saat ini memblokir koneksi WebSocket langsung (wss://)
-    // yang akan memicu React ErrorBoundary mengalami crash dengan keterangan Object child.
+    // 2. Gunakan Polling (15 detik) untuk kompatibilitas lingkungan yang memblokir WebSocket
     const intervalId = setInterval(() => {
       fetchRoads();
     }, 15000);
