@@ -384,6 +384,33 @@ export default function App() {
     document.head.appendChild(script);
   }, []);
 
+  // --- HELPER: FORMAT DATA SUPABASE ---
+  const formatRoadData = (road) => {
+    let parsedGps = road.realGps;
+    let parsedPin = road.pinLocation;
+    let parsedPhotos = road.photoUrls;
+
+    if (typeof parsedGps === 'string') {
+      try { parsedGps = JSON.parse(parsedGps); } catch (e) { parsedGps = []; }
+    }
+    if (typeof parsedPin === 'string') {
+      try { parsedPin = JSON.parse(parsedPin); } catch (e) { parsedPin = null; }
+    }
+    if (typeof parsedPhotos === 'string') {
+      try { parsedPhotos = JSON.parse(parsedPhotos); } catch (e) { parsedPhotos = []; }
+    }
+
+    if (!Array.isArray(parsedGps)) parsedGps = [];
+    if (!Array.isArray(parsedPhotos)) parsedPhotos = [];
+
+    return {
+      ...road,
+      realGps: parsedGps,
+      pinLocation: parsedPin,
+      photoUrls: parsedPhotos
+    };
+  };
+
   // --- 2. SUPABASE: TARIK DATA ---
   const fetchRoads = async () => {
     if (!supabase) return;
@@ -391,35 +418,12 @@ export default function App() {
       const { data, error } = await supabase
         .from('mapped_roads')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // 🔴 BATASI HANYA 100 RUTE TERBARU DEMI PERFORMA & KEAMANAN KUOTA
         
       if (error) throw error;
 
-      const formattedData = (data || []).map(road => {
-        let parsedGps = road.realGps;
-        let parsedPin = road.pinLocation;
-        let parsedPhotos = road.photoUrls;
-
-        if (typeof parsedGps === 'string') {
-          try { parsedGps = JSON.parse(parsedGps); } catch (e) { parsedGps = []; }
-        }
-        if (typeof parsedPin === 'string') {
-          try { parsedPin = JSON.parse(parsedPin); } catch (e) { parsedPin = null; }
-        }
-        if (typeof parsedPhotos === 'string') {
-          try { parsedPhotos = JSON.parse(parsedPhotos); } catch (e) { parsedPhotos = []; }
-        }
-
-        if (!Array.isArray(parsedGps)) parsedGps = [];
-        if (!Array.isArray(parsedPhotos)) parsedPhotos = [];
-
-        return {
-          ...road,
-          realGps: parsedGps,
-          pinLocation: parsedPin,
-          photoUrls: parsedPhotos
-        };
-      });
+      const formattedData = (data || []).map(formatRoadData);
 
       setSyncedRoads(prev => {
         if (JSON.stringify(prev) === JSON.stringify(formattedData)) return prev;
@@ -439,11 +443,22 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (supabase) {
+    if (!supabase) return;
+
+    // 1. Tarik data awal (maksimal 100 terbaru)
+    fetchRoads();
+
+    // 2. Gunakan Polling ringan (15 detik) sebagai pengganti WebSocket.
+    // Lingkungan preview Canvas saat ini memblokir koneksi WebSocket langsung (wss://)
+    // yang akan memicu React ErrorBoundary mengalami crash dengan keterangan Object child.
+    const intervalId = setInterval(() => {
       fetchRoads();
-      const intervalId = setInterval(() => { fetchRoads(); }, 5000); 
-      return () => clearInterval(intervalId); 
-    }
+    }, 15000);
+
+    // Cleanup saat komponen dibongkar (Keluar halaman)
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [supabase]);
 
 
@@ -1174,7 +1189,7 @@ export default function App() {
 
   const cancelRecording = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
-    if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) {
         if (typeof watchIdRef.current === 'number' && gpsAccuracy === "Simulasi") clearInterval(watchIdRef.current);
         else navigator.geolocation.clearWatch(watchIdRef.current);
@@ -1859,7 +1874,7 @@ export default function App() {
                      <div className="w-full flex space-x-3">
                          {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
                              <>
-                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-50 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                                      <span>JEDA</span>
                                  </button>
