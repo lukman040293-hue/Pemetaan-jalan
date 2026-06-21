@@ -276,10 +276,11 @@ export default function App() {
   const [isAnimatingMap, setIsAnimatingMap] = useState(false);
   const [isAnimPaused, setIsAnimPaused] = useState(false);
   const isAnimPausedRef = useRef(false);
-  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1);
-  const animationSpeedRef = useRef(1);
+  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.5);
+  const animationSpeedRef = useRef(1.5);
   const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
   const [showSpeedControl, setShowSpeedControl] = useState(false);
+  const [animIconType, setAnimIconType] = useState('car'); // State baru untuk tipe ikon ('car', 'motorcycle', 'runner')
   const animatedMarkerRef = useRef(null);
   const animationTimeoutRef = useRef(null);
 
@@ -687,75 +688,134 @@ export default function App() {
            return (toDeg(Math.atan2(y, x)) + 360) % 360;
        };
 
-       // Sudut awal mobil menghadap titik kedua
+       // Sudut awal menghadap titik kedua
        let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
-       // Menyelaraskan warna mobil dengan kondisi jalan
-       const carColor = getConditionColor(selectedRoad.condition);
+       // Menyelaraskan warna ikon dengan kondisi jalan
+       const iconColor = getConditionColor(selectedRoad.condition);
        
-       const carIcon = window.L.divIcon({
-          className: 'moving-car-icon',
-          html: `
+       let iconHtml = '';
+       let iconSize = [32, 50];
+       let iconAnchor = [16, 25];
+
+       if (animIconType === 'motorcycle') {
+           iconSize = [20, 44];
+           iconAnchor = [10, 22];
+           iconHtml = `
+            <div id="anim-car-wrapper" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                <svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                    <!-- Roda Depan & Belakang -->
+                    <rect x="16" y="5" width="8" height="20" rx="4" fill="#1e293b"/>
+                    <rect x="16" y="75" width="8" height="20" rx="4" fill="#1e293b"/>
+                    <!-- Knalpot -->
+                    <rect x="24" y="60" width="4" height="25" rx="2" fill="#cbd5e1"/>
+                    <!-- Body Motor (Menyesuaikan kondisi) -->
+                    <rect x="10" y="20" width="20" height="60" rx="10" fill="${iconColor}"/>
+                    <!-- Stang -->
+                    <rect x="4" y="25" width="32" height="4" rx="2" fill="#475569"/>
+                    <rect x="2" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
+                    <rect x="32" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
+                    <!-- Helm/Rider -->
+                    <circle cx="20" cy="45" r="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+                    <!-- Lampu Depan & Belakang -->
+                    <circle cx="20" cy="18" r="4" fill="#fef08a"/>
+                    <rect x="16" y="78" width="8" height="4" rx="2" fill="#ef4444"/>
+                </svg>
+            </div>
+           `;
+       } else if (animIconType === 'runner') {
+           iconSize = [28, 28]; // Ukuran diseimbangkan agar pas di peta
+           iconAnchor = [14, 14];
+           iconHtml = `
+            <div id="anim-car-wrapper" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                <svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
+                    <style>
+                        /* Animasi langkah lari 2 frame sederhana */
+                        @keyframes runCycle {
+                            0% { transform: scaleX(1); }
+                            50% { transform: scaleX(-1); }
+                            100% { transform: scaleX(1); }
+                        }
+                    </style>
+                    <g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;">
+                        <!-- Kaki Kiri (Melangkah ke Depan) -->
+                        <rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" />
+                        <!-- Kaki Kanan (Tertinggal di Belakang) -->
+                        <rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" />
+                        
+                        <!-- Tangan Kiri (Ayun ke belakang) -->
+                        <path d="M 14 25 Q 6 36 12 44" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                        <circle cx="12" cy="44" r="3" fill="#fcd34d" />
+                        
+                        <!-- Tangan Kanan (Ayun ke depan) -->
+                        <path d="M 36 25 Q 44 14 38 6" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                        <circle cx="38" cy="6" r="3" fill="#fcd34d" />
+
+                        <!-- Bahu / Badan Utama -->
+                        <rect x="13" y="20" width="24" height="10" rx="5" fill="${iconColor}" />
+                    </g>
+                    <!-- Kepala (Tetap di poros tengah) -->
+                    <circle cx="25" cy="25" r="7" fill="#fcd34d" />
+                    <!-- Topi/Rambut Menghadap ke Depan -->
+                    <path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" />
+                </svg>
+            </div>
+           `;
+       } else {
+           // Default (Mobil)
+           iconSize = [32, 50];
+           iconAnchor = [16, 25];
+           iconHtml = `
             <div id="anim-car-wrapper" style="width: 32px; height: 50px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
                 <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
-                    <!-- Ban Bantet menonjol -->
+                    <!-- Ban -->
                     <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
                     <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
                     <rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/>
                     <rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/>
                     
-                    <!-- Bumper Depan (Silver) -->
+                    <!-- Bumper Depan & Belakang -->
                     <rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/>
-                    <!-- Bumper Belakang (Silver) -->
                     <rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/>
                     
-                    <!-- Body Utama Bulat -->
-                    <rect x="14" y="12" width="72" height="135" rx="28" fill="${carColor}"/>
-                    <!-- Efek Depth/Bayangan 3D di Body -->
+                    <!-- Body Utama -->
+                    <rect x="14" y="12" width="72" height="135" rx="28" fill="${iconColor}"/>
+                    <!-- Efek Depth/Bayangan -->
                     <rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/>
-                    <rect x="20" y="18" width="60" height="123" rx="22" fill="${carColor}"/>
+                    <rect x="20" y="18" width="60" height="123" rx="22" fill="${iconColor}"/>
                     
-                    <!-- Lampu Depan Bulat (Nongol) -->
+                    <!-- Lampu Depan -->
                     <circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
                     <circle cx="26" cy="18" r="4" fill="#fef08a"/>
                     <circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
                     <circle cx="74" cy="18" r="4" fill="#fef08a"/>
 
-                    <!-- Grill Depan -->
-                    <rect x="36" y="14" width="28" height="6" rx="3" fill="#0f172a" opacity="0.6"/>
-                    
-                    <!-- Kaca Depan -->
+                    <!-- Kaca -->
                     <path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/>
-                    <!-- Kaca Belakang -->
                     <path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/>
-                    
-                    <!-- Kaca Samping -->
                     <path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/>
                     <path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/>
 
                     <!-- Atap Mobil -->
-                    <rect x="28" y="72" width="44" height="38" rx="12" fill="${carColor}"/>
-                    <!-- Pantulan Cahaya Atap (Glossy) -->
+                    <rect x="28" y="72" width="44" height="38" rx="12" fill="${iconColor}"/>
                     <rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/>
-
-                    <!-- Spion Bulat di Samping -->
-                    <path d="M 14 62 L 6 62" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-                    <ellipse cx="6" cy="62" rx="4" ry="8" fill="#f1f5f9"/>
                     
-                    <path d="M 86 62 L 94 62" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-                    <ellipse cx="94" cy="62" rx="4" ry="8" fill="#f1f5f9"/>
-
                     <!-- Lampu Rem -->
                     <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                     <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                 </svg>
             </div>
-          `,
-          iconSize: [32, 50],
-          iconAnchor: [16, 25] 
+           `;
+       }
+       
+       const customVehicleIcon = window.L.divIcon({
+          className: 'moving-vehicle-icon',
+          html: iconHtml,
+          iconSize: iconSize,
+          iconAnchor: iconAnchor 
        });
 
-       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
+       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
        
        // Paskan map untuk melihat keseluruhan rute berjalan secara stabil
        const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
@@ -803,12 +863,12 @@ export default function App() {
               animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
           }
           
-          // Mengatur arah hadap mobil (rotasi putaran) berdasarkan koordinat berikutnya
+          // Mengatur arah hadap ikon (rotasi putaran) berdasarkan koordinat berikutnya
           if (currentIndex < points.length - 1) {
               const nextPt = points[currentIndex + 1];
               const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
               
-              // Mencegah mobil berputar terbalik mundur 360 derajat (mencari rute putaran terpendek)
+              // Mencegah ikon berputar terbalik mundur 360 derajat
               let diff = targetBearing - (currentAngle % 360);
               if (diff > 180) diff -= 360;
               if (diff < -180) diff += 360;
@@ -816,7 +876,7 @@ export default function App() {
 
               const carWrapper = document.getElementById('anim-car-wrapper');
               if (carWrapper) {
-                  // Putaran dibuat sedikit lebih cepat dari transisi posisi agar mobil 'menghadap' arah tikungan dulu
+                  // Putaran dibuat sedikit lebih cepat dari transisi posisi agar ikon 'menghadap' arah tikungan dulu
                   carWrapper.style.transition = `transform ${segmentDelay * 0.7}ms ease-in-out`;
                   carWrapper.style.transform = `rotate(${currentAngle}deg)`;
               }
@@ -836,7 +896,7 @@ export default function App() {
            animatedMarkerRef.current = null;
        }
     };
-  }, [isAnimatingMap, selectedRoad]);
+  }, [isAnimatingMap, selectedRoad, animIconType]);
 
   // --- EFEK PETA SURVEYOR ---
   // (Sama seperti sebelumnya, dikurangi untuk ringkasnya, tidak ada perubahan logika GPS)
@@ -1558,6 +1618,7 @@ export default function App() {
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
         body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -2403,7 +2464,7 @@ export default function App() {
                              setIsAnimatingMap(true); 
                              setIsAnimPaused(false);
                              setCurrentAnimDistance(0);
-                             setAnimationSpeedMultiplier(1);
+                             setAnimationSpeedMultiplier(1.5);
                              setShowSpeedControl(false);
                              if(window.innerWidth < 768) setIsSidebarOpen(false); 
                          }} className="text-[10px] md:text-xs text-amber-600 hover:bg-amber-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-amber-50/50 shadow-sm border border-amber-100">
@@ -2519,9 +2580,23 @@ export default function App() {
                        </button>
                    </div>
                    
-                   {/* Info Jarak */}
-                   <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 text-center text-emerald-700 font-mono text-sm font-bold shadow-sm">
-                       Jarak: {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                   {/* Info Jarak & Pilihan Kendaraan/Ikon */}
+                   <div className="mt-3 flex space-x-2">
+                       <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 flex items-center justify-center text-emerald-700 font-mono text-sm font-bold shadow-sm">
+                           {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                       </div>
+                       
+                       <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center space-x-1">
+                           <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
+                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
+                           </button>
+                           <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
+                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
+                           </button>
+                           <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
+                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
+                           </button>
+                       </div>
                    </div>
 
                    {/* Kotak Pengaturan Kecepatan (Warna Putih Teks Hitam) */}
