@@ -279,6 +279,7 @@ export default function App() {
   const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1);
   const animationSpeedRef = useRef(1);
   const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
+  const [showSpeedControl, setShowSpeedControl] = useState(false);
   const animatedMarkerRef = useRef(null);
   const animationTimeoutRef = useRef(null);
 
@@ -306,6 +307,7 @@ export default function App() {
     if (!selectedRoad) {
       setHighlightedRoadId(null);
       setIsAnimatingMap(false);
+      setShowSpeedControl(false);
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
       setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId);
@@ -694,55 +696,69 @@ export default function App() {
        const carIcon = window.L.divIcon({
           className: 'moving-car-icon',
           html: `
-            <div id="anim-car-wrapper" style="width: 26px; height: 42px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
-                <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
-                    <!-- Ban Bantet -->
-                    <rect x="5" y="30" width="15" height="25" rx="6" fill="#1e293b"/>
-                    <rect x="80" y="30" width="15" height="25" rx="6" fill="#1e293b"/>
-                    <rect x="5" y="105" width="15" height="25" rx="6" fill="#1e293b"/>
-                    <rect x="80" y="105" width="15" height="25" rx="6" fill="#1e293b"/>
+            <div id="anim-car-wrapper" style="width: 32px; height: 50px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
+                    <!-- Ban Bantet menonjol -->
+                    <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
+                    <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
+                    <rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/>
+                    <rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/>
                     
-                    <!-- Bodi Bulat (Bubble Car) -->
-                    <rect x="10" y="10" width="80" height="140" rx="40" fill="${carColor}" stroke="#ffffff" stroke-width="3"/>
+                    <!-- Bumper Depan (Silver) -->
+                    <rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/>
+                    <!-- Bumper Belakang (Silver) -->
+                    <rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/>
                     
-                    <!-- Atap Kaca Lucu -->
-                    <rect x="22" y="60" width="56" height="50" rx="20" fill="rgba(255,255,255,0.25)"/>
+                    <!-- Body Utama Bulat -->
+                    <rect x="14" y="12" width="72" height="135" rx="28" fill="${carColor}"/>
+                    <!-- Efek Depth/Bayangan 3D di Body -->
+                    <rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/>
+                    <rect x="20" y="18" width="60" height="123" rx="22" fill="${carColor}"/>
+                    
+                    <!-- Lampu Depan Bulat (Nongol) -->
+                    <circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                    <circle cx="26" cy="18" r="4" fill="#fef08a"/>
+                    <circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                    <circle cx="74" cy="18" r="4" fill="#fef08a"/>
 
-                    <!-- Kaca Depan Melengkung -->
-                    <path d="M 18 55 Q 50 35 82 55 L 75 75 Q 50 65 25 75 Z" fill="#0f172a" opacity="0.85"/>
+                    <!-- Grill Depan -->
+                    <rect x="36" y="14" width="28" height="6" rx="3" fill="#0f172a" opacity="0.6"/>
                     
+                    <!-- Kaca Depan -->
+                    <path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/>
                     <!-- Kaca Belakang -->
-                    <path d="M 25 120 Q 50 135 75 120 L 70 105 Q 50 115 30 105 Z" fill="#0f172a" opacity="0.85"/>
-
-                    <!-- Mata Bulat Besar (Lampu) -->
-                    <circle cx="28" cy="26" r="10" fill="#ffffff"/>
-                    <circle cx="28" cy="26" r="5" fill="#fef08a"/>
+                    <path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/>
                     
-                    <circle cx="72" cy="26" r="10" fill="#ffffff"/>
-                    <circle cx="72" cy="26" r="5" fill="#fef08a"/>
+                    <!-- Kaca Samping -->
+                    <path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/>
+                    <path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/>
 
-                    <!-- Pipi Merona Lucu -->
-                    <circle cx="16" cy="36" r="4.5" fill="#fca5a5" opacity="0.8"/>
-                    <circle cx="84" cy="36" r="4.5" fill="#fca5a5" opacity="0.8"/>
+                    <!-- Atap Mobil -->
+                    <rect x="28" y="72" width="44" height="38" rx="12" fill="${carColor}"/>
+                    <!-- Pantulan Cahaya Atap (Glossy) -->
+                    <rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/>
 
-                    <!-- Bemper Senyum -->
-                    <path d="M 38 16 Q 50 24 62 16" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <!-- Spion Bulat di Samping -->
+                    <path d="M 14 62 L 6 62" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                    <ellipse cx="6" cy="62" rx="4" ry="8" fill="#f1f5f9"/>
+                    
+                    <path d="M 86 62 L 94 62" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                    <ellipse cx="94" cy="62" rx="4" ry="8" fill="#f1f5f9"/>
 
-                    <!-- Lampu Rem Bulat Kecil -->
-                    <circle cx="28" cy="138" r="6" fill="#ef4444"/>
-                    <circle cx="72" cy="138" r="6" fill="#ef4444"/>
+                    <!-- Lampu Rem -->
+                    <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
+                    <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                 </svg>
             </div>
           `,
-          iconSize: [26, 42],  // Dibuat lebih lebar/bantet sedikit
-          iconAnchor: [13, 21] // Titik pusat rotasi disesuaikan
+          iconSize: [32, 50],
+          iconAnchor: [16, 25] 
        });
 
        animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
        
        // Paskan map untuk melihat keseluruhan rute berjalan secara stabil
        const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
-       // Memberikan padding bawah lebih besar agar rute tidak tertutup panel kontrol di bawah
        map.fitBounds(routeBounds, { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
 
        const animate = () => {
@@ -760,9 +776,34 @@ export default function App() {
           }
           
           const pt = points[currentIndex];
-          animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
+          let segmentDelay = 600 / animationSpeedRef.current; // Delay awal (pemanasan posisi)
+
+          // Kalkulasi Jarak & Durasi Animasi yang Konsisten (Kecepatan Konstan)
+          if (currentIndex > 0) {
+              const prevPt = points[currentIndex - 1];
+              const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+              accumulatedDistance += dist;
+              setCurrentAnimDistance(accumulatedDistance);
+
+              // Kecepatan dasar visual: ~25 meter per detik (skala 1x)
+              const baseVisualSpeedMps = 25; 
+              let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / animationSpeedRef.current;
+              
+              // Batasi delay antara 30ms (Sangat Cepat/Dekat) dan 8000ms (Jarak jauh trek lurus)
+              segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
+          }
+
+          // Transisi Injeksi CSS ke Elemen Peta (Smooth Gliding / Tanpa Patah)
+          if (animatedMarkerRef.current) {
+              const el = animatedMarkerRef.current.getElement();
+              if (el && currentIndex > 0) {
+                  // Menerapkan linear transition membuat mobil meluncur dengan lancar mengikuti koordinat
+                  el.style.transition = `transform ${segmentDelay}ms linear`;
+              }
+              animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
+          }
           
-          // Mengatur arah hadap mobil (rotasi) berdasarkan koordinat berikutnya
+          // Mengatur arah hadap mobil (rotasi putaran) berdasarkan koordinat berikutnya
           if (currentIndex < points.length - 1) {
               const nextPt = points[currentIndex + 1];
               const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
@@ -775,28 +816,17 @@ export default function App() {
 
               const carWrapper = document.getElementById('anim-car-wrapper');
               if (carWrapper) {
-                  const currentDelay = 500 / animationSpeedRef.current;
-                  carWrapper.style.transition = `transform ${currentDelay * 0.8}ms ease-out`;
+                  // Putaran dibuat sedikit lebih cepat dari transisi posisi agar mobil 'menghadap' arah tikungan dulu
+                  carWrapper.style.transition = `transform ${segmentDelay * 0.7}ms ease-in-out`;
                   carWrapper.style.transform = `rotate(${currentAngle}deg)`;
               }
           }
 
-          // Kalkulasi jarak berjalan
-          if (currentIndex > 0) {
-              const prevPt = points[currentIndex - 1];
-              const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
-              accumulatedDistance += dist;
-              setCurrentAnimDistance(accumulatedDistance);
-          }
-
           currentIndex++;
-          
-          // Kecepatan animasi (basis 500ms per koordinat dibagi multiplier) - Default jauh lebih lambat
-          const currentDelay = 500 / animationSpeedRef.current;
-          animationTimeoutRef.current = setTimeout(animate, currentDelay); 
+          animationTimeoutRef.current = setTimeout(animate, segmentDelay); 
        };
 
-       animationTimeoutRef.current = setTimeout(animate, 1000); // Tunggu 1 detik sebelum bergerak
+       animationTimeoutRef.current = setTimeout(animate, 800); // Tunggu sejenak sebelum tancap gas
     }
 
     return () => {
@@ -2374,6 +2404,7 @@ export default function App() {
                              setIsAnimPaused(false);
                              setCurrentAnimDistance(0);
                              setAnimationSpeedMultiplier(1);
+                             setShowSpeedControl(false);
                              if(window.innerWidth < 768) setIsSidebarOpen(false); 
                          }} className="text-[10px] md:text-xs text-amber-600 hover:bg-amber-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-amber-50/50 shadow-sm border border-amber-100">
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>
@@ -2464,35 +2495,73 @@ export default function App() {
 
             {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
             {selectedRoad && isAnimatingMap && (
-               <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] bg-black/85 backdrop-blur-md px-5 py-4 rounded-2xl flex flex-col shadow-2xl border border-white/20 animate-fade-in-up w-auto min-w-[280px]">
-                   <div className="flex justify-between items-center mb-3 border-b border-white/20 pb-2">
-                     <span className="text-white text-xs md:text-sm font-bold flex items-center">
-                       <div className={`w-2.5 h-2.5 rounded-full mr-2 ${isAnimPaused ? 'bg-amber-500' : 'bg-rose-500 animate-pulse'}`}></div> 
-                       {isAnimPaused ? 'Rute Dijeda' : 'Rute Berjalan...'}
-                     </span>
-                     <span className="text-emerald-400 font-mono text-sm md:text-base font-bold bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-900 ml-4">
-                        {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
-                     </span>
-                   </div>
-                   <div className="flex items-center justify-between space-x-3">
-                       <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`px-4 py-2 rounded-lg text-xs font-black transition-colors shadow-lg flex items-center ${isAnimPaused ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}>
-                           {isAnimPaused ? '▶ Lanjut' : '⏸ Jeda'}
-                       </button>
-                       <div className="flex space-x-1 bg-white/10 rounded-lg p-1.5 border border-white/10">
-                           <button onClick={() => {
-                               const speeds = [0.25, 0.5, 1, 2, 4];
-                               setAnimationSpeedMultiplier(prev => speeds[Math.max(0, speeds.indexOf(prev) - 1)] || prev);
-                           }} className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded font-bold text-xs transition-colors">Slower</button>
+               <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-50/95 backdrop-blur-xl px-5 py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[90%] max-w-[340px]">
+                   
+                   {/* Header Utama: Play, Speed Toggle, Close */}
+                   <div className="flex justify-between items-center">
+                       <div className="flex space-x-2 items-center">
+                           <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border ${isAnimPaused ? 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}>
+                               {isAnimPaused ? '▶ Play' : '⏸ Pause'}
+                           </button>
                            
-                           <div className="px-3 py-1 text-white text-xs font-bold min-w-[3rem] text-center">{animationSpeedMultiplier}x</div>
-                           
-                           <button onClick={() => {
-                               const speeds = [0.25, 0.5, 1, 2, 4];
-                               setAnimationSpeedMultiplier(prev => speeds[Math.min(speeds.length - 1, speeds.indexOf(prev) + 1)] || prev);
-                           }} className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded font-bold text-xs transition-colors">Faster</button>
+                           {/* Tombol Toggle Kecepatan */}
+                           <button 
+                               onClick={() => setShowSpeedControl(!showSpeedControl)} 
+                               className={`px-3 py-2.5 rounded-full text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                           >
+                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
+                               <span>{Number(animationSpeedMultiplier).toFixed(2)}x</span>
+                           </button>
                        </div>
-                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); }} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-black hover:bg-rose-700 transition-colors shadow-lg">Tutup</button>
+
+                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white px-3 py-2.5 rounded-full text-xs font-black transition-colors shadow-sm">
+                           Tutup
+                       </button>
                    </div>
+                   
+                   {/* Info Jarak */}
+                   <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 text-center text-emerald-700 font-mono text-sm font-bold shadow-sm">
+                       Jarak: {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                   </div>
+
+                   {/* Kotak Pengaturan Kecepatan (Warna Putih Teks Hitam) */}
+                   {showSpeedControl && (
+                       <div className="mt-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-md animate-fade-in text-slate-900">
+                           <div className="flex justify-between items-center mb-3">
+                               <span className="text-xs font-bold tracking-wide uppercase text-slate-500">Kecepatan Rute</span>
+                               <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200">{Number(animationSpeedMultiplier).toFixed(2)}x</span>
+                           </div>
+                           
+                           <div className="flex items-center space-x-3 mb-4">
+                               <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">-</button>
+                               
+                               <input 
+                                   type="range" 
+                                   min="0.25" 
+                                   max="2.0" 
+                                   step="0.25" 
+                                   value={animationSpeedMultiplier} 
+                                   onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))}
+                                   className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" 
+                                   style={{ accentColor: '#2563eb' }}
+                               />
+                               
+                               <button onClick={() => setAnimationSpeedMultiplier(Math.min(2.0, animationSpeedMultiplier + 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">+</button>
+                           </div>
+
+                           <div className="flex justify-between space-x-1.5">
+                               {[0.5, 0.75, 1.0, 1.5, 2.0].map(speed => (
+                                   <button 
+                                       key={speed} 
+                                       onClick={() => setAnimationSpeedMultiplier(speed)} 
+                                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                                   >
+                                       {speed}x
+                                   </button>
+                               ))}
+                           </div>
+                       </div>
+                   )}
                </div>
             )}
           </main>
