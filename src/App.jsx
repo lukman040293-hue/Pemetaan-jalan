@@ -2631,7 +2631,7 @@ export default function App() {
                    {/* Header Utama: Play, Speed Toggle, Close */}
                    <div className="flex justify-between items-center">
                        <div className="flex space-x-2 items-center">
-                           <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border ${isAnimPaused ? 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}>
+                           <button onClick={() => setIsAnimPaused(!isAnimPaused)} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-blue-600 text-white border-blue-600 hover:bg-blue-700">
                                {isAnimPaused ? '▶ Play' : '⏸ Pause'}
                            </button>
                            
@@ -2645,14 +2645,14 @@ export default function App() {
                            </button>
                        </div>
 
-                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white px-3 py-2.5 rounded-full text-xs font-black transition-colors shadow-sm">
-                           Tutup
+                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                        </button>
                    </div>
                    
                    {/* Info Jarak & Pilihan Kendaraan/Ikon */}
                    <div className="mt-3 flex space-x-2">
-                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 flex items-center justify-center text-slate-800 font-mono text-sm font-normal shadow-sm">
+                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-lg font-bold shadow-sm">
                            {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
                        </div>
                        
