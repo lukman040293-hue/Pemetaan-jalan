@@ -2035,27 +2035,40 @@ export default function App() {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 150MB)</label>
                     <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Batas ukuran telah dinaikkan ke 150MB. Pada banyak HP modern, video akan terkompres secara otomatis jika direkam langsung.</p>
-                    <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors">
-                      <input type="file" accept="video/mp4,video/quicktime,video/*" onChange={(e) => { 
-                          const f = e.target.files[0]; 
-                          if(f){ 
-                            const maxSizeBytes = 150 * 1024 * 1024; // Naikkan limit ke 150MB
-                            if (f.size > maxSizeBytes) {
-                               showToast("⚠️ Gagal: Ukuran video masih terlalu besar! Maksimal 150 MB.");
-                               e.target.value = ''; 
-                               return; 
-                            }
-                            setUploadedVideoUrl(URL.createObjectURL(f));
-                            setUploadedVideoFile(f); 
-                            showToast("✅ Video siap dilampirkan."); 
-                          } 
-                        }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                      {uploadedVideoUrl ? (
-                        <div className="text-emerald-600 font-bold text-sm flex flex-col items-center"><span className="text-xl mb-1">✅</span> Video Terlampir (Ketuk tukar)</div>
-                      ) : (
+                    
+                    {!uploadedVideoUrl ? (
+                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors">
+                        <input type="file" accept="video/mp4,video/quicktime,video/*" onChange={(e) => { 
+                            const f = e.target.files[0]; 
+                            if(f){ 
+                              const maxSizeBytes = 150 * 1024 * 1024; // Naikkan limit ke 150MB
+                              if (f.size > maxSizeBytes) {
+                                 showToast("⚠️ Gagal: Ukuran video masih terlalu besar! Maksimal 150 MB.");
+                                 e.target.value = ''; 
+                                 return; 
+                              }
+                              setUploadedVideoUrl(URL.createObjectURL(f));
+                              setUploadedVideoFile(f); 
+                              showToast("✅ Video siap dilampirkan."); 
+                            } 
+                          }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                         <div className="text-slate-500 text-sm font-semibold flex flex-col items-center"><span className="text-xl mb-1">📁</span> Pilih file video</div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="relative border border-emerald-300 rounded-2xl p-4 bg-emerald-50 text-center flex items-center justify-between shadow-sm">
+                         <div className="flex items-center space-x-3 text-emerald-700 font-bold text-sm">
+                            <span className="text-2xl">✅</span>
+                            <div className="text-left flex flex-col">
+                               <span>Video Terlampir</span>
+                               <span className="text-[10px] text-emerald-600 font-normal truncate max-w-[120px]">{uploadedVideoFile?.name || 'video_tersimpan.mp4'}</span>
+                            </div>
+                         </div>
+                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); showToast("Video batal dilampirkan."); }} className="bg-rose-100 text-rose-600 hover:bg-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1 transition-colors relative z-10">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                           <span>Hapus</span>
+                         </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 pb-8 flex flex-col space-y-3">
@@ -2261,7 +2274,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Baik</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Baik</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
@@ -2271,7 +2284,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Ringan</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Ringan</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
@@ -2281,7 +2294,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Sedang</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Sedang</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
@@ -2291,7 +2304,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Parah</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Rusak Parah</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
@@ -2305,7 +2318,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="text-[10px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Aspal</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Aspal</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
@@ -2315,7 +2328,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="text-[10px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Beton</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Beton</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
@@ -2325,7 +2338,7 @@ export default function App() {
                     <div className="pointer-events-auto flex items-stretch rounded-lg shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-0.5 transition-transform cursor-default h-10 md:h-11 w-auto shrink-0 bg-white/95 backdrop-blur-md">
                        <div className="flex-1 flex items-center gap-1.5 px-2.5 md:px-3 border-r border-slate-200/80">
                           <span className="text-[10px] md:text-xs leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
-                          <span className="text-[9px] md:text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tanah</span>
+                          <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Tanah</span>
                        </div>
                        <div className="flex items-center justify-center bg-slate-100/90 px-3 md:px-4 min-w-[36px] md:min-w-[44px]">
                           <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
