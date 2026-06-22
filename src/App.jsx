@@ -1276,10 +1276,21 @@ export default function App() {
     }
   }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
 
-  // Hindari bug peta abu-abu saat pindah tab
+  // Hindari bug peta abu-abu saat pindah tab (Fix blank map)
   useEffect(() => {
      if (recordTab === 'map' && liveMapInstanceRef.current) {
-        setTimeout(() => { liveMapInstanceRef.current.invalidateSize(); }, 100);
+        const map = liveMapInstanceRef.current;
+        // Trigger invalidate segera, lalu panggil lagi beberapa kali selama dan setelah transisi CSS 300ms selesai
+        // Ini memastikan Leaflet memuat ulang ubin (tiles) yang hilang
+        map.invalidateSize();
+        const timers = [100, 300, 500].map(time => 
+            setTimeout(() => { 
+                if (liveMapInstanceRef.current) {
+                    liveMapInstanceRef.current.invalidateSize(true); 
+                }
+            }, time)
+        );
+        return () => timers.forEach(clearTimeout);
      }
   }, [recordTab]);
 
@@ -1795,19 +1806,21 @@ export default function App() {
               <div className="flex-1 relative bg-slate-900 text-white overflow-hidden">
                 
                 {/* Layer Kamera */}
-                <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${recordTab === 'camera' ? 'opacity-100 z-0' : 'opacity-0 z-0 pointer-events-none'}`}/>
+                <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${recordTab === 'camera' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}/>
                 
-                {/* Layer Peta Live */}
-                <div ref={liveMapContainerRef} className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${recordTab === 'map' ? 'opacity-100 z-0' : 'opacity-0 z-0 pointer-events-none'}`}></div>
+                {/* Layer Peta Live (Dibungkus div terpisah agar Leaflet tidak bentrok dengan React CSS) */}
+                <div className={`absolute inset-0 w-full h-full bg-slate-200 transition-opacity duration-300 ${recordTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+                   <div ref={liveMapContainerRef} className="w-full h-full"></div>
+                </div>
 
                 {/* Gradient Bawah untuk Keterbacaan Teks */}
-                <div className="absolute bottom-0 left-0 right-0 h-56 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent z-10 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-56 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent z-20 pointer-events-none"></div>
 
                 {/* --- HEADER TABS: KAMERA VS PETA LIVE --- */}
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-black/50 backdrop-blur-md rounded-full p-1.5 flex shadow-lg border border-white/10">
-                    <button onClick={() => setRecordTab('camera')} className={`px-5 py-2 rounded-full text-xs font-black transition-all ${recordTab === 'camera' ? 'bg-white text-black shadow-md' : 'text-slate-300 hover:text-white'}`}>Kamera Mode</button>
-                    <button onClick={() => setRecordTab('map')} className={`px-5 py-2 rounded-full text-xs font-black transition-all flex items-center space-x-1.5 ${recordTab === 'map' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}>
-                        <span>Peta Live</span>
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-slate-100/90 backdrop-blur-md rounded-full p-1.5 flex shadow-lg border border-slate-200">
+                    <button onClick={() => setRecordTab('camera')} className={`px-5 py-2 rounded-full text-xs font-black transition-all ${recordTab === 'camera' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900'}`}>Kamera</button>
+                    <button onClick={() => setRecordTab('map')} className={`px-5 py-2 rounded-full text-xs font-black transition-all flex items-center space-x-1.5 ${recordTab === 'map' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900'}`}>
+                        <span>Live</span>
                         {recordingStatus === 'recording' && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
                     </button>
                 </div>
@@ -1858,15 +1871,15 @@ export default function App() {
                 )}
 
                 {/* WIDGET BAWAH (Menggabungkan Log & Stats agar lebih lega) */}
-                <div className="absolute bottom-[80px] left-4 right-4 bg-black/50 backdrop-blur-xl p-3.5 rounded-3xl border border-white/10 z-30 shadow-2xl flex flex-col gap-3">
+                <div className="absolute bottom-[80px] left-4 right-4 bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 z-30 shadow-2xl flex flex-col gap-3">
                     
                     {/* Log Mini */}
-                    <div className="flex justify-between items-center text-[10px] bg-white/10 rounded-xl px-3 py-2 border border-white/5">
-                        <span className="text-blue-300 font-bold flex items-center gap-1.5">
-                           <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+                    <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
+                        <span className="text-blue-600 font-bold flex items-center gap-1.5">
+                           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
                            Log: {realGpsPoints.length} Titik
                         </span>
-                        <span className="text-emerald-300 font-mono tracking-tight">
+                        <span className="text-emerald-600 font-mono tracking-tight font-bold">
                             {realGpsPoints.length > 0 ? `${realGpsPoints[realGpsPoints.length-1].lat.toFixed(5)}, ${realGpsPoints[realGpsPoints.length-1].lng.toFixed(5)}` : 'Menunggu satelit...'}
                         </span>
                     </div>
@@ -1874,18 +1887,18 @@ export default function App() {
                     {/* Stats */}
                     <div className="flex justify-between items-center px-1">
                         <div className="text-center w-1/3">
-                            <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak</div>
-                            <div className="text-xl font-black text-white leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-300">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
+                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak</div>
+                            <div className="text-xl font-black text-slate-900 leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
                         </div>
-                        <div className="w-px h-8 bg-white/10"></div>
+                        <div className="w-px h-8 bg-slate-200"></div>
                         <div className="text-center w-1/3">
-                            <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
-                            <div className="text-xl font-black text-white leading-none">{currentSpeed} <span className="text-xs font-medium text-slate-300">km/h</span></div>
+                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
+                            <div className="text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-xs font-medium text-slate-500">km/h</span></div>
                         </div>
-                        <div className="w-px h-8 bg-white/10"></div>
+                        <div className="w-px h-8 bg-slate-200"></div>
                         <div className="text-center w-1/3">
-                            <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div>
-                            <div className={`text-xl font-black leading-none ${gpsAccuracy < 15 ? 'text-emerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
+                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div>
+                            <div className={`text-xl font-black leading-none ${gpsAccuracy === '-' || gpsAccuracy === 'Simulasi' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : gpsAccuracy < 30 ? 'text-amber-500' : 'text-red-600'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-500">m</span></div>
                         </div>
                     </div>
                 </div>
@@ -1897,7 +1910,7 @@ export default function App() {
                      <div className="w-full flex space-x-3">
                          <button onClick={cancelRecording} className="w-1/3 bg-slate-800/80 backdrop-blur-md border border-white/10 text-white rounded-2xl py-3.5 font-bold text-sm transition-colors shadow-lg">Batal</button>
                          <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-all border ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600 scale-100' : 'bg-slate-800/80 backdrop-blur-md text-slate-400 border-white/5 cursor-not-allowed scale-95'}`}>
-                             {recordingStatus === 'locating' ? <span>Mencari GPS...</span> : <span>MULAI JALAN</span>}
+                             {recordingStatus === 'locating' ? <span>Mencari GPS...</span> : <span>START RECORD</span>}
                          </button>
                      </div>
                   ) : (
