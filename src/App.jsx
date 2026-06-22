@@ -1863,7 +1863,7 @@ export default function App() {
                   </div>
 
                   {/* OVERLAY: Log Koordinat Terakhir */}
-                  <div className="absolute bottom-28 left-4 right-4 md:left-auto md:w-64 bg-black/70 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-left text-[10px] font-mono z-20 pointer-events-none shadow-lg transition-all">
+                  <div className="absolute bottom-36 left-4 right-4 md:left-auto md:w-64 bg-black/70 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-left text-[10px] font-mono z-20 pointer-events-none shadow-lg transition-all">
                     <div className="flex justify-between items-center mb-1.5 border-b border-white/20 pb-1">
                       <span className="text-blue-400 font-bold">Log Koordinat Aktif</span>
                       <span className="text-white font-bold bg-white/20 px-1.5 py-0.5 rounded">{realGpsPoints.length} Titik</span>
@@ -1883,7 +1883,7 @@ export default function App() {
 
                   {/* Tombol Simulasi Darurat jika GPS tidak kunjung dapat */}
                   {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
-                      <button onClick={simulateGpsMovement} className="absolute bottom-32 right-4 bg-slate-800/90 text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
+                      <button onClick={simulateGpsMovement} className="absolute bottom-56 right-4 bg-slate-800/90 text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
                   )}
                 </div>
 
@@ -1901,7 +1901,7 @@ export default function App() {
                      <div className="w-full flex space-x-3">
                          {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
                              <>
-                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-50 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                                      <span>JEDA</span>
                                  </button>
