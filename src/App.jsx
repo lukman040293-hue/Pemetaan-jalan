@@ -1773,7 +1773,7 @@ export default function App() {
             </div>
           )}
 
-          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-12 pb-4 md:pt-5 md:pb-4">
+          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-6 pb-3 md:py-4">
             <h1 className="font-black text-slate-900 text-lg tracking-tight">R-Map Surveyor</h1>
             <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors">Keluar</button>
           </header>
@@ -1818,10 +1818,10 @@ export default function App() {
 
                 {/* --- HEADER TABS: KAMERA VS PETA LIVE --- */}
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-slate-100/90 backdrop-blur-md rounded-full p-1.5 flex shadow-lg border border-slate-200">
-                    <button onClick={() => setRecordTab('camera')} className={`px-5 py-2 rounded-full text-xs font-black transition-all ${recordTab === 'camera' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900'}`}>Kamera</button>
-                    <button onClick={() => setRecordTab('map')} className={`px-5 py-2 rounded-full text-xs font-black transition-all flex items-center space-x-1.5 ${recordTab === 'map' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900'}`}>
+                    <button onClick={() => setRecordTab('camera')} className={`px-5 py-2 rounded-full text-xs font-black transition-all ${recordTab === 'camera' ? 'bg-blue-600 text-white shadow-sm border border-blue-600' : 'text-slate-500 hover:text-slate-900'}`}>Kamera</button>
+                    <button onClick={() => setRecordTab('map')} className={`px-5 py-2 rounded-full text-xs font-black transition-all flex items-center space-x-1.5 ${recordTab === 'map' ? 'bg-blue-600 text-white shadow-sm border border-blue-600' : 'text-slate-500 hover:text-slate-900'}`}>
                         <span>Live</span>
-                        {recordingStatus === 'recording' && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                        {recordingStatus === 'recording' && <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse border border-white/50"></span>}
                     </button>
                 </div>
 
@@ -1865,14 +1865,16 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Tombol Simulasi Darurat jika GPS tidak kunjung dapat */}
-                {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
-                    <button onClick={simulateGpsMovement} className="absolute top-[110px] right-4 bg-slate-800/80 backdrop-blur-md text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
-                )}
-
                 {/* WIDGET BAWAH (Menggabungkan Log & Stats agar lebih lega) */}
                 <div className="absolute bottom-[80px] left-4 right-4 bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 z-30 shadow-2xl flex flex-col gap-3">
                     
+                    {/* Tombol Simulasi Darurat - Mengambang di kanan atas widget bawah */}
+                    {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
+                        <button onClick={simulateGpsMovement} className="absolute -top-11 right-0 bg-slate-800 hover:bg-slate-700 text-white text-[10px] px-4 py-2 rounded-full z-40 border border-slate-700 shadow-lg font-bold transition-colors">
+                            Simulasi (Tanpa Sinyal)
+                        </button>
+                    )}
+
                     {/* Log Mini */}
                     <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
                         <span className="text-blue-600 font-bold flex items-center gap-1.5">
@@ -2108,7 +2110,7 @@ export default function App() {
 
             {mobileScreen === 'pin_map' && (
               <div className="flex-1 flex flex-col bg-slate-100 relative">
-                <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm pt-12 md:pt-4">
+                <div className="bg-white px-5 pb-3 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm pt-6 md:py-4">
                   <div><h3 className="font-extrabold text-slate-800 text-base">Tandai Lokasi</h3><p className="text-xs text-slate-500">Ketuk garis biru untuk meletakkan pin</p></div>
                   <button onClick={() => setMobileScreen('form')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-bold text-sm shadow-md transition-colors">Selesai</button>
                 </div>
@@ -2142,7 +2144,7 @@ export default function App() {
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
                 {/* Area Header (Tetap/Tidak ikut ter-scroll) */}
-                <div className="px-6 pt-14 md:pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                <div className="px-6 pt-6 md:pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
                   <div className="flex justify-between items-center mb-4 mt-2">
                     <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
                     <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
