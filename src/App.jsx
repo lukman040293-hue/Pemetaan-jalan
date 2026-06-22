@@ -271,9 +271,11 @@ export default function App() {
   const [filterJenis, setFilterJenis] = useState('Semua'); 
   const [filterKondisi, setFilterKondisi] = useState('Semua');
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
+  const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); // State untuk pilihan multi-rute
   
   // State untuk Animasi Rute
   const [isAnimatingMap, setIsAnimatingMap] = useState(false);
+  const [animatingRoadsList, setAnimatingRoadsList] = useState([]); // State baru untuk menyimpan daftar multi-rute
   const [isAnimPaused, setIsAnimPaused] = useState(false);
   const isAnimPausedRef = useRef(false);
   const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
@@ -308,6 +310,7 @@ export default function App() {
     if (!selectedRoad) {
       setHighlightedRoadId(null);
       setIsAnimatingMap(false);
+      setAnimatingRoadsList([]);
       setShowSpeedControl(false);
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
@@ -315,6 +318,13 @@ export default function App() {
       setIsAnimatingMap(false);
     }
   }, [selectedRoad]);
+
+  // Fungsi toggle rute terpilih di admin
+  const toggleAdminRouteSelection = (id) => {
+    setSelectedAdminRouteIds(prev => 
+      prev.includes(id) ? prev.filter(rId => rId !== id) : [...prev, id]
+    );
+  };
 
   // --- STATE SURVEYOR ---
   const [mobileScreen, setMobileScreen] = useState('home'); 
@@ -676,23 +686,16 @@ export default function App() {
     }
   }, [isSidebarOpen, appRole]);
 
-  // --- EFEK: ANIMASI RUTE DI ADMIN ---
+  // --- EFEK: ANIMASI RUTE DI ADMIN (MENDUKUNG MULTI-VEHICLE) ---
   useEffect(() => {
-    // Deklarasikan referensi event listener di luar block if agar bisa diakses saat unmount (cleanup)
     let onInteractionStart = null;
     let onInteractionEnd = null;
+    let activeTimeouts = [];
+    let activeMarkers = [];
 
-    if (isAnimatingMap && selectedRoad && adminMapInstanceRef.current) {
+    if (isAnimatingMap && animatingRoadsList.length > 0 && adminMapInstanceRef.current) {
        const map = adminMapInstanceRef.current;
-       const points = selectedRoad.realGps;
-       let currentIndex = 0;
-       let accumulatedDistance = 0;
-
-       if (!points || points.length < 2) {
-          setIsAnimatingMap(false);
-          showToast("Titik rute terlalu sedikit untuk dianimasikan.");
-          return;
-       }
+       let isInteracting = false;
 
        // Fungsi pembantu menghitung arah hadap mobil (Bearing dalam derajat)
        const getBearing = (lat1, lng1, lat2, lng2) => {
@@ -704,147 +707,11 @@ export default function App() {
            return (toDeg(Math.atan2(y, x)) + 360) % 360;
        };
 
-       // Sudut awal menghadap titik kedua
-       let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-
-       // Menyelaraskan warna ikon dengan kondisi jalan
-       const iconColor = getConditionColor(selectedRoad.condition);
-       
-       let iconHtml = '';
-       let iconSize = [32, 50];
-       let iconAnchor = [16, 25];
-
-       if (animIconType === 'motorcycle') {
-           iconSize = [20, 44];
-           iconAnchor = [10, 22];
-           iconHtml = `
-            <div id="anim-car-wrapper" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
-                <svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
-                    <!-- Roda Depan & Belakang -->
-                    <rect x="16" y="5" width="8" height="20" rx="4" fill="#1e293b"/>
-                    <rect x="16" y="75" width="8" height="20" rx="4" fill="#1e293b"/>
-                    <!-- Knalpot -->
-                    <rect x="24" y="60" width="4" height="25" rx="2" fill="#cbd5e1"/>
-                    <!-- Body Motor (Menyesuaikan kondisi) -->
-                    <rect x="10" y="20" width="20" height="60" rx="10" fill="${iconColor}"/>
-                    <!-- Stang -->
-                    <rect x="4" y="25" width="32" height="4" rx="2" fill="#475569"/>
-                    <rect x="2" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
-                    <rect x="32" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
-                    <!-- Helm/Rider -->
-                    <circle cx="20" cy="45" r="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-                    <!-- Lampu Depan & Belakang -->
-                    <circle cx="20" cy="18" r="4" fill="#fef08a"/>
-                    <rect x="16" y="78" width="8" height="4" rx="2" fill="#ef4444"/>
-                </svg>
-            </div>
-           `;
-       } else if (animIconType === 'runner') {
-           iconSize = [28, 28]; // Ukuran diseimbangkan agar pas di peta
-           iconAnchor = [14, 14];
-           iconHtml = `
-            <div id="anim-car-wrapper" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
-                <svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
-                    <style>
-                        /* Animasi langkah lari 2 frame sederhana */
-                        @keyframes runCycle {
-                            0% { transform: scaleX(1); }
-                            50% { transform: scaleX(-1); }
-                            100% { transform: scaleX(1); }
-                        }
-                    </style>
-                    <g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;">
-                        <!-- Kaki Kiri (Melangkah ke Depan) -->
-                        <rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" />
-                        <!-- Kaki Kanan (Tertinggal di Belakang) -->
-                        <rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" />
-                        
-                        <!-- Tangan Kiri (Ayun ke belakang) -->
-                        <path d="M 14 25 Q 6 36 12 44" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
-                        <circle cx="12" cy="44" r="3" fill="#fcd34d" />
-                        
-                        <!-- Tangan Kanan (Ayun ke depan) -->
-                        <path d="M 36 25 Q 44 14 38 6" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
-                        <circle cx="38" cy="6" r="3" fill="#fcd34d" />
-
-                        <!-- Bahu / Badan Utama -->
-                        <rect x="13" y="20" width="24" height="10" rx="5" fill="${iconColor}" />
-                    </g>
-                    <!-- Kepala (Tetap di poros tengah) -->
-                    <circle cx="25" cy="25" r="7" fill="#fcd34d" />
-                    <!-- Topi/Rambut Menghadap ke Depan -->
-                    <path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" />
-                </svg>
-            </div>
-           `;
-       } else {
-           // Default (Mobil)
-           iconSize = [32, 50];
-           iconAnchor = [16, 25];
-           iconHtml = `
-            <div id="anim-car-wrapper" style="width: 32px; height: 50px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
-                <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
-                    <!-- Ban -->
-                    <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
-                    <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
-                    <rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/>
-                    <rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/>
-                    
-                    <!-- Bumper Depan & Belakang -->
-                    <rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/>
-                    <rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/>
-                    
-                    <!-- Body Utama -->
-                    <rect x="14" y="12" width="72" height="135" rx="28" fill="${iconColor}"/>
-                    <!-- Efek Depth/Bayangan -->
-                    <rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/>
-                    <rect x="20" y="18" width="60" height="123" rx="22" fill="${iconColor}"/>
-                    
-                    <!-- Lampu Depan -->
-                    <circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
-                    <circle cx="26" cy="18" r="4" fill="#fef08a"/>
-                    <circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
-                    <circle cx="74" cy="18" r="4" fill="#fef08a"/>
-
-                    <!-- Kaca -->
-                    <path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/>
-                    <path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/>
-                    <path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/>
-                    <path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/>
-
-                    <!-- Atap Mobil -->
-                    <rect x="28" y="72" width="44" height="38" rx="12" fill="${iconColor}"/>
-                    <rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/>
-                    
-                    <!-- Lampu Rem -->
-                    <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
-                    <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
-                </svg>
-            </div>
-           `;
-       }
-       
-       const customVehicleIcon = window.L.divIcon({
-          className: 'moving-vehicle-icon',
-          html: iconHtml,
-          iconSize: iconSize,
-          iconAnchor: iconAnchor 
-       });
-
-       animatedMarkerRef.current = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
-       
-       // Paskan map untuk melihat keseluruhan rute berjalan secara stabil
-       const routeBounds = window.L.latLngBounds(points.map(pt => [pt.lat, pt.lng]));
-       map.fitBounds(routeBounds, { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
-
-       // --- FIX: MATIKAN TRANSISI CSS SAAT PETA DI-ZOOM/DIGESER ---
-       let isInteracting = false;
        onInteractionStart = () => { 
            isInteracting = true; 
-           if(animatedMarkerRef.current) { 
-               const el = animatedMarkerRef.current.getElement(); 
-               if(el) el.style.transition = 'none'; 
-           } 
+           activeMarkers.forEach(m => {
+               if(m && m.getElement()) m.getElement().style.transition = 'none';
+           });
        };
        onInteractionEnd = () => { isInteracting = false; };
        
@@ -853,84 +720,183 @@ export default function App() {
        map.on('dragstart', onInteractionStart);
        map.on('dragend', onInteractionEnd);
 
-       const animate = () => {
-          if (currentIndex >= points.length) {
-             setIsAnimatingMap(false);
-             setIsAnimPaused(false);
-             showToast("Animasi rute selesai.");
-             return;
-          }
+       let finishedCount = 0;
+       const totalVehicles = animatingRoadsList.length;
 
-          if (isAnimPausedRef.current) {
-              // Jika di-pause, loop menunggu 100ms tanpa memajukan index
-              animationTimeoutRef.current = setTimeout(animate, 100);
-              return;
-          }
-          
-          const pt = points[currentIndex];
-          let segmentDelay = 600 / animationSpeedRef.current; // Delay awal (pemanasan posisi)
+       animatingRoadsList.forEach((road, vIndex) => {
+           const points = road.realGps;
+           if (!points || points.length < 2) {
+               finishedCount++;
+               return;
+           }
 
-          // Kalkulasi Jarak & Durasi Animasi yang Konsisten (Kecepatan Konstan)
-          if (currentIndex > 0) {
-              const prevPt = points[currentIndex - 1];
-              const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
-              accumulatedDistance += dist;
-              setCurrentAnimDistance(accumulatedDistance);
+           let currentIndex = 0;
+           let accumulatedDistance = 0;
+           let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+           const iconColor = getConditionColor(road.condition);
+           
+           let iconHtml = '';
+           let iconSize = [32, 50];
+           let iconAnchor = [16, 25];
 
-              // Kecepatan dasar visual dipercepat ekstrim: ~75 meter per detik (skala 1.0x)
-              const baseVisualSpeedMps = 75; 
-              let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / animationSpeedRef.current;
+           if (animIconType === 'motorcycle') {
+               iconSize = [20, 44];
+               iconAnchor = [10, 22];
+               iconHtml = `
+                <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                    <svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                        <rect x="16" y="5" width="8" height="20" rx="4" fill="#1e293b"/>
+                        <rect x="16" y="75" width="8" height="20" rx="4" fill="#1e293b"/>
+                        <rect x="24" y="60" width="4" height="25" rx="2" fill="#cbd5e1"/>
+                        <rect x="10" y="20" width="20" height="60" rx="10" fill="${iconColor}"/>
+                        <rect x="4" y="25" width="32" height="4" rx="2" fill="#475569"/>
+                        <rect x="2" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
+                        <rect x="32" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
+                        <circle cx="20" cy="45" r="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="20" cy="18" r="4" fill="#fef08a"/>
+                        <rect x="16" y="78" width="8" height="4" rx="2" fill="#ef4444"/>
+                    </svg>
+                </div>`;
+           } else if (animIconType === 'runner') {
+               iconSize = [28, 28];
+               iconAnchor = [14, 14];
+               iconHtml = `
+                <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                    <svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
+                        <style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style>
+                        <g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;">
+                            <rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" />
+                            <rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" />
+                            <path d="M 14 25 Q 6 36 12 44" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                            <circle cx="12" cy="44" r="3" fill="#fcd34d" />
+                            <path d="M 36 25 Q 44 14 38 6" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                            <circle cx="38" cy="6" r="3" fill="#fcd34d" />
+                            <rect x="13" y="20" width="24" height="10" rx="5" fill="${iconColor}" />
+                        </g>
+                        <circle cx="25" cy="25" r="7" fill="#fcd34d" />
+                        <path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" />
+                    </svg>
+                </div>`;
+           } else {
+               iconSize = [32, 50];
+               iconAnchor = [16, 25];
+               iconHtml = `
+                <div id="anim-car-wrapper-${vIndex}" style="width: 32px; height: 50px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                    <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
+                        <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
+                        <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
+                        <rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/>
+                        <rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/>
+                        <rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/>
+                        <rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/>
+                        <rect x="14" y="12" width="72" height="135" rx="28" fill="${iconColor}"/>
+                        <rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/>
+                        <rect x="20" y="18" width="60" height="123" rx="22" fill="${iconColor}"/>
+                        <circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="26" cy="18" r="4" fill="#fef08a"/>
+                        <circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="74" cy="18" r="4" fill="#fef08a"/>
+                        <path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/>
+                        <path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/>
+                        <path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/>
+                        <path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/>
+                        <rect x="28" y="72" width="44" height="38" rx="12" fill="${iconColor}"/>
+                        <rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/>
+                        <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
+                        <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
+                    </svg>
+                </div>`;
+           }
+           
+           const customVehicleIcon = window.L.divIcon({
+              className: 'moving-vehicle-icon',
+              html: iconHtml,
+              iconSize: iconSize,
+              iconAnchor: iconAnchor 
+           });
+
+           const marker = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
+           activeMarkers.push(marker);
+
+           const animate = () => {
+              if (currentIndex >= points.length) {
+                 finishedCount++;
+                 if (finishedCount >= totalVehicles) {
+                     setIsAnimatingMap(false);
+                     setIsAnimPaused(false);
+                     showToast("Animasi semua rute selesai.");
+                 }
+                 return;
+              }
+
+              if (isAnimPausedRef.current) {
+                  activeTimeouts.push(setTimeout(animate, 100));
+                  return;
+              }
               
-              // Batasi delay antara 30ms (Sangat Cepat/Dekat) dan 8000ms (Jarak jauh trek lurus)
-              segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
-          }
+              const pt = points[currentIndex];
+              let segmentDelay = 600 / animationSpeedRef.current; 
 
-          // Transisi Injeksi CSS ke Elemen Peta (Smooth Gliding / Tanpa Patah)
-          if (animatedMarkerRef.current) {
-              const el = animatedMarkerRef.current.getElement();
-              if (el && currentIndex > 0) {
-                  // Jika user sedang zoom/geser, hapus transisi agar mobil tidak "terbang" dari jalur
-                  if (isInteracting) {
-                      el.style.transition = 'none';
-                  } else {
-                      el.style.transition = `transform ${segmentDelay}ms linear`;
+              if (currentIndex > 0) {
+                  const prevPt = points[currentIndex - 1];
+                  const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+                  accumulatedDistance += dist;
+                  
+                  if (totalVehicles === 1) setCurrentAnimDistance(accumulatedDistance);
+
+                  const baseVisualSpeedMps = 75; 
+                  let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / animationSpeedRef.current;
+                  segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
+              }
+
+              if (marker) {
+                  const el = marker.getElement();
+                  if (el && currentIndex > 0) {
+                      if (isInteracting) {
+                          el.style.transition = 'none';
+                      } else {
+                          el.style.transition = `transform ${segmentDelay}ms linear`;
+                      }
+                  }
+                  marker.setLatLng([pt.lat, pt.lng]);
+              }
+              
+              if (currentIndex < points.length - 1) {
+                  const nextPt = points[currentIndex + 1];
+                  const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
+                  
+                  let diff = targetBearing - (currentAngle % 360);
+                  if (diff > 180) diff -= 360;
+                  if (diff < -180) diff += 360;
+                  currentAngle += diff;
+
+                  const carWrapper = document.getElementById(`anim-car-wrapper-${vIndex}`);
+                  if (carWrapper) {
+                      carWrapper.style.transition = `transform ${segmentDelay * 0.7}ms ease-in-out`;
+                      carWrapper.style.transform = `rotate(${currentAngle}deg)`;
                   }
               }
-              animatedMarkerRef.current.setLatLng([pt.lat, pt.lng]);
-          }
-          
-          // Mengatur arah hadap ikon (rotasi putaran) berdasarkan koordinat berikutnya
-          if (currentIndex < points.length - 1) {
-              const nextPt = points[currentIndex + 1];
-              const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
-              
-              // Mencegah ikon berputar terbalik mundur 360 derajat
-              let diff = targetBearing - (currentAngle % 360);
-              if (diff > 180) diff -= 360;
-              if (diff < -180) diff += 360;
-              currentAngle += diff;
 
-              const carWrapper = document.getElementById('anim-car-wrapper');
-              if (carWrapper) {
-                  // Putaran dibuat sedikit lebih cepat dari transisi posisi agar ikon 'menghadap' arah tikungan dulu
-                  carWrapper.style.transition = `transform ${segmentDelay * 0.7}ms ease-in-out`;
-                  carWrapper.style.transform = `rotate(${currentAngle}deg)`;
-              }
-          }
+              currentIndex++;
+              activeTimeouts.push(setTimeout(animate, segmentDelay)); 
+           };
 
-          currentIndex++;
-          animationTimeoutRef.current = setTimeout(animate, segmentDelay); 
-       };
+           // Buat jeda mulai yang berurutan jika ada banyak rute agar tidak bertabrakan bersamaan di awal
+           activeTimeouts.push(setTimeout(animate, 800 + (vIndex * 60))); 
+       });
 
-       animationTimeoutRef.current = setTimeout(animate, 800); // Tunggu sejenak sebelum tancap gas
+       // Paskan map untuk melihat keseluruhan rute yang sedang dianimasikan
+       const allRouteBounds = animatingRoadsList.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
+       if (allRouteBounds.length > 0) {
+          map.fitBounds(window.L.latLngBounds(allRouteBounds), { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
+       }
     }
 
     return () => {
-       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-       if (animatedMarkerRef.current && adminMapInstanceRef.current) {
-           adminMapInstanceRef.current.removeLayer(animatedMarkerRef.current);
-           animatedMarkerRef.current = null;
-       }
+       activeTimeouts.forEach(clearTimeout);
+       activeMarkers.forEach(m => {
+           if(m && adminMapInstanceRef.current) adminMapInstanceRef.current.removeLayer(m);
+       });
        if (adminMapInstanceRef.current && onInteractionStart && onInteractionEnd) {
            adminMapInstanceRef.current.off('zoomstart', onInteractionStart);
            adminMapInstanceRef.current.off('zoomend', onInteractionEnd);
@@ -938,7 +904,7 @@ export default function App() {
            adminMapInstanceRef.current.off('dragend', onInteractionEnd);
        }
     };
-  }, [isAnimatingMap, selectedRoad, animIconType]);
+  }, [isAnimatingMap, animatingRoadsList, animIconType]);
 
   // --- EFEK PETA SURVEYOR ---
   // (Sama seperti sebelumnya, dikurangi untuk ringkasnya, tidak ada perubahan logika GPS)
@@ -1949,9 +1915,6 @@ export default function App() {
 
             {mobileScreen === 'form' && (
               <div className="flex-1 p-6 overflow-y-auto bg-slate-50 text-left custom-scrollbar">
-                <h3 className="text-xl font-black text-slate-800 mb-1">Form Survei Lapangan</h3>
-                <p className="text-sm text-slate-500 mb-5">Verifikasi informasi rute yang direkam.</p>
-                
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl mb-6 flex items-center justify-between shadow-sm">
                   <div className="flex items-center space-x-3">
                     <div className="bg-blue-200 text-blue-600 p-2.5 rounded-xl">
@@ -2413,11 +2376,43 @@ export default function App() {
                 </div>
 
               <div className="flex-1 flex flex-col bg-transparent overflow-hidden">
-                <div className="px-4 py-3 border-b border-white/30 flex justify-between items-end bg-white/40 z-10 shrink-0">
-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Laporan Masuk</span>
-                  <span className="bg-blue-100/80 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
-                    {adminStats.total} Data
-                  </span>
+                <div className="px-4 py-3 border-b border-white/30 flex justify-between items-center bg-white/40 z-10 shrink-0">
+                  <div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">Laporan Masuk</span>
+                    <span className="bg-blue-100/80 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm mt-1 inline-block">
+                      {adminStats.total} Data
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    {selectedAdminRouteIds.length > 0 && (
+                       <button onClick={() => setSelectedAdminRouteIds([])} className="text-[10px] text-slate-500 hover:text-rose-500 mr-3 font-bold underline transition-colors">
+                         Batal Pilih
+                       </button>
+                    )}
+                    <button 
+                      onClick={() => {
+                         let validRoads = [];
+                         if (selectedAdminRouteIds.length > 0) {
+                             // Jika ada rute yang dicentang, hanya ambil rute tersebut
+                             validRoads = syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1);
+                         } else {
+                             // Jika tidak ada yang dicentang, ambil semua rute sesuai filter saat ini
+                             validRoads = syncedRoads.filter(road => (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || road.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || road.condition === filterKondisi)).filter(r => r.realGps && r.realGps.length > 1);
+                         }
+
+                         if(validRoads.length === 0) return showToast("Tidak ada rute valid untuk diputar.");
+                         setAnimatingRoadsList(validRoads);
+                         setIsAnimatingMap(true);
+                         setIsAnimPaused(false);
+                         setAnimationSpeedMultiplier(1.0);
+                         if(window.innerWidth < 768) setIsSidebarOpen(false);
+                      }}
+                      className={`${selectedAdminRouteIds.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-500 hover:bg-emerald-600'} text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-sm flex items-center space-x-1 transition-colors group`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 group-hover:scale-110 transition-transform"><path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" /></svg>
+                      <span>{selectedAdminRouteIds.length > 0 ? `Play Terpilih (${selectedAdminRouteIds.length})` : 'Play Semua'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-8 custom-scrollbar">
@@ -2431,6 +2426,8 @@ export default function App() {
                       .map((road) => {
                       const roadId = road.id || road.dbId;
                       const isHighlighted = highlightedRoadId === roadId;
+                      const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
+
                       return (
                       <div key={roadId} onClick={() => {
                           setSelectedRoad(road);
@@ -2443,7 +2440,19 @@ export default function App() {
                              const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
                              adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(latlngs), { padding: [40, 40] });
                           }
-                      }} className={`p-3 rounded-2xl border bg-white/50 backdrop-blur-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:bg-white/70 flex flex-col gap-2 ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500 bg-white/80' : 'border-white/60 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
+                      }} className={`p-3 rounded-2xl border bg-white/50 backdrop-blur-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:bg-white/70 flex flex-col gap-2 relative ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500 bg-white/80' : 'border-white/60 shadow-sm hover:border-blue-300 hover:shadow-md'}`}>
+                        
+                        {/* Checkbox Multi-Select Animasi */}
+                        <div 
+                           onClick={(e) => {
+                               e.stopPropagation();
+                               toggleAdminRouteSelection(roadId);
+                           }}
+                           className={`absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors z-10 shadow-sm ${isSelectedAdmin ? 'bg-indigo-600 border-indigo-600' : 'bg-white/80 border-slate-300 hover:border-indigo-400'}`}
+                        >
+                           {isSelectedAdmin && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                        </div>
+
                         <div className="flex gap-3">
                           <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100/50 relative border border-white/60 shadow-sm">
                             {road.photoUrls && road.photoUrls.length > 0 ? (
@@ -2548,7 +2557,8 @@ export default function App() {
                     <div className="flex justify-end items-start mb-3 pr-8 md:pr-12">
                       <div className="flex flex-wrap gap-1.5 justify-end">
                          <button onClick={() => { 
-                             if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); // Menutup popup marker di peta
+                             if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); 
+                             setAnimatingRoadsList([selectedRoad]);
                              setIsAnimatingMap(true); 
                              setIsAnimPaused(false);
                              setCurrentAnimDistance(0);
@@ -2643,7 +2653,7 @@ export default function App() {
             )}
 
             {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
-            {selectedRoad && isAnimatingMap && (
+            {isAnimatingMap && animatingRoadsList.length > 0 && (
                <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-50/95 backdrop-blur-xl px-5 py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[90%] max-w-[340px]">
                    
                    {/* Header Utama: Play, Speed Toggle, Close */}
@@ -2663,15 +2673,19 @@ export default function App() {
                            </button>
                        </div>
 
-                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
+                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                        </button>
                    </div>
                    
                    {/* Info Jarak & Pilihan Kendaraan/Ikon */}
                    <div className="mt-3 flex space-x-2">
-                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-lg font-bold shadow-sm">
-                           {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-base font-bold shadow-sm whitespace-nowrap">
+                           {animatingRoadsList.length > 1 ? (
+                               <span className="text-blue-700">{animatingRoadsList.length} Rute Aktif</span>
+                           ) : (
+                               currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'
+                           )}
                        </div>
                        
                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center space-x-1">
