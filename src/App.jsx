@@ -1845,25 +1845,25 @@ export default function App() {
                   </div>
 
                   {/* OVERLAY: Statistik Bawah (Jarak, Kecepatan, Akurasi) */}
-                  <div className="absolute bottom-6 left-4 right-4 bg-black/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 flex justify-between z-20 shadow-2xl">
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-xl py-3 px-4 rounded-2xl border border-white/10 flex justify-between z-20 shadow-2xl">
                       <div className="text-center w-1/3">
-                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Jarak Perekaman</div>
-                          <div className="text-2xl font-black text-white">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-300">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
+                          <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak Perekaman</div>
+                          <div className="text-xl font-black text-white">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-300">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
                       </div>
                       <div className="w-px bg-white/10"></div>
                       <div className="text-center w-1/3">
-                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
-                          <div className="text-2xl font-black text-white">{currentSpeed} <span className="text-xs font-medium text-slate-300">km/h</span></div>
+                          <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
+                          <div className="text-xl font-black text-white">{currentSpeed} <span className="text-xs font-medium text-slate-300">km/h</span></div>
                       </div>
                       <div className="w-px bg-white/10"></div>
                       <div className="text-center w-1/3">
-                          <div className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-0.5">Akurasi GPS</div>
-                          <div className={`text-2xl font-black ${gpsAccuracy < 15 ? 'textemerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
+                          <div className="text-slate-400 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi GPS</div>
+                          <div className={`text-xl font-black ${gpsAccuracy < 15 ? 'textemerald-400' : gpsAccuracy < 30 ? 'text-amber-400' : 'text-red-400'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-300">m</span></div>
                       </div>
                   </div>
 
                   {/* OVERLAY: Log Koordinat Terakhir */}
-                  <div className="absolute bottom-36 left-4 right-4 md:left-auto md:w-64 bg-black/70 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-left text-[10px] font-mono z-20 pointer-events-none shadow-lg transition-all">
+                  <div className="absolute bottom-[100px] left-4 right-4 md:left-auto md:w-64 bg-black/70 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-left text-[10px] font-mono z-20 pointer-events-none shadow-lg transition-all">
                     <div className="flex justify-between items-center mb-1.5 border-b border-white/20 pb-1">
                       <span className="text-blue-400 font-bold">Log Koordinat Aktif</span>
                       <span className="text-white font-bold bg-white/20 px-1.5 py-0.5 rounded">{realGpsPoints.length} Titik</span>
@@ -1883,17 +1883,17 @@ export default function App() {
 
                   {/* Tombol Simulasi Darurat jika GPS tidak kunjung dapat */}
                   {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
-                      <button onClick={simulateGpsMovement} className="absolute bottom-56 right-4 bg-slate-800/90 text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
+                      <button onClick={simulateGpsMovement} className="absolute bottom-[170px] right-4 bg-slate-800/90 text-white text-[10px] px-4 py-2 rounded-full z-30 border border-white/20 shadow-lg font-bold hover:bg-slate-700">Simulasi (Tanpa Sinyal)</button>
                   )}
                 </div>
 
                 {/* --- KONTROL TOMBOL UTAMA --- */}
-                <div className="p-5 bg-slate-950 flex flex-col items-center z-30 border-t border-white/10 pb-8">
+                <div className="p-4 bg-slate-950 flex flex-col items-center z-30 border-t border-white/10 pb-6">
                   
                   {recordingStatus === 'locating' || recordingStatus === 'ready' ? (
                      <div className="w-full flex space-x-3">
-                         <button onClick={cancelRecording} className="w-1/3 bg-slate-800 text-slate-300 hover:text-white rounded-2xl py-4 font-bold text-sm transition-colors">Batal</button>
-                         <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-4 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-all ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white hover:bg-emerald-600 scale-100' : 'bg-slate-800 text-slate-500 cursor-not-allowed scale-95'}`}>
+                         <button onClick={cancelRecording} className="w-1/3 bg-slate-800 text-slate-300 hover:text-white rounded-2xl py-3.5 font-bold text-sm transition-colors">Batal</button>
+                         <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-all ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white hover:bg-emerald-600 scale-100' : 'bg-slate-800 text-slate-500 cursor-not-allowed scale-95'}`}>
                              {recordingStatus === 'locating' ? <span>Mencari GPS...</span> : <span>MULAI JALAN</span>}
                          </button>
                      </div>
@@ -1901,11 +1901,11 @@ export default function App() {
                      <div className="w-full flex space-x-3">
                          {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
                              <>
-                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                                      <span>JEDA</span>
                                  </button>
-                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <div className="w-4 h-4 bg-white rounded-sm"></div>
                                      <span>SELESAI LAPOR</span>
                                  </button>
@@ -1913,11 +1913,11 @@ export default function App() {
                          )}
                          {recordingStatus === 'paused' && (
                              <>
-                                 <button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                      <span>LANJUTKAN</span>
                                  </button>
-                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-4 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
+                                 <button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-colors">
                                      <div className="w-4 h-4 bg-white rounded-sm"></div>
                                      <span>SELESAI LAPOR</span>
                                  </button>
