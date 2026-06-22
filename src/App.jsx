@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 // 🔴 KONFIGURASI SUPABASE ANDA 
 // Masukkan URL dan Publishable Key dari Project Supabase Anda di sini:
 // =========================================================================
-const SUPABASE_URL = 'https://crgckrqueqpgrakkzfmp.supabase.co'; 
-const SUPABASE_ANON_KEY = 'sb_publishable_Dmd8dOeZaAs0IGC4kXrSSg_it8dY8nB'; 
+const SUPABASE_URL = 'https://bucyrbywyrkvjwqpzetk.supabase.co'; 
+const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR'; 
 
 // --- DATA RUJUKAN ---
 const KELURAHAN_LIST = [
