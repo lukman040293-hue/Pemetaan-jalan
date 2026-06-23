@@ -7,6 +7,13 @@ import React, { useState, useEffect, useRef } from 'react';
 const SUPABASE_URL = 'https://bucyrbywyrkvjwqpzetk.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR'; 
 
+// =========================================================================
+// 🔵 KONFIGURASI CLOUDINARY (PENYIMPANAN MEDIA PIHAK KETIGA)
+// Digunakan agar storage Supabase (1GB limit) tidak cepat penuh.
+// =========================================================================
+const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; // Ganti dengan "Cloud Name" dari dashboard Cloudinary Anda
+const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; // Ganti dengan "Upload Preset" tipe Unsigned milik Anda
+
 // --- DATA RUJUKAN ---
 const KELURAHAN_LIST = [
   "Air Hitam", "Air Putih", "Bandara", "Baqa", "Bayur", "Budaya Pampang", "Bugis", "Bukit Pinang", "Bukuan", "Dadi Mulya", 
@@ -1388,35 +1395,57 @@ export default function App() {
 
         if (draft.videoFile) {
           const sizeInMB = (draft.videoFile.size / (1024 * 1024)).toFixed(1);
-          setSyncMessage(`Mengunggah Video (${sizeInMB} MB) untuk Rute ${i+1}/${draftsToUpload.length}... Mohon tunggu.`);
+          setSyncMessage(`Mengunggah Video (${sizeInMB} MB) ke Cloud CDN... (Rute ${i+1}/${draftsToUpload.length})`);
           
-          const fileExt = draft.videoFile.name.split('.').pop();
-          const fileName = `video-${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage.from('media').upload(fileName, draft.videoFile);
-
-          if (!uploadError) {
-            const { data } = supabase.storage.from('media').getPublicUrl(fileName);
-            finalVideoUrl = data.publicUrl;
+          // Menggunakan Cloudinary REST API untuk Unsigned Upload (Video)
+          const formData = new FormData();
+          formData.append('file', draft.videoFile);
+          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+          
+          try {
+             // Endpoint khusus untuk video
+             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+                 method: 'POST',
+                 body: formData
+             });
+             const data = await res.json();
+             if (data.secure_url) {
+                 finalVideoUrl = data.secure_url;
+             } else {
+                 throw new Error(data.error?.message || "Gagal upload video");
+             }
+          } catch (uploadError) {
+             console.warn("Gagal mengunggah video ke Cloudinary:", uploadError);
+             showToast(`Video rute ${draft.name} gagal diunggah, melanjutkan tanpa video.`);
           }
         }
 
         if (draft.photoFiles && draft.photoFiles.length > 0) {
-          setSyncMessage(`Mengunggah ${draft.photoFiles.length} Foto untuk Rute ${i+1}/${draftsToUpload.length}...`);
+          setSyncMessage(`Mengunggah ${draft.photoFiles.length} Foto ke Cloud CDN... (Rute ${i+1}/${draftsToUpload.length})`);
           
           for (let j = 0; j < draft.photoFiles.length; j++) {
             const photoFile = draft.photoFiles[j];
-            const fileExt = photoFile.name.split('.').pop();
-            const fileName = `photo-${Date.now()}-${j}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-            const { error: photoUploadError } = await supabase.storage.from('media').upload(fileName, photoFile);
-            
-            if (!photoUploadError) {
-              const { data } = supabase.storage.from('media').getPublicUrl(fileName);
-              finalPhotoUrls.push(data.publicUrl);
+            const formData = new FormData();
+            formData.append('file', photoFile);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            try {
+               // Endpoint khusus untuk image/foto
+               const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                   method: 'POST',
+                   body: formData
+               });
+               const data = await res.json();
+               if (data.secure_url) {
+                   finalPhotoUrls.push(data.secure_url);
+               }
+            } catch (photoUploadError) {
+               console.warn("Gagal mengunggah foto ke Cloudinary:", photoUploadError);
             }
           }
         }
 
-        setSyncMessage(`Menyimpan Rute ${i+1}/${draftsToUpload.length} ke Database Pusat...`);
+        setSyncMessage(`Menyimpan Data Rute ${i+1}/${draftsToUpload.length} ke Supabase...`);
         
         // Memisahkan property isUploaded agar tidak terkirim dan error di Supabase
         const { id, videoFile, localVideoUrl, photoFiles, localPhotoUrls, isUploaded, ...dataToUpload } = draft; 
