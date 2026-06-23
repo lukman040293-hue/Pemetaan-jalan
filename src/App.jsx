@@ -929,15 +929,14 @@ export default function App() {
     const map = window.L.map(drawMapContainerRef.current);
     drawMapInstanceRef.current = map;
     
-    // Default ke Citra Satelit karena sangat membantu untuk menggambar manual
     const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
     const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
     
-    satelit.addTo(map); 
+    osm.addTo(map); // Default disamakan menggunakan Peta Jalan (OSM)
 
     window.L.control.layers({
-      "Citra Satelit (Esri)": satelit,
-      "Peta Jalan (OSM)": osm
+      "Peta Jalan (OSM)": osm,
+      "Citra Satelit (Esri)": satelit
     }, null, { position: 'topleft' }).addTo(map);
 
     drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
@@ -1304,7 +1303,17 @@ export default function App() {
     if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
     
     const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    
+    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    
+    osm.addTo(map);
+    
+    window.L.control.layers({
+      "Peta Jalan (OSM)": osm,
+      "Citra Satelit (Esri)": satelit
+    }, null, { position: 'topleft' }).addTo(map);
+
     liveMapInstanceRef.current = map;
     
     liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
@@ -2097,73 +2106,73 @@ export default function App() {
             )}
 
             {mobileScreen === 'form' && (
-              <div className="flex-1 p-6 overflow-y-auto bg-slate-50 text-left custom-scrollbar">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl mb-6 flex items-center justify-between shadow-sm">
+              <div className="flex-1 p-5 overflow-y-auto bg-white text-left custom-scrollbar">
+                <div className="bg-slate-50 p-4 rounded-3xl mb-6 flex items-center justify-between border border-slate-100">
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-200 text-blue-600 p-2.5 rounded-xl">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                    <div className="bg-blue-100 text-blue-600 p-2.5 rounded-2xl">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                     </div>
                     <div>
-                      <div className="text-blue-900 font-black text-sm leading-tight">Jalur Tersimpan</div>
-                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} titik koordinat | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'} {recordingDuration > 0 && `| ${formatDuration(recordingDuration)}`}</div>
+                      <div className="text-slate-900 font-bold text-sm">Jalur Tersimpan</div>
+                      <div className="text-slate-500 text-xs mt-0.5">{realGpsPoints.length} titik | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'} {recordingDuration > 0 && `| ${formatDuration(recordingDuration)}`}</div>
                     </div>
                   </div>
-                  <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center space-x-1.5 whitespace-nowrap">
-                    <span>Lihat Jalur</span>
+                  <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap">
+                    Lihat Peta
                   </button>
                 </div>
 
                 <form onSubmit={saveDraft} className="space-y-5">
+                  {/* Pin Lokasi */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi (Pin)</label>
-                    <div className="bg-white border border-slate-200 px-4 py-2.5 min-h-[3.5rem] rounded-2xl flex items-center justify-between shadow-sm">
-                      <div className={`flex flex-col justify-center ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
-                        <span className="text-sm font-bold flex items-center">{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
-                        {pinLocation && (
-                           <span className="text-[10px] font-mono mt-0.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                             {pinLocation.lat.toFixed(6)}, {pinLocation.lng.toFixed(6)}
-                           </span>
-                        )}
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Titik Lokasi (Pin)</label>
+                    <div className="bg-slate-50 px-4 py-3 min-h-[3.5rem] rounded-2xl flex items-center justify-between border border-slate-100">
+                      <div className={`flex flex-col justify-center ${pinLocation ? 'text-blue-600' : 'text-slate-500'}`}>
+                        <span className="text-sm font-semibold flex items-center">{pinLocation ? '📍 Lokasi Terkunci' : 'Belum ditandai'}</span>
                       </div>
-                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded-xl text-xs font-extrabold transition-colors">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
+                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">{pinLocation ? 'Ubah' : 'Buka Peta'}</button>
                     </div>
                   </div>
 
+                  {/* Input Teks */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jl/Gg/Blok</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Jl/Gg/Blok</label>
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full bg-slate-50 border-none px-4 py-3.5 rounded-2xl text-base text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required />
                   </div>
                   
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kelurahan</label>
-                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base bg-white outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Kelurahan</label>
+                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full bg-slate-50 border-none px-4 py-3.5 rounded-2xl text-base text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
                       {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
                     </select>
                   </div>
 
+                  {/* Jenis Jalan (Flat Buttons) */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Jenis Jl/Gg/Blok</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Jenis Jalan</label>
+                    <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100">
                       {['Tanah', 'Aspal', 'Beton'].map(jenis => (
-                        <button key={jenis} type="button" onClick={() => setFormData({...formData, jenisJalan: jenis})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all ${formData.jenisJalan === jenis ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{jenis}</button>
+                        <button key={jenis} type="button" onClick={() => setFormData({...formData, jenisJalan: jenis})} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${formData.jenisJalan === jenis ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{jenis}</button>
                       ))}
                     </div>
                   </div>
 
+                  {/* Kondisi Jalan (Grid Flat) */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Kondisi Jalan</label>
                     <div className="grid grid-cols-2 gap-2">
                       {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
-                        <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all flex items-center justify-center space-x-1.5 ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getConditionColor(cond) }}></span>
+                        <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`py-3 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center space-x-2 border ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'}`}>
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getConditionColor(cond) }}></span>
                           <span>{cond}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
+                  {/* Textarea */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Catatan Tambahan / Keterangan</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Catatan Tambahan</label>
                     <textarea 
                       value={formData.notes} 
                       onChange={(e) => {
@@ -2171,23 +2180,25 @@ export default function App() {
                         e.target.style.height = 'auto';
                         e.target.style.height = e.target.scrollHeight + 'px';
                       }} 
-                      className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base outline-none focus:ring-2 focus:ring-blue-500 shadow-sm resize-none overflow-hidden" 
+                      className="w-full bg-slate-50 border-none px-4 py-3.5 rounded-2xl text-base text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none overflow-hidden" 
                       rows="1"
                       placeholder="Ketik keterangan di sini..."
                     ></textarea>
                   </div>
 
+                  {/* Upload Foto */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Unggah Foto (Maks 4)</label>
+                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Foto (Maks 4)</label>
                        <span className="text-xs font-bold text-slate-400">{uploadedPhotoUrls.length}/4</span>
                     </div>
                     
                     {uploadedPhotoUrls.length < 4 && (
-                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-white hover:bg-slate-50 transition-colors mb-3">
+                      <div className="relative border border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors mb-3">
                         <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <div className="text-slate-500 text-sm font-semibold flex items-center gap-2">
-                          <span className="text-lg">📸</span> Tambah Foto
+                        <div className="text-slate-500 text-sm font-medium flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>
+                          Tambah Foto
                         </div>
                       </div>
                     )}
@@ -2195,9 +2206,9 @@ export default function App() {
                     {uploadedPhotoUrls.length > 0 && (
                       <div className="grid grid-cols-4 gap-2 mb-2">
                         {uploadedPhotoUrls.map((url, idx) => (
-                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
                             <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md border border-white hover:bg-red-600 transition-colors">
+                            <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-red-500/90 backdrop-blur text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
                             </button>
                           </div>
@@ -2206,12 +2217,12 @@ export default function App() {
                     )}
                   </div>
 
+                  {/* Upload Video */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 150MB)</label>
-                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Pada banyak HP modern, video akan terkompres otomatis.</p>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 150MB)</label>
                     
                     {!uploadedVideoUrl ? (
-                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-white hover:bg-slate-50 transition-colors">
+                      <div className="relative border border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors">
                         <input type="file" accept="video/mp4,video/quicktime,video/*" onChange={(e) => { 
                             const f = e.target.files[0]; 
                             if(f){ 
@@ -2226,28 +2237,27 @@ export default function App() {
                               showToast("✅ Video siap dilampirkan."); 
                             } 
                           }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <div className="text-slate-500 text-sm font-semibold flex items-center gap-2"><span className="text-lg">📁</span> Pilih file video</div>
+                        <div className="text-slate-500 text-sm font-medium flex items-center gap-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" /></svg>
+                           Pilih Video
+                        </div>
                       </div>
                     ) : (
-                      <div className="relative border border-emerald-300 rounded-2xl px-4 py-3 min-h-[3.5rem] bg-emerald-50 flex items-center justify-between shadow-sm">
-                         <div className="flex items-center space-x-3 text-emerald-700 font-bold text-sm">
-                            <span className="text-xl">✅</span>
-                            <div className="text-left flex flex-col">
-                               <span>Video Terlampir</span>
-                               <span className="text-[10px] text-emerald-600 font-normal truncate max-w-[120px]">{uploadedVideoFile?.name || 'video_tersimpan.mp4'}</span>
-                            </div>
+                      <div className="bg-emerald-50 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-between border border-emerald-100">
+                         <div className="flex items-center space-x-3 text-emerald-700 font-medium text-sm">
+                            <span className="text-emerald-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" /></svg></span>
+                            <span className="truncate max-w-[150px]">{uploadedVideoFile?.name || 'video_tersimpan.mp4'}</span>
                          </div>
-                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); showToast("Video batal dilampirkan."); }} className="bg-rose-100 text-rose-600 hover:bg-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1 transition-colors relative z-10">
-                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                           <span>Hapus</span>
+                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); showToast("Video batal dilampirkan."); }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg transition-colors">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                          </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="pt-4 pb-8 flex flex-col space-y-3">
-                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl hover:bg-slate-800 transition-colors">
-                      {editingDraftId ? 'Simpan Perubahan' : 'Simpan'}
+                  <div className="pt-2 pb-8 flex flex-col space-y-3">
+                    <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base hover:bg-blue-700 transition-colors shadow-sm">
+                      {editingDraftId ? 'Simpan Perubahan' : 'Simpan Data'}
                     </button>
                     <button type="button" onClick={() => {
                       setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
@@ -2256,8 +2266,8 @@ export default function App() {
                       setPinLocation(null);
                       setMobileScreen(editingDraftId ? 'drafts' : 'home');
                       setEditingDraftId(null);
-                    }} className="w-full bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-2xl font-bold text-base shadow-sm hover:bg-slate-50">
-                      Batal & Kembali
+                    }} className="w-full bg-white border border-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-colors shadow-sm">
+                      Batal
                     </button>
                   </div>
                 </form>
