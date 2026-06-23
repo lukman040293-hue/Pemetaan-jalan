@@ -97,6 +97,15 @@ const formatLength = (kmString) => {
   return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(2) + ' km';
 };
 
+// --- HELPER: FORMAT DURASI WAKTU ---
+const formatDuration = (seconds) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
 // --- HELPER: KOMPRESI GAMBAR (CANVAS) ---
 const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) => {
   return new Promise((resolve, reject) => {
@@ -337,6 +346,7 @@ export default function App() {
   const recordingStatusRef = useRef('idle');
   const lastMoveTimeRef = useRef(Date.now());
   const [recordTab, setRecordTab] = useState('camera'); 
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
   const liveMapContainerRef = useRef(null);
   const liveMapInstanceRef = useRef(null);
@@ -350,6 +360,17 @@ export default function App() {
   const drawMarkersGroupRef = useRef(null);
 
   useEffect(() => { recordingStatusRef.current = recordingStatus; }, [recordingStatus]);
+
+  // Timer durasi rekaman aktif
+  useEffect(() => {
+    let interval;
+    if (recordingStatus === 'recording') {
+      interval = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [recordingStatus]);
 
   const [selectedDraftIds, setSelectedDraftIds] = useState([]);
   const [formData, setFormData] = useState({
@@ -553,7 +574,7 @@ export default function App() {
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Pjg. Rute</th>
-                  <td style="padding: 6px 4px; color: #334155; font-weight: bold;">${formatLength(road.length)}</td>
+                  <td style="padding: 6px 4px; color: #334155; font-weight: bold;">${formatLength(road.length)} ${road.duration ? `(${formatDuration(road.duration)})` : ''}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <th style="padding: 6px 4px; color: #64748b; font-weight: normal;">Kondisi</th>
@@ -1108,6 +1129,7 @@ export default function App() {
     setRecordingStatus('locating'); 
     setRecordTab('map'); 
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0);
+    setRecordingDuration(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null);
@@ -1229,6 +1251,7 @@ export default function App() {
   const simulateGpsMovement = () => {
     let currentLat = -0.425; let currentLng = 117.185;
     setGpsAccuracy("Simulasi"); setCurrentSpeed(15); setTotalDistance(0);
+    setRecordingDuration(0);
     setRecordingStatus('ready'); 
     
     if (watchIdRef.current !== null && typeof watchIdRef.current !== 'number') navigator.geolocation.clearWatch(watchIdRef.current);
@@ -1392,6 +1415,7 @@ export default function App() {
     });
     setRealGpsPoints(draft.realGps);
     setTotalDistance(parseFloat(draft.length) * 1000 || 0); 
+    setRecordingDuration(draft.duration || 0);
     setPinLocation(draft.pinLocation);
     setUploadedVideoFile(draft.videoFile || null);
     setUploadedVideoUrl(draft.localVideoUrl || null);
@@ -1425,6 +1449,7 @@ export default function App() {
       videoFile: uploadedVideoFile, localVideoUrl: uploadedVideoUrl, 
       photoFiles: uploadedPhotoFiles, localPhotoUrls: uploadedPhotoUrls,
       length: (totalDistance / 1000).toFixed(3), 
+      duration: recordingDuration,
       date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
       surveyor: "Tim PUPR",
       isUploaded: false, 
@@ -1822,15 +1847,14 @@ export default function App() {
             </div>
           )}
 
-          <header className="bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 pt-6 pb-3 md:py-4">
-            <h1 className="font-black text-slate-900 text-lg tracking-tight">R-Map Surveyor</h1>
-            <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors">Keluar</button>
-          </header>
-
           <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
             {mobileScreen === 'home' && (
               <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-                <div className="flex space-x-3 mb-4 mt-4">
+                <div className="flex justify-end mb-2">
+                   <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">Keluar</button>
+                </div>
+
+                <div className="flex space-x-3 mb-4 mt-2">
                     <button onClick={startRealHardware} className="w-1/2 bg-white border-2 border-blue-500 hover:bg-blue-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
                         <div className="bg-blue-100 text-blue-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
@@ -1848,12 +1872,11 @@ export default function App() {
 
                 <button onClick={() => setMobileScreen('drafts')} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center space-x-4">
-                    <div className="bg-amber-100 p-3 rounded-xl text-amber-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+                    <div className="text-slate-600 pl-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
                     </div>
                     <div className="text-left">
-                      <div className="font-bold text-base">Draft Tersimpan</div>
-                      <div className="text-xs text-slate-500">Penyimpanan Offline</div>
+                      <div className="font-bold text-lg">Draft</div>
                     </div>
                   </div>
                   <span className="bg-rose-500 text-white px-3 py-1 rounded-full text-sm font-bold">{drafts.length}</span>
@@ -1863,16 +1886,6 @@ export default function App() {
 
             {mobileScreen === 'draw_map' && (
               <div className="flex-1 flex flex-col bg-slate-100 relative overflow-hidden">
-                <div className="bg-white px-5 pb-3 border-b border-slate-200 flex justify-between items-center z-20 shadow-sm pt-6 md:py-4 relative">
-                  <div>
-                     <h3 className="font-extrabold text-slate-800 text-base">Gambar Manual</h3>
-                     <p className="text-xs text-slate-500">Ketuk peta untuk membuat jalur rute</p>
-                  </div>
-                  <button onClick={() => setMobileScreen('home')} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-full bg-slate-100 border border-slate-200 shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-
                 <div className="flex-1 relative z-0">
                    <div ref={drawMapContainerRef} className="absolute inset-0 bg-slate-200 cursor-crosshair"></div>
                    {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuatkan Peta...</div>}
@@ -1916,14 +1929,17 @@ export default function App() {
                          </button>
                      </div>
 
-                     <button onClick={finishManualDrawing} disabled={manualDrawnPoints.length < 2} className={`w-full py-4 rounded-2xl font-black text-sm shadow-2xl flex justify-center items-center space-x-2 transition-all border ${manualDrawnPoints.length >= 2 ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600 active:scale-95' : 'bg-slate-800/95 backdrop-blur-md text-slate-400 border-slate-700 cursor-not-allowed'}`}>
-                         <span>SELESAI GAMBAR JALUR</span>
-                         {manualDrawnPoints.length >= 2 ? (
-                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z" clipRule="evenodd" /></svg>
-                         ) : (
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                         )}
-                     </button>
+                     <div className="w-full flex space-x-3">
+                         <button onClick={() => setMobileScreen('home')} className="w-1/3 bg-slate-800/80 backdrop-blur-md border border-white/10 text-white rounded-2xl py-3.5 font-bold text-sm transition-colors shadow-lg">Batal</button>
+                         <button onClick={finishManualDrawing} disabled={manualDrawnPoints.length < 2} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 transition-all border ${manualDrawnPoints.length >= 2 ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600 active:scale-95' : 'bg-slate-800/95 backdrop-blur-md text-slate-400 border-white/5 cursor-not-allowed scale-95'}`}>
+                             <span>SELESAI GAMBAR</span>
+                             {manualDrawnPoints.length >= 2 ? (
+                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z" clipRule="evenodd" /></svg>
+                             ) : (
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                             )}
+                         </button>
+                     </div>
                 </div>
               </div>
             )}
@@ -1994,13 +2010,6 @@ export default function App() {
                 {/* WIDGET BAWAH (Menggabungkan Log & Stats agar lebih lega) */}
                 <div className="absolute bottom-[80px] left-4 right-4 bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 z-30 shadow-2xl flex flex-col gap-3">
                     
-                    {/* Tombol Simulasi Darurat - Mengambang di kanan atas widget bawah */}
-                    {(recordingStatus === 'locating' || recordingStatus === 'ready') && realGpsPoints.length === 0 && (
-                        <button onClick={simulateGpsMovement} className="absolute -top-11 right-0 bg-slate-800 hover:bg-slate-700 text-white text-[10px] px-4 py-2 rounded-full z-40 border border-slate-700 shadow-lg font-bold transition-colors">
-                            Simulasi (Tanpa Sinyal)
-                        </button>
-                    )}
-
                     {/* Log Mini */}
                     <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
                         <span className="text-blue-600 font-bold flex items-center gap-1.5">
@@ -2014,19 +2023,24 @@ export default function App() {
 
                     {/* Stats */}
                     <div className="flex justify-between items-center px-1">
-                        <div className="text-center w-1/3">
+                        <div className="text-center w-1/4">
+                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Waktu</div>
+                            <div className="text-lg md:text-xl font-black text-slate-900 leading-none">{formatDuration(recordingDuration)}</div>
+                        </div>
+                        <div className="w-px h-8 bg-slate-200"></div>
+                        <div className="text-center w-1/4">
                             <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak</div>
-                            <div className="text-xl font-black text-slate-900 leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-xs font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
+                            <div className="text-lg md:text-xl font-black text-slate-900 leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-[10px] md:text-xs font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span></div>
                         </div>
                         <div className="w-px h-8 bg-slate-200"></div>
-                        <div className="text-center w-1/3">
-                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Kecepatan</div>
-                            <div className="text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-xs font-medium text-slate-500">km/h</span></div>
+                        <div className="text-center w-1/4">
+                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Speed</div>
+                            <div className="text-lg md:text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-[10px] md:text-xs font-medium text-slate-500">km/h</span></div>
                         </div>
                         <div className="w-px h-8 bg-slate-200"></div>
-                        <div className="text-center w-1/3">
+                        <div className="text-center w-1/4">
                             <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div>
-                            <div className={`text-xl font-black leading-none ${gpsAccuracy === '-' || gpsAccuracy === 'Simulasi' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : gpsAccuracy < 30 ? 'text-amber-500' : 'text-red-600'}`}>{gpsAccuracy} <span className="text-xs font-medium text-slate-500">m</span></div>
+                            <div className={`text-lg md:text-xl font-black leading-none ${gpsAccuracy === '-' || gpsAccuracy === 'Simulasi' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : gpsAccuracy < 30 ? 'text-amber-500' : 'text-red-600'}`}>{gpsAccuracy} <span className="text-[10px] md:text-xs font-medium text-slate-500">m</span></div>
                         </div>
                     </div>
                 </div>
@@ -2082,7 +2096,7 @@ export default function App() {
                     </div>
                     <div>
                       <div className="text-blue-900 font-black text-sm leading-tight">Jalur Tersimpan</div>
-                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} titik koordinat | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
+                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} titik koordinat | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'} {recordingDuration > 0 && `| ${formatDuration(recordingDuration)}`}</div>
                     </div>
                   </div>
                   <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center space-x-1.5 whitespace-nowrap">
@@ -2278,9 +2292,11 @@ export default function App() {
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
                 {/* Area Header (Tetap/Tidak ikut ter-scroll) */}
                 <div className="px-6 pt-6 md:pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
-                  <div className="flex justify-between items-center mb-4 mt-2">
-                    <div><h3 className="text-2xl font-black">Draft Offline</h3><p className="text-sm text-slate-500">Disimpan aman di HP</p></div>
-                    <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 p-3 rounded-full hover:bg-slate-300">Tutup</button>
+                  <div className="flex justify-end items-center mb-4 mt-2">
+                    <button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full hover:bg-slate-300 font-bold text-sm flex items-center space-x-1.5 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        <span>Tutup</span>
+                    </button>
                   </div>
 
                   {drafts.length > 0 && (
@@ -2334,7 +2350,7 @@ export default function App() {
                           </div>
                           <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {formatKel(d.kelurahan)}</div>
                           <div className="flex justify-between items-center mt-3 border-t border-slate-200/60 pt-3 text-xs">
-                            <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.realGps.length} Log Satelit</span>
+                            <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.duration ? formatDuration(d.duration) + ' • ' : ''}{d.realGps.length} Log</span>
                             <span className="bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-bold">{d.condition}</span>
                           </div>
                         </div>
@@ -2657,7 +2673,7 @@ export default function App() {
                             <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">
                               <span>{road.date}</span>
                               <span className="font-mono bg-white/60 px-1.5 py-0.5 rounded border border-white/50 text-slate-600 font-bold shadow-sm">
-                                {formatLength(road.length)} • {road.realGps?.length || 0} GPS
+                                {formatLength(road.length)} • {road.duration ? formatDuration(road.duration) + ' • ' : ''}{road.realGps?.length || 0} GPS
                               </span>
                             </div>
                           </div>
@@ -2774,7 +2790,7 @@ export default function App() {
                           </tr>
                           <tr>
                             <th className="py-3 px-4 font-normal text-slate-500 bg-slate-50/50">Pjg. Rute</th>
-                            <td className="py-3 px-4 font-normal text-slate-700">{formatLength(selectedRoad.length)}</td>
+                            <td className="py-3 px-4 font-normal text-slate-700">{formatLength(selectedRoad.length)} {selectedRoad.duration ? `(${formatDuration(selectedRoad.duration)})` : ''}</td>
                           </tr>
                           <tr>
                             <th className="py-3 px-4 font-normal text-slate-500 bg-slate-50/50">Kondisi</th>
