@@ -109,7 +109,6 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
         let width = img.width;
         let height = img.height;
 
-        // Kalkulasi rasio aspek untuk mempertahankan proporsi gambar
         if (width > height) {
           if (width > maxWidth) {
             height = Math.round((height * maxWidth) / width);
@@ -122,21 +121,18 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
           }
         }
 
-        // Gambar ulang di atas canvas dengan resolusi baru
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Kompres menjadi file JPEG
         canvas.toBlob(
           (blob) => {
             if (!blob) {
               reject(new Error('Gagal mengonversi canvas ke Blob'));
               return;
             }
-            // Ubah tipe ke image/jpeg dan simpan dengan nama baru
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg", {
               type: 'image/jpeg',
               lastModified: Date.now(),
@@ -144,7 +140,7 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
             resolve(compressedFile);
           },
           'image/jpeg',
-          quality // Nilai 0.7 biasanya menghasilkan size ~200kb untuk dimensi 1000px
+          quality 
         );
       };
       img.onerror = (error) => reject(error);
@@ -152,7 +148,6 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
     reader.onerror = (error) => reject(error);
   });
 };
-// --- AKHIR ALGORITMA ---
 
 // --- KOMPONEN ANGKA ANIMASI (ROLLING NUMBER) ---
 const AnimatedNumber = ({ value }) => {
@@ -160,13 +155,12 @@ const AnimatedNumber = ({ value }) => {
 
   useEffect(() => {
     let startTimestamp = null;
-    const duration = 1500; // Durasi animasi 1.5 detik
+    const duration = 1500; 
     let animationFrame;
 
     const step = (timestamp) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      // Animasi easing perlahan di akhir (easeOutExpo)
       const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setDisplayValue(Math.floor(easeOut * value));
       
@@ -198,7 +192,6 @@ export default function App() {
 
   // --- INISIALISASI PUSTAKA & SUPABASE (CDN) ---
   useEffect(() => {
-    // Mencegah Auto-Zoom di Mobile secara paksa pada viewport
     let metaViewport = document.querySelector('meta[name="viewport"]');
     if (!metaViewport) {
       metaViewport = document.createElement('meta');
@@ -240,13 +233,12 @@ export default function App() {
   const [syncedRoads, setSyncedRoads] = useState([]); 
   const [drafts, setDrafts] = useState([]); 
   const [selectedRoad, setSelectedRoad] = useState(null);
-  const [videoSnapshot, setVideoSnapshot] = useState([]); // Diubah menjadi array untuk menampung 4 cuplikan
+  const [videoSnapshot, setVideoSnapshot] = useState([]); 
   
-  // Status Upload Cloud
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
 
-  // --- MEMUAT DRAFT DARI LOCAL STORAGE SAAT APLIKASI DIBUKA ---
+  // --- MEMUAT DRAFT DARI LOCAL STORAGE ---
   useEffect(() => {
     try {
       const savedDrafts = localStorage.getItem('rmap_drafts');
@@ -258,11 +250,9 @@ export default function App() {
     }
   }, []);
 
-  // --- MENYIMPAN DRAFT KE LOCAL STORAGE SETIAP KALI ADA PERUBAHAN ---
+  // --- MENYIMPAN DRAFT KE LOCAL STORAGE ---
   useEffect(() => {
     try {
-      // Kita perlu menyaring object "File" asli karena File tidak bisa di-stringify ke JSON langsung.
-      // Kita hanya menyimpan data teks, GPS, dan string URL sementara.
       const draftsToSave = drafts.map(draft => {
         const { videoFile, photoFiles, ...safeDraft } = draft;
         return safeDraft;
@@ -278,33 +268,25 @@ export default function App() {
   const [filterJenis, setFilterJenis] = useState('Semua'); 
   const [filterKondisi, setFilterKondisi] = useState('Semua');
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
-  const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); // State untuk pilihan multi-rute
+  const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); 
   
-  // State untuk Animasi Rute
+  // State Animasi
   const [isAnimatingMap, setIsAnimatingMap] = useState(false);
-  const [animatingRoadsList, setAnimatingRoadsList] = useState([]); // State baru untuk menyimpan daftar multi-rute
+  const [animatingRoadsList, setAnimatingRoadsList] = useState([]); 
   const [isAnimPaused, setIsAnimPaused] = useState(false);
   const isAnimPausedRef = useRef(false);
   const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
   const animationSpeedRef = useRef(1.0);
   const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
   const [showSpeedControl, setShowSpeedControl] = useState(false);
-  const [animIconType, setAnimIconType] = useState('car'); // State baru untuk tipe ikon ('car', 'motorcycle', 'runner')
+  const [animIconType, setAnimIconType] = useState('car'); 
   const animatedMarkerRef = useRef(null);
   const animationTimeoutRef = useRef(null);
 
-  // Menyinkronkan state kecepatan animasi dengan ref agar bisa dibaca di dalam closure setTimeout
-  useEffect(() => {
-      animationSpeedRef.current = animationSpeedMultiplier;
-  }, [animationSpeedMultiplier]);
+  useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
+  useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
 
-  useEffect(() => {
-      isAnimPausedRef.current = isAnimPaused;
-  }, [isAnimPaused]);
-
-  // Atur default sidebar terbuka jika layar besar (desktop), tertutup jika layar HP
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  // Tambahan state untuk menyembunyikan legenda yang mengambang
   const [showFloatingLegend, setShowFloatingLegend] = useState(window.innerWidth >= 768);
 
   const adminMapContainerRef = useRef(null);
@@ -326,7 +308,6 @@ export default function App() {
     }
   }, [selectedRoad]);
 
-  // Fungsi toggle rute terpilih di admin
   const toggleAdminRouteSelection = (id) => {
     setSelectedAdminRouteIds(prev => 
       prev.includes(id) ? prev.filter(rId => rId !== id) : [...prev, id]
@@ -337,6 +318,10 @@ export default function App() {
   const [mobileScreen, setMobileScreen] = useState('home'); 
   const [isRecording, setIsRecording] = useState(false);
   const [realGpsPoints, setRealGpsPoints] = useState([]);
+  
+  // State Khusus Untuk Mode Gambar Manual
+  const [manualDrawnPoints, setManualDrawnPoints] = useState([]);
+
   const [gpsAccuracy, setGpsAccuracy] = useState('-');
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0);
@@ -345,29 +330,28 @@ export default function App() {
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
   const [uploadedVideoFile, setUploadedVideoFile] = useState(null); 
   
-  // State untuk multiple foto (Max 4)
   const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
 
-  // --- FITUR STRAVA (LIVE MAP, PAUSE, AUTO-PAUSE) ---
-  const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, locating, ready, recording, paused, auto_paused
+  const [recordingStatus, setRecordingStatus] = useState('idle'); 
   const recordingStatusRef = useRef('idle');
   const lastMoveTimeRef = useRef(Date.now());
-  const [recordTab, setRecordTab] = useState('camera'); // 'camera' or 'map'
+  const [recordTab, setRecordTab] = useState('camera'); 
 
   const liveMapContainerRef = useRef(null);
   const liveMapInstanceRef = useRef(null);
   const liveMapMarkerRef = useRef(null);
   const liveMapPolylineRef = useRef(null);
 
-  // Sync ref untuk digunakan di dalam closure GPS WatchPosition
-  useEffect(() => {
-      recordingStatusRef.current = recordingStatus;
-  }, [recordingStatus]);
+  // Refs Khusus Untuk Mode Gambar Manual
+  const drawMapContainerRef = useRef(null);
+  const drawMapInstanceRef = useRef(null);
+  const drawPolylineRef = useRef(null);
+  const drawMarkersGroupRef = useRef(null);
 
-  // State untuk memilih draft offline mana saja yang akan diunggah
+  useEffect(() => { recordingStatusRef.current = recordingStatus; }, [recordingStatus]);
+
   const [selectedDraftIds, setSelectedDraftIds] = useState([]);
-
   const [formData, setFormData] = useState({
     name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: ''
   });
@@ -381,9 +365,7 @@ export default function App() {
   const surveyorMapInstanceRef = useRef(null);
   const surveyorMarkerRef = useRef(null);
   const currentLocationMarkerRef = useRef(null); 
-  const watchLocationIdRef = useRef(null); 
 
-  // Timeout untuk fallback GPS jika lama tidak mendapat sinyal
   const locatingTimeoutRef = useRef(null);
   const isGpsForcedRef = useRef(false);
 
@@ -437,7 +419,7 @@ export default function App() {
         .from('mapped_roads')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100); // Batasi 100 rute terbaru
+        .limit(100);
         
       if (error) throw error;
 
@@ -460,19 +442,9 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return;
-
-    // 1. Tarik data awal
     fetchRoads();
-
-    // 2. Gunakan Polling (15 detik) untuk kompatibilitas lingkungan yang memblokir WebSocket
-    const intervalId = setInterval(() => {
-      fetchRoads();
-    }, 15000);
-
-    // Cleanup saat komponen dibongkar (Keluar halaman)
-    return () => {
-      clearInterval(intervalId);
-    };
+    const intervalId = setInterval(() => { fetchRoads(); }, 15000);
+    return () => clearInterval(intervalId);
   }, [supabase]);
 
 
@@ -536,7 +508,6 @@ export default function App() {
       if (road.realGps && road.realGps.length > 0) {
         const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
         
-        // Garis rute utama (dasar)
         const polyline = window.L.polyline(latlngs, { 
           color: getConditionColor(road.condition), 
           weight: 5, 
@@ -545,32 +516,26 @@ export default function App() {
           lineJoin: 'round'
         }).addTo(layerGroup);
 
-        // Pin Awal (Hijau) & Akhir (Merah)
         window.L.circleMarker(latlngs[0], { radius: 3, fillColor: '#10B981', color: '#ffffff', weight: 1.5, fillOpacity: 1 }).addTo(layerGroup);
         window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 3, fillColor: '#EF4444', color: '#ffffff', weight: 1.5, fillOpacity: 1 }).addTo(layerGroup);
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
-          // --- PERUBAHAN IKON PIN ADMIN (Gaya Bulat/Lolipop) ---
           const conditionColor = getConditionColor(road.condition);
-          // Menggunakan SVG Inline untuk bentuk pin bulat bertangkai dengan pantulan cahaya
           const pinSvg = `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="14" height="24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); transition: all 0.2s ease;">
-              <!-- Tiang Penyangga -->
               <rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" />
-              <!-- Lingkaran Utama (Berwarna sesuai kondisi) -->
               <circle cx="12" cy="12" r="12" fill="${conditionColor}" />
-              <!-- Titik Pantulan Cahaya di kiri atas -->
               <circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" />
             </svg>
           `;
 
           const pinIcon = window.L.divIcon({
-            className: 'custom-pin-svg', // Nama class baru
+            className: 'custom-pin-svg', 
             html: pinSvg,
-            iconSize: [14, 24], // Ukuran ikon diperkecil lagi
-            iconAnchor: [7, 24], // Titik jangkar di tengah bawah tiang
-            popupAnchor: [0, -24] // Popup muncul di atas pin
+            iconSize: [14, 24], 
+            iconAnchor: [7, 24], 
+            popupAnchor: [0, -24] 
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -657,7 +622,6 @@ export default function App() {
     }
   }, [appRole, syncedRoads, filterKelurahan, filterKondisi, filterJenis]);
 
-  // Efek terpisah khusus untuk Highlight Jalur (Sehingga popup dan peta dasar tidak kerender ulang)
   useEffect(() => {
     if (appRole !== 'admin' || !adminHighlightLayerGroupRef.current) return;
     const highlightGroup = adminHighlightLayerGroupRef.current;
@@ -668,12 +632,10 @@ export default function App() {
       if (activeRoad && activeRoad.realGps && activeRoad.realGps.length > 0) {
         const latlngs = activeRoad.realGps.map(pt => [pt.lat, pt.lng]);
         
-        // Garis Glow dan Outline (Interactive false agar tidak menghalangi klik ke layer utama)
         window.L.polyline(latlngs, { color: '#3B82F6', weight: 16, opacity: 0.5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
         window.L.polyline(latlngs, { color: '#ffffff', weight: 10, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
         window.L.polyline(latlngs, { color: getConditionColor(activeRoad.condition), weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
 
-        // Radar Pin Pulse
         if (activeRoad.pinLocation && activeRoad.pinLocation.lat) {
            const pulseIcon = window.L.divIcon({
               className: 'custom-pulse',
@@ -693,7 +655,7 @@ export default function App() {
     }
   }, [isSidebarOpen, appRole]);
 
-  // --- EFEK: ANIMASI RUTE DI ADMIN (MENDUKUNG MULTI-VEHICLE) ---
+  // --- EFEK: ANIMASI RUTE DI ADMIN ---
   useEffect(() => {
     let onInteractionStart = null;
     let onInteractionEnd = null;
@@ -704,7 +666,6 @@ export default function App() {
        const map = adminMapInstanceRef.current;
        let isInteracting = false;
 
-       // Fungsi pembantu menghitung arah hadap mobil (Bearing dalam derajat)
        const getBearing = (lat1, lng1, lat2, lng2) => {
            const toRad = deg => deg * Math.PI / 180;
            const toDeg = rad => rad * 180 / Math.PI;
@@ -888,11 +849,9 @@ export default function App() {
               activeTimeouts.push(setTimeout(animate, segmentDelay)); 
            };
 
-           // Buat jeda mulai yang berurutan jika ada banyak rute agar tidak bertabrakan bersamaan di awal
            activeTimeouts.push(setTimeout(animate, 800 + (vIndex * 60))); 
        });
 
-       // Paskan map untuk melihat keseluruhan rute yang sedang dianimasikan
        const allRouteBounds = animatingRoadsList.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
        if (allRouteBounds.length > 0) {
           map.fitBounds(window.L.latLngBounds(allRouteBounds), { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
@@ -913,8 +872,103 @@ export default function App() {
     };
   }, [isAnimatingMap, animatingRoadsList, animIconType]);
 
-  // --- EFEK PETA SURVEYOR ---
-  // (Sama seperti sebelumnya, dikurangi untuk ringkasnya, tidak ada perubahan logika GPS)
+  // --- EFEK: PEMANTAU LOKASI LATAR (GLOBAL UNTUK SURVEYOR) ---
+  // Kita pisahkan agar current location tetap terpantau di layar mana pun saat role adalah surveyor
+  useEffect(() => {
+      if (appRole !== 'surveyor') return;
+      
+      let watchId;
+      if ('geolocation' in navigator) {
+          watchId = navigator.geolocation.watchPosition(
+              (position) => {
+                  setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+              },
+              () => { console.warn("GPS belum stabil atau izin ditolak."); },
+              { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+          );
+      }
+      return () => {
+          if (watchId) navigator.geolocation.clearWatch(watchId);
+      };
+  }, [appRole]);
+
+  // --- EFEK PETA DRAW MAP (MODE GAMBAR MANUAL) ---
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
+
+    const map = window.L.map(drawMapContainerRef.current);
+    drawMapInstanceRef.current = map;
+    
+    // Default ke Citra Satelit karena sangat membantu untuk menggambar manual
+    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+    
+    satelit.addTo(map); 
+
+    window.L.control.layers({
+      "Citra Satelit (Esri)": satelit,
+      "Peta Jalan (OSM)": osm
+    }, null, { position: 'topleft' }).addTo(map);
+
+    drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
+    drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+
+    // Pusatkan peta ke lokasi sekarang jika ada, atau ke default Samarinda
+    if (currentLocation) {
+        map.setView([currentLocation.lat, currentLocation.lng], 16);
+    } else {
+        map.setView([-0.425, 117.185], 14);
+    }
+
+    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
+
+    return () => {
+      map.remove();
+      drawMapInstanceRef.current = null;
+      drawPolylineRef.current = null;
+      drawMarkersGroupRef.current = null;
+    };
+  }, [appRole, mobileScreen, isLeafletLoaded]);
+
+  // --- LOGIKA KLIK DAN UPDATE VISUAL PADA DRAW MAP ---
+  useEffect(() => {
+      if (mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
+      const map = drawMapInstanceRef.current;
+
+      const onMapClick = (e) => {
+          setManualDrawnPoints(prev => {
+              const newPt = { lat: e.latlng.lat, lng: e.latlng.lng };
+              if (prev.length > 0) {
+                  const lastPt = prev[prev.length - 1];
+                  const dist = getDistanceMeters(lastPt.lat, lastPt.lng, newPt.lat, newPt.lng);
+                  setTotalDistance(d => d + dist);
+              }
+              return [...prev, newPt];
+          });
+      };
+
+      map.on('click', onMapClick);
+      return () => { map.off('click', onMapClick); };
+  }, [mobileScreen]);
+
+  useEffect(() => {
+      if (mobileScreen !== 'draw_map' || !drawPolylineRef.current || !drawMarkersGroupRef.current) return;
+      
+      drawPolylineRef.current.setLatLngs(manualDrawnPoints.map(p => [p.lat, p.lng]));
+      
+      drawMarkersGroupRef.current.clearLayers();
+      manualDrawnPoints.forEach((pt, idx) => {
+          const isStart = idx === 0;
+          const isEnd = idx === manualDrawnPoints.length - 1;
+          const color = isStart ? '#10B981' : (isEnd ? '#EF4444' : '#ffffff');
+          const radius = (isStart || isEnd) ? 5 : 3;
+          const weight = (isStart || isEnd) ? 2 : 1.5;
+          window.L.circleMarker([pt.lat, pt.lng], { radius, fillColor: color, color: (isStart||isEnd)?'#fff':'#3B82F6', weight, fillOpacity: 1 }).addTo(drawMarkersGroupRef.current);
+      });
+  }, [manualDrawnPoints, mobileScreen]);
+
+
+  // --- EFEK PETA PIN (UNTUK FORM) ---
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
 
@@ -976,19 +1030,7 @@ export default function App() {
       }
     });
 
-    if ('geolocation' in navigator) {
-        watchLocationIdRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                setCurrentLocation({ lat: latitude, lng: longitude });
-            },
-            (err) => { console.warn("Gagal mendapatkan lokasi GPS:", err); },
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
-        );
-    }
-
     return () => {
-      if (watchLocationIdRef.current) navigator.geolocation.clearWatch(watchLocationIdRef.current);
       map.remove();
       surveyorMapInstanceRef.current = null;
       surveyorMarkerRef.current = null;
@@ -1002,21 +1044,16 @@ export default function App() {
 
     if (pinLocation) {
       if (surveyorMarkerRef.current) {
-        // Hapus marker lama agar bisa dibuat ulang dengan warna yang di-update
         surveyorMarkerRef.current.remove();
         surveyorMarkerRef.current = null; 
       }
       
       if (!surveyorMarkerRef.current) {
-        // --- PERUBAHAN IKON PIN SURVEYOR (Gaya Bulat/Lolipop - Sedikit Lebih Besar untuk Mobile) ---
         const conditionColor = getConditionColor(formData.condition);
         const pinSvgMobile = `
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="18" height="30" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); transition: all 0.2s ease;">
-            <!-- Tiang Penyangga -->
             <rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" />
-            <!-- Lingkaran Utama -->
             <circle cx="12" cy="12" r="12" fill="${conditionColor}" />
-            <!-- Titik Pantulan Cahaya -->
             <circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" />
           </svg>
         `;
@@ -1024,8 +1061,8 @@ export default function App() {
         const pinIcon = window.L.divIcon({
           className: 'custom-pin-mobile-svg',
           html: pinSvgMobile,
-          iconSize: [18, 30], // Diperkecil juga
-          iconAnchor: [9, 30] // Titik jangkar di tengah bawah tiang
+          iconSize: [18, 30], 
+          iconAnchor: [9, 30] 
         });
         surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon })
           .addTo(map);
@@ -1059,19 +1096,17 @@ export default function App() {
     setRealGpsPoints([]); 
     setIsRecording(true); 
     setMobileScreen('record');
-    setRecordingStatus('locating'); // Mulai dengan mencari sinyal
-    setRecordTab('map'); // Buka Peta Live sebagai default agar terlihat akurasi posisinya
+    setRecordingStatus('locating'); 
+    setRecordTab('map'); 
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null);
     setEditingDraftId(null); 
-    setCurrentLocation(null);
 
     isGpsForcedRef.current = false;
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
 
-    // Fallback: Jika setelah 15 detik GPS masih belum "ready", paksa tombol "Mulai" agar aktif
     locatingTimeoutRef.current = setTimeout(() => {
       if (recordingStatusRef.current === 'locating') {
         showToast("⏳ Sinyal GPS sulit didapat. Tombol 'Mulai' diaktifkan paksa dengan toleransi rendah.");
@@ -1098,18 +1133,16 @@ export default function App() {
           setCurrentSpeed(currentSpeedKmh);
           setCurrentLocation({ lat: latitude, lng: longitude });
           
-          // FASE WARM-UP (Mencari Sinyal Hijau ala Strava)
           if (recordingStatusRef.current === 'locating' && accuracy <= 25) {
              if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
              setRecordingStatus('ready');
              showToast("Sinyal GPS Bagus! Siap Memulai.");
           } else if (recordingStatusRef.current === 'ready' && accuracy > 40 && !isGpsForcedRef.current) {
-             setRecordingStatus('locating'); // Sinyal hilang sebelum mulai
+             setRecordingStatus('locating'); 
           }
 
-          // FASE RECORDING (Termasuk Auto-Pause & Resume)
           if (recordingStatusRef.current === 'recording' || recordingStatusRef.current === 'auto_paused') {
-            if (accuracy > 40 && !isGpsForcedRef.current) return; // Abaikan titik dengan akurasi buruk saat merekam (kecuali dipaksa)
+            if (accuracy > 40 && !isGpsForcedRef.current) return; 
 
             setRealGpsPoints(prev => {
               if (prev.length === 0) {
@@ -1120,18 +1153,15 @@ export default function App() {
               const last = prev[prev.length - 1];
               const dist = getDistanceMeters(last.lat, last.lng, latitude, longitude);
               
-              // Logika Auto-Pause (Jika pergerakan sangat kecil / diam)
               if (dist < 3.5) {
                  if (Date.now() - lastMoveTimeRef.current > 10000 && recordingStatusRef.current === 'recording') {
-                    // 10 detik tidak bergerak signifikan = Auto Pause
                     setRecordingStatus('auto_paused');
                     showToast("Terdeteksi Berhenti: Auto-Pause aktif.");
                  }
                  return prev;
               }
-              if (dist > 100) return prev; // Filter loncatan GPS ekstrim
+              if (dist > 100) return prev; 
               
-              // Pergerakan Signifikan (Auto-Resume)
               if (recordingStatusRef.current === 'auto_paused') {
                  setRecordingStatus('recording');
                  showToast("Bergerak: Melanjutkan rekaman otomatis.");
@@ -1149,10 +1179,48 @@ export default function App() {
     }
   };
 
+  // --- FUNGSI MODE GAMBAR MANUAL ---
+  const startManualDrawing = () => {
+    setManualDrawnPoints([]);
+    setRealGpsPoints([]); // Pastikan yang dikirim ke form bersih di awal
+    setTotalDistance(0);
+    setUploadedVideoUrl(null); setUploadedVideoFile(null); 
+    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
+    setPinLocation(null);
+    setEditingDraftId(null); 
+    setMobileScreen('draw_map');
+  };
+
+  const undoLastDrawnPoint = () => {
+    setManualDrawnPoints(prev => {
+        if (prev.length === 0) return prev;
+        if (prev.length === 1) {
+            setTotalDistance(0);
+            return [];
+        }
+        const newPoints = prev.slice(0, -1);
+        let newDist = 0;
+        for (let i = 1; i < newPoints.length; i++) {
+            newDist += getDistanceMeters(newPoints[i-1].lat, newPoints[i-1].lng, newPoints[i].lat, newPoints[i].lng);
+        }
+        setTotalDistance(newDist);
+        return newPoints;
+    });
+  };
+
+  const finishManualDrawing = () => {
+    if (manualDrawnPoints.length < 2) {
+        showToast("Gambarkan minimal 2 titik untuk membuat rute!");
+        return;
+    }
+    setRealGpsPoints(manualDrawnPoints);
+    setMobileScreen('form');
+  };
+
   const simulateGpsMovement = () => {
     let currentLat = -0.425; let currentLng = 117.185;
     setGpsAccuracy("Simulasi"); setCurrentSpeed(15); setTotalDistance(0);
-    setRecordingStatus('ready'); // Langsung siap
+    setRecordingStatus('ready'); 
     
     if (watchIdRef.current !== null && typeof watchIdRef.current !== 'number') navigator.geolocation.clearWatch(watchIdRef.current);
     watchIdRef.current = setInterval(() => {
@@ -1200,7 +1268,6 @@ export default function App() {
     setMobileScreen('home');
   };
 
-  // --- EFEK: INISIALISASI PETA LIVE (DI LAYAR REKAM) ---
   useEffect(() => {
     if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
     
@@ -1220,7 +1287,6 @@ export default function App() {
     };
   }, [mobileScreen, isLeafletLoaded]);
 
-  // --- EFEK: UPDATE PETA LIVE (DI LAYAR REKAM) ---
   useEffect(() => {
     if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
     const map = liveMapInstanceRef.current;
@@ -1238,7 +1304,6 @@ export default function App() {
           map.setView([currentLocation.lat, currentLocation.lng], 17);
        }
        
-       // Center otomatis jika di tab peta dan sedang merekam / siap
        if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) {
            map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
        }
@@ -1249,12 +1314,9 @@ export default function App() {
     }
   }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
 
-  // Hindari bug peta abu-abu saat pindah tab (Fix blank map)
   useEffect(() => {
      if (recordTab === 'map' && liveMapInstanceRef.current) {
         const map = liveMapInstanceRef.current;
-        // Trigger invalidate segera, lalu panggil lagi beberapa kali selama dan setelah transisi CSS 300ms selesai
-        // Ini memastikan Leaflet memuat ulang ubin (tiles) yang hilang
         map.invalidateSize();
         const timers = [100, 300, 500].map(time => 
             setTimeout(() => { 
@@ -1282,7 +1344,6 @@ export default function App() {
     showToast("⏳ Mengompresi foto...");
 
     try {
-      // Proses semua file secara paralel menggunakan helper kompresi kita
       const compressedFiles = await Promise.all(
         newFilesToProcess.map(file => compressImage(file, 1000, 1000, 0.7))
       );
@@ -1357,7 +1418,7 @@ export default function App() {
       length: (totalDistance / 1000).toFixed(3), 
       date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
       surveyor: "Tim PUPR",
-      isUploaded: false, // Tambahan: mereset status unggah ke false jika draft baru atau baru diedit
+      isUploaded: false, 
     };
     
     if (editingDraftId) {
@@ -1397,13 +1458,11 @@ export default function App() {
           const sizeInMB = (draft.videoFile.size / (1024 * 1024)).toFixed(1);
           setSyncMessage(`Mengunggah Video (${sizeInMB} MB) ke Cloud CDN... (Rute ${i+1}/${draftsToUpload.length})`);
           
-          // Menggunakan Cloudinary REST API untuk Unsigned Upload (Video)
           const formData = new FormData();
           formData.append('file', draft.videoFile);
           formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
           
           try {
-             // Endpoint khusus untuk video
              const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
                  method: 'POST',
                  body: formData
@@ -1430,7 +1489,6 @@ export default function App() {
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
             try {
-               // Endpoint khusus untuk image/foto
                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
                    method: 'POST',
                    body: formData
@@ -1447,7 +1505,6 @@ export default function App() {
 
         setSyncMessage(`Menyimpan Data Rute ${i+1}/${draftsToUpload.length} ke Supabase...`);
         
-        // Memisahkan property isUploaded agar tidak terkirim dan error di Supabase
         const { id, videoFile, localVideoUrl, photoFiles, localPhotoUrls, isUploaded, ...dataToUpload } = draft; 
         dataToUpload.realGps = JSON.stringify(dataToUpload.realGps); 
         if(dataToUpload.pinLocation) dataToUpload.pinLocation = JSON.stringify(dataToUpload.pinLocation);
@@ -1463,7 +1520,6 @@ export default function App() {
       setSyncMessage("Selesai!");
       showToast(`${uploadCount} Rute Berhasil Diunggah ke Supabase!`);
       
-      // PERUBAHAN: Draft tidak lagi dihapus, melainkan diset isUploaded menjadi true
       setDrafts(prev => prev.map(d => selectedDraftIds.includes(d.id) ? { ...d, isUploaded: true } : d));
       setSelectedDraftIds([]); 
       fetchRoads();
@@ -1635,7 +1691,6 @@ export default function App() {
     }, 800);
   };
 
-  // --- MENGHITUNG STATISTIK ADMIN UNTUK LEGENDA HORIZONTAL ---
   const filteredRoads = syncedRoads.filter(road => {
     return (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) &&
            (filterJenis === 'Semua' || road.jenisJalan === filterJenis) &&
@@ -1653,10 +1708,6 @@ export default function App() {
     tanah: filteredRoads.filter(r => r.jenisJalan === 'Tanah').length,
   };
 
-
-  // =========================================================================
-  // RENDER STRUKTUR UTAMA
-  // =========================================================================
   return (
     <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print:relative print:h-auto print:overflow-visible print:bg-white">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1674,28 +1725,22 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.8); }
 
-        /* Menyembunyikan scrollbar di bar legenda horizontal */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Mencegah auto-zoom di HP (terutama iOS/iPhone) saat klik input form */
         @media screen and (max-width: 768px) {
           input, select, textarea { font-size: 16px !important; }
         }
 
-        /* Mendorong tombol Zoom & Layer ke kanan agar tidak tertutup sidebar */
         .leaflet-left { transition: left 0.3s ease-in-out; }
         .sidebar-open .leaflet-left { left: 380px !important; }
         @media (max-width: 768px) {
-          /* Menggunakan vw agar lebih presisi di layar HP */
           .sidebar-open .leaflet-left { left: calc(85vw + 10px) !important; }
         }
 
-        /* Menyelaraskan kotak Layer Peta dengan Zoom Control (+/-) */
         .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
         .leaflet-touch .leaflet-control-layers-toggle { width: 34px !important; height: 34px !important; background-size: 18px !important; }
 
-        /* Tombol Detail di dalam Popup */
         .btn-detail-popup { margin-top: 12px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         .btn-detail-popup:active { transform: scale(0.98); }
@@ -1776,11 +1821,21 @@ export default function App() {
           <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
             {mobileScreen === 'home' && (
               <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-                <button onClick={startRealHardware} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-3xl p-6 mb-4 mt-4 shadow-xl shadow-blue-600/20 transition-all flex flex-col items-center">
-                  <div className="bg-white/20 p-4 rounded-full mb-3"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg></div>
-                  <span className="font-extrabold text-lg">Mulai Rekaman</span>
-                  <span className="text-xs text-blue-100 mt-1">Aktifkan Kamera & GPS</span>
-                </button>
+                <div className="flex space-x-3 mb-4 mt-4">
+                    <button onClick={startRealHardware} className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl p-5 shadow-xl shadow-blue-600/20 transition-all flex flex-col items-center justify-center">
+                        <div className="bg-white/20 p-3 rounded-full mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                        </div>
+                        <span className="font-extrabold text-sm leading-tight text-center">Rekam<br/>GPS Live</span>
+                    </button>
+
+                    <button onClick={startManualDrawing} className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-3xl p-5 shadow-xl shadow-emerald-500/20 transition-all flex flex-col items-center justify-center">
+                        <div className="bg-white/20 p-3 rounded-full mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg>
+                        </div>
+                        <span className="font-extrabold text-sm leading-tight text-center">Gambar<br/>Rute Manual</span>
+                    </button>
+                </div>
 
                 <button onClick={() => setMobileScreen('drafts')} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center space-x-4">
@@ -1794,6 +1849,73 @@ export default function App() {
                   </div>
                   <span className="bg-rose-500 text-white px-3 py-1 rounded-full text-sm font-bold">{drafts.length}</span>
                 </button>
+              </div>
+            )}
+
+            {mobileScreen === 'draw_map' && (
+              <div className="flex-1 flex flex-col bg-slate-100 relative overflow-hidden">
+                <div className="bg-white px-5 pb-3 border-b border-slate-200 flex justify-between items-center z-20 shadow-sm pt-6 md:py-4 relative">
+                  <div>
+                     <h3 className="font-extrabold text-slate-800 text-base">Gambar Manual</h3>
+                     <p className="text-xs text-slate-500">Ketuk peta untuk membuat jalur rute</p>
+                  </div>
+                  <button onClick={() => setMobileScreen('home')} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-full bg-slate-100 border border-slate-200 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div className="flex-1 relative z-0">
+                   <div ref={drawMapContainerRef} className="absolute inset-0 bg-slate-200 cursor-crosshair"></div>
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuatkan Peta...</div>}
+                </div>
+
+                {/* Gradient Bawah untuk kontras tombol UI terhadap peta Satelit */}
+                <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-slate-900/70 to-transparent z-10 pointer-events-none"></div>
+                
+                {/* Tombol Lokasi GPS - POSISINYA DINAIKKAN AGAR TIDAK KETINDIS */}
+                <div className="absolute bottom-[170px] right-4 z-20">
+                     <button 
+                         onClick={() => {
+                             if (drawMapInstanceRef.current && currentLocation) {
+                                 drawMapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 16);
+                             } else if (!currentLocation) {
+                                 showToast("Lokasi GPS Anda belum terdeteksi...");
+                             }
+                         }}
+                         className="bg-white/95 backdrop-blur-md p-3.5 rounded-full shadow-xl border border-slate-200/80 text-blue-600 hover:bg-blue-50 active:scale-95 transition-transform flex items-center justify-center"
+                         aria-label="Pusatkan ke lokasi Anda"
+                     >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                     </button>
+                </div>
+
+                {/* Panel Kontrol Bawah */}
+                <div className="absolute bottom-6 left-4 right-4 z-20 flex flex-col gap-3">
+                     <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-4 flex justify-between items-center">
+                         <div>
+                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Titik: <span className="text-blue-600 font-black">{manualDrawnPoints.length}</span></div>
+                            <div className="text-xl font-black text-slate-900 leading-none">
+                               {totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-sm font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span>
+                            </div>
+                         </div>
+                         
+                         <button onClick={undoLastDrawnPoint} disabled={manualDrawnPoints.length === 0} className={`p-3.5 rounded-full flex items-center justify-center transition-all border shadow-sm ${manualDrawnPoints.length > 0 ? 'bg-amber-100 border-amber-200 text-amber-700 hover:bg-amber-200 active:scale-95' : 'bg-slate-100 border-slate-200 text-slate-400 opacity-50 cursor-not-allowed'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                         </button>
+                     </div>
+
+                     <button onClick={finishManualDrawing} disabled={manualDrawnPoints.length < 2} className={`w-full py-4 rounded-2xl font-black text-sm shadow-2xl flex justify-center items-center space-x-2 transition-all border ${manualDrawnPoints.length >= 2 ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600 active:scale-95' : 'bg-slate-800/95 backdrop-blur-md text-slate-400 border-slate-700 cursor-not-allowed'}`}>
+                         <span>SELESAI GAMBAR JALUR</span>
+                         {manualDrawnPoints.length >= 2 ? (
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z" clipRule="evenodd" /></svg>
+                         ) : (
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                         )}
+                     </button>
+                </div>
               </div>
             )}
 
@@ -1950,8 +2072,8 @@ export default function App() {
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                     </div>
                     <div>
-                      <div className="text-blue-900 font-black text-sm leading-tight">Jalur Terekam</div>
-                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} log satelit | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
+                      <div className="text-blue-900 font-black text-sm leading-tight">Jalur Tersimpan</div>
+                      <div className="text-blue-600 text-[11px] font-bold mt-0.5">{realGpsPoints.length} titik koordinat | {totalDistance < 1000 ? Math.round(totalDistance) + ' m' : (totalDistance/1000).toFixed(2) + ' km'}</div>
                     </div>
                   </div>
                   <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center space-x-1.5 whitespace-nowrap">
@@ -2422,10 +2544,8 @@ export default function App() {
                       onClick={() => {
                          let validRoads = [];
                          if (selectedAdminRouteIds.length > 0) {
-                             // Jika ada rute yang dicentang, hanya ambil rute tersebut
                              validRoads = syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1);
                          } else {
-                             // Jika tidak ada yang dicentang, ambil semua rute sesuai filter saat ini
                              validRoads = syncedRoads.filter(road => (filterKelurahan === 'Semua' || road.kelurahan === filterKelurahan) && (filterJenis === 'Semua' || road.jenisJalan === filterJenis) && (filterKondisi === 'Semua' || road.condition === filterKondisi)).filter(r => r.realGps && r.realGps.length > 1);
                          }
 
