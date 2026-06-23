@@ -1831,18 +1831,18 @@ export default function App() {
             {mobileScreen === 'home' && (
               <div className="flex-1 p-6 flex flex-col overflow-y-auto">
                 <div className="flex space-x-3 mb-4 mt-4">
-                    <button onClick={startRealHardware} className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl p-5 shadow-xl shadow-blue-600/20 transition-all flex flex-col items-center justify-center">
-                        <div className="bg-white/20 p-3 rounded-full mb-3">
+                    <button onClick={startRealHardware} className="w-1/2 bg-white border-2 border-blue-500 hover:bg-blue-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
+                        <div className="bg-blue-100 text-blue-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                         </div>
-                        <span className="font-extrabold text-sm leading-tight text-center">Rekam<br/>GPS Live</span>
+                        <span className="font-extrabold text-sm leading-tight text-center group-hover:text-blue-700 transition-colors">Rekam<br/>GPS Live</span>
                     </button>
 
-                    <button onClick={startManualDrawing} className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-3xl p-5 shadow-xl shadow-emerald-500/20 transition-all flex flex-col items-center justify-center">
-                        <div className="bg-white/20 p-3 rounded-full mb-3">
+                    <button onClick={startManualDrawing} className="w-1/2 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
+                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg>
                         </div>
-                        <span className="font-extrabold text-sm leading-tight text-center">Gambar<br/>Rute Manual</span>
+                        <span className="font-extrabold text-sm leading-tight text-center group-hover:text-emerald-700 transition-colors">Gambar<br/>Rute Manual</span>
                     </button>
                 </div>
 
@@ -2092,34 +2092,34 @@ export default function App() {
 
                 <form onSubmit={saveDraft} className="space-y-5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi Kerusakan (Pin)</label>
-                    <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-sm">
-                      <div className={`flex flex-col ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Titik Lokasi (Pin)</label>
+                    <div className="bg-white border border-slate-200 px-4 py-2.5 min-h-[3.5rem] rounded-2xl flex items-center justify-between shadow-sm">
+                      <div className={`flex flex-col justify-center ${pinLocation ? 'text-emerald-600' : 'text-slate-500'}`}>
                         <span className="text-sm font-bold flex items-center">{pinLocation ? '📍 Pin Terkunci' : 'Belum ditandai'}</span>
                         {pinLocation && (
-                           <span className="text-[10px] font-mono mt-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                           <span className="text-[10px] font-mono mt-0.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                              {pinLocation.lat.toFixed(6)}, {pinLocation.lng.toFixed(6)}
                            </span>
                         )}
                       </div>
-                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-colors">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
+                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded-xl text-xs font-extrabold transition-colors">{pinLocation ? 'Ubah di Peta' : 'Buka Peta'}</button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jalan</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 p-4 rounded-2xl text-base focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Nama Jl/Gg/Blok</label>
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Cth: Jl. Poros Utama" className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
                   </div>
                   
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kelurahan</label>
-                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-base bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                    <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base bg-white outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
                       {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Jenis Material Jalan</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Jenis Jl/Gg/Blok</label>
                     <div className="grid grid-cols-3 gap-2">
                       {['Tanah', 'Aspal', 'Beton'].map(jenis => (
                         <button key={jenis} type="button" onClick={() => setFormData({...formData, jenisJalan: jenis})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all ${formData.jenisJalan === jenis ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{jenis}</button>
@@ -2128,7 +2128,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan (Opsional)</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kondisi Jalan</label>
                     <div className="grid grid-cols-2 gap-2">
                       {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
                         <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`p-2 rounded-xl border text-sm font-extrabold transition-all flex items-center justify-center space-x-1.5 ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
@@ -2140,8 +2140,18 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Catatan Tambahan</label>
-                    <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full border border-slate-200 p-4 rounded-2xl text-base outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Catatan Tambahan / Keterangan</label>
+                    <textarea 
+                      value={formData.notes} 
+                      onChange={(e) => {
+                        setFormData({...formData, notes: e.target.value});
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }} 
+                      className="w-full border border-slate-200 px-4 py-3 min-h-[3.5rem] rounded-2xl text-base outline-none focus:ring-2 focus:ring-blue-500 shadow-sm resize-none overflow-hidden" 
+                      rows="1"
+                      placeholder="Ketik keterangan di sini..."
+                    ></textarea>
                   </div>
 
                   <div>
@@ -2151,10 +2161,10 @@ export default function App() {
                     </div>
                     
                     {uploadedPhotoUrls.length < 4 && (
-                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors mb-3">
+                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-white hover:bg-slate-50 transition-colors mb-3">
                         <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <div className="text-slate-500 text-sm font-semibold flex flex-col items-center">
-                          <span className="text-2xl mb-1">📸</span> Tambah Foto
+                        <div className="text-slate-500 text-sm font-semibold flex items-center gap-2">
+                          <span className="text-lg">📸</span> Tambah Foto
                         </div>
                       </div>
                     )}
@@ -2175,10 +2185,10 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Unggah Video (Opsional, Maks 150MB)</label>
-                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Batas ukuran telah dinaikkan ke 150MB. Pada banyak HP modern, video akan terkompres secara otomatis jika direkam langsung.</p>
+                    <p className="text-[10px] text-slate-500 mb-2 italic">*Catatan: Pada banyak HP modern, video akan terkompres otomatis.</p>
                     
                     {!uploadedVideoUrl ? (
-                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center bg-white hover:bg-slate-50 transition-colors">
+                      <div className="relative border-2 border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-white hover:bg-slate-50 transition-colors">
                         <input type="file" accept="video/mp4,video/quicktime,video/*" onChange={(e) => { 
                             const f = e.target.files[0]; 
                             if(f){ 
@@ -2193,12 +2203,12 @@ export default function App() {
                               showToast("✅ Video siap dilampirkan."); 
                             } 
                           }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <div className="text-slate-500 text-sm font-semibold flex flex-col items-center"><span className="text-xl mb-1">📁</span> Pilih file video</div>
+                        <div className="text-slate-500 text-sm font-semibold flex items-center gap-2"><span className="text-lg">📁</span> Pilih file video</div>
                       </div>
                     ) : (
-                      <div className="relative border border-emerald-300 rounded-2xl p-4 bg-emerald-50 text-center flex items-center justify-between shadow-sm">
+                      <div className="relative border border-emerald-300 rounded-2xl px-4 py-3 min-h-[3.5rem] bg-emerald-50 flex items-center justify-between shadow-sm">
                          <div className="flex items-center space-x-3 text-emerald-700 font-bold text-sm">
-                            <span className="text-2xl">✅</span>
+                            <span className="text-xl">✅</span>
                             <div className="text-left flex flex-col">
                                <span>Video Terlampir</span>
                                <span className="text-[10px] text-emerald-600 font-normal truncate max-w-[120px]">{uploadedVideoFile?.name || 'video_tersimpan.mp4'}</span>
@@ -2214,7 +2224,7 @@ export default function App() {
 
                   <div className="pt-4 pb-8 flex flex-col space-y-3">
                     <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-base shadow-xl hover:bg-slate-800 transition-colors">
-                      {editingDraftId ? 'Simpan Perubahan Draft' : 'Simpan ke Memori Luring (Draft)'}
+                      {editingDraftId ? 'Simpan Perubahan' : 'Simpan'}
                     </button>
                     <button type="button" onClick={() => {
                       setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
