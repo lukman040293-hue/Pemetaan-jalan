@@ -771,10 +771,10 @@ export default function App() {
                     </svg>
                 </div>`;
            } else {
-               iconSize = [32, 50];
-               iconAnchor = [16, 25];
+               iconSize = [24, 38];
+               iconAnchor = [12, 19];
                iconHtml = `
-                <div id="anim-car-wrapper-${vIndex}" style="width: 32px; height: 50px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                <div id="anim-car-wrapper-${vIndex}" style="width: 24px; height: 38px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
                     <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
                         <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
                         <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
