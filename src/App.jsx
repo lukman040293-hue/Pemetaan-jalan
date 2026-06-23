@@ -698,6 +698,10 @@ export default function App() {
                return;
            }
 
+           // Menambahkan faktor kecepatan acak (0.7x hingga 1.4x) untuk setiap kendaraan
+           // Ini akan membedakan kecepatan tiap rute saat diputar bersamaan
+           const individualSpeedFactor = 0.7 + (Math.random() * 0.7);
+
            let currentIndex = 0;
            let accumulatedDistance = 0;
            let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
@@ -813,7 +817,8 @@ export default function App() {
                   if (totalVehicles === 1) setCurrentAnimDistance(accumulatedDistance);
 
                   const baseVisualSpeedMps = 75; 
-                  let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / animationSpeedRef.current;
+                  // Terapkan kecepatan global (dari slider kontrol) dikalikan kecepatan individu kendaraan
+                  let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / (animationSpeedRef.current * individualSpeedFactor);
                   segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
               }
 
@@ -829,19 +834,23 @@ export default function App() {
                   marker.setLatLng([pt.lat, pt.lng]);
               }
               
-              if (currentIndex < points.length - 1) {
-                  const nextPt = points[currentIndex + 1];
-                  const targetBearing = getBearing(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
-                  
-                  let diff = targetBearing - (currentAngle % 360);
-                  if (diff > 180) diff -= 360;
-                  if (diff < -180) diff += 360;
-                  currentAngle += diff;
-
-                  const carWrapper = document.getElementById(`anim-car-wrapper-${vIndex}`);
-                  if (carWrapper) {
-                      carWrapper.style.transition = `transform ${segmentDelay * 0.7}ms ease-in-out`;
-                      carWrapper.style.transform = `rotate(${currentAngle}deg)`;
+              if (currentIndex > 0) {
+                  const prevPt = points[currentIndex - 1];
+                  // Pastikan titik sebelumnya dan saat ini berbeda agar perhitungan sudut tidak ngawur
+                  if (prevPt.lat !== pt.lat || prevPt.lng !== pt.lng) {
+                      const targetBearing = getBearing(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+                      
+                      let diff = targetBearing - (currentAngle % 360);
+                      if (diff > 180) diff -= 360;
+                      if (diff < -180) diff += 360;
+                      currentAngle += diff;
+    
+                      const carWrapper = document.getElementById(`anim-car-wrapper-${vIndex}`);
+                      if (carWrapper) {
+                          // Membatasi waktu rotasi maksimal 400ms agar belokan tampak realistis dan tidak over-predicting
+                          carWrapper.style.transition = `transform ${Math.min(segmentDelay * 0.5, 400)}ms ease-in-out`;
+                          carWrapper.style.transform = `rotate(${currentAngle}deg)`;
+                      }
                   }
               }
 
@@ -2552,7 +2561,7 @@ export default function App() {
                          if(validRoads.length === 0) return showToast("Tidak ada rute valid untuk diputar.");
                          setAnimatingRoadsList(validRoads);
                          setIsAnimatingMap(true);
-                         setIsAnimPaused(false);
+                         setIsAnimPaused(true); // Diubah menjadi true agar menunggu diklik play
                          setAnimationSpeedMultiplier(1.0);
                          if(window.innerWidth < 768) setIsSidebarOpen(false);
                       }}
@@ -2709,7 +2718,7 @@ export default function App() {
                              if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); 
                              setAnimatingRoadsList([selectedRoad]);
                              setIsAnimatingMap(true); 
-                             setIsAnimPaused(false);
+                             setIsAnimPaused(true); // Diubah menjadi true agar menunggu diklik play
                              setCurrentAnimDistance(0);
                              setAnimationSpeedMultiplier(1.0);
                              setShowSpeedControl(false);
