@@ -1873,7 +1873,7 @@ export default function App() {
                 <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-slate-900/70 to-transparent z-10 pointer-events-none"></div>
                 
                 {/* Tombol Lokasi GPS - POSISINYA DINAIKKAN AGAR TIDAK KETINDIS */}
-                <div className="absolute bottom-[170px] right-4 z-20">
+                <div className="absolute bottom-[220px] right-4 z-20">
                      <button 
                          onClick={() => {
                              if (drawMapInstanceRef.current && currentLocation) {
