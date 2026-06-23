@@ -2309,33 +2309,33 @@ export default function App() {
                   </div>
 
                   {drafts.length > 0 && (
-                     <div className="mb-2 flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={selectAllDrafts}>
+                     <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={selectAllDrafts}>
                        <span className="text-sm font-bold text-slate-700">Pilih Semua ({drafts.length})</span>
-                       <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
-                          {selectedDraftIds.length === drafts.length && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                       <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                          {selectedDraftIds.length === drafts.length && <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
                        </div>
                      </div>
                   )}
                 </div>
 
                 {/* Area Daftar (Bisa di-scroll tanpa batas) */}
-                <div className="flex-1 space-y-4 overflow-y-auto px-6 pb-4 pt-2 custom-scrollbar">
+                <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pb-4 pt-1 custom-scrollbar">
                   {drafts.length === 0 ? (
-                    <div className="text-center text-slate-400 mt-10 text-base font-medium border-2 border-dashed border-slate-300 rounded-3xl p-8">Belum ada survei yang disimpan.</div>
+                    <div className="text-center text-slate-400 mt-10 text-base font-medium border-2 border-dashed border-slate-300 rounded-2xl p-8">Belum ada survei yang disimpan.</div>
                   ) : (
                     drafts.map(d => {
                       const isSelected = selectedDraftIds.includes(d.id);
                       return (
-                      <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`p-4 rounded-3xl border shadow-sm relative overflow-hidden flex items-center transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300'}`}>
-                        <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: getConditionColor(d.condition)}}></div>
+                      <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`px-3 py-2.5 rounded-2xl border shadow-sm relative overflow-hidden flex items-center transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300'}`}>
+                        <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: getConditionColor(d.condition)}}></div>
                         
-                        <div className="pl-1 pr-3 py-2 flex items-center justify-center">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
-                             {isSelected && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                        <div className="pl-1.5 pr-3 flex items-center justify-center">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                             {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
                           </div>
                         </div>
 
-                        <div className="flex-1 w-full py-1">
+                        <div className="flex-1 w-full">
                           <div className="flex justify-between items-center">
                              <div className="font-extrabold text-base text-slate-800 pr-2 flex items-center flex-wrap gap-1.5">
                                <span className="truncate max-w-[140px] md:max-w-[200px]">{d.name}</span>
