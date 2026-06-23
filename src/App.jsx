@@ -1434,6 +1434,15 @@ export default function App() {
     }
   };
 
+  const deleteSelectedDrafts = () => {
+    if (selectedDraftIds.length === 0) return;
+    if (window.confirm(`Hapus ${selectedDraftIds.length} draft terpilih secara permanen?`)) {
+      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id)));
+      setSelectedDraftIds([]);
+      showToast("Draft terpilih berhasil dihapus.");
+    }
+  };
+
   const saveDraft = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return showToast("Nama jalan wajib diisi!");
@@ -2327,9 +2336,9 @@ export default function App() {
                         </div>
 
                         <div className="flex-1 w-full py-1">
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center">
                              <div className="font-extrabold text-base text-slate-800 pr-2 flex items-center flex-wrap gap-1.5">
-                               <span>{d.name}</span>
+                               <span className="truncate max-w-[140px] md:max-w-[200px]">{d.name}</span>
                                {/* Label Status Terkirim */}
                                {d.isUploaded && (
                                  <span className="bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center shadow-sm">
@@ -2343,15 +2352,7 @@ export default function App() {
                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                    <span>Edit</span>
                                  </button>
-                                 <button onClick={(e) => { e.stopPropagation(); deleteDraft(d.id); }} className="bg-rose-50 text-rose-600 border border-rose-200 p-1.5 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors shadow-sm flex items-center justify-center">
-                                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                 </button>
                              </div>
-                          </div>
-                          <div className="text-xs font-bold text-slate-400 uppercase mt-1">{d.jenisJalan} • {formatKel(d.kelurahan)}</div>
-                          <div className="flex justify-between items-center mt-3 border-t border-slate-200/60 pt-3 text-xs">
-                            <span className="font-bold text-slate-600">{formatLength(d.length)} • {d.duration ? formatDuration(d.duration) + ' • ' : ''}{d.realGps.length} Log</span>
-                            <span className="bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-bold">{d.condition}</span>
                           </div>
                         </div>
                       </div>
@@ -2362,9 +2363,20 @@ export default function App() {
 
                 {/* Area Tombol Bawah (Sticky, selalu muncul di bawah) */}
                 {drafts.length > 0 && (
-                  <div className="p-6 flex-shrink-0 bg-white border-t border-slate-200 z-10 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
-                    <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-full text-white py-4 rounded-2xl font-black text-base flex justify-center items-center space-x-2 shadow-xl transition-all ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400 cursor-not-allowed opacity-80'}`}>
-                      {isDbConnected ? <span>UNGGAH TERPILIH ({selectedDraftIds.length})</span> : <span>SERVER SUPABASE TERPUTUS</span>}
+                  <div className="p-4 md:p-6 flex-shrink-0 bg-white border-t border-slate-200 z-10 shadow-[0_-5px_15px_rgba(0,0,0,0.03)] flex space-x-3">
+                    <button 
+                      onClick={deleteSelectedDrafts} 
+                      disabled={selectedDraftIds.length === 0} 
+                      className={`w-1/3 py-4 rounded-2xl font-black text-sm transition-all border shadow-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'}`}
+                    >
+                      HAPUS
+                    </button>
+                    <button 
+                      onClick={syncDataToCloud} 
+                      disabled={selectedDraftIds.length === 0} 
+                      className={`w-2/3 text-white py-4 rounded-2xl font-black text-sm flex justify-center items-center space-x-2 shadow-xl transition-all ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400 cursor-not-allowed opacity-80'}`}
+                    >
+                      {isDbConnected ? <span>UNGGAH ({selectedDraftIds.length})</span> : <span className="text-[10px] whitespace-nowrap">SERVER TERPUTUS</span>}
                     </button>
                   </div>
                 )}
