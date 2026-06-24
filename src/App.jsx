@@ -2297,12 +2297,22 @@ export default function App() {
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Kondisi Jalan</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
-                        <button key={cond} type="button" onClick={() => setFormData({...formData, condition: cond})} className={`py-3 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center space-x-2 border ${formData.condition === cond ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'}`}>
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getConditionColor(cond) }}></span>
-                          <span>{cond}</span>
-                        </button>
-                      ))}
+                      {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => {
+                        const isActive = formData.condition === cond;
+                        const condColor = getConditionColor(cond);
+                        return (
+                          <button 
+                            key={cond} 
+                            type="button" 
+                            onClick={() => setFormData({...formData, condition: cond})} 
+                            className={`py-3 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center space-x-2 border ${isActive ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'}`}
+                            style={isActive ? { backgroundColor: condColor, borderColor: condColor } : {}}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: isActive ? '#ffffff' : condColor }}></span>
+                            <span>{cond}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
