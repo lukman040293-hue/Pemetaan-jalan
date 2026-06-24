@@ -158,32 +158,73 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
   });
 };
 
-// --- KOMPONEN ANGKA ANIMASI (ROLLING NUMBER) ---
-const AnimatedNumber = ({ value }) => {
-  const [displayValue, setDisplayValue] = useState(0);
+// --- KOMPONEN ANGKA ANIMASI (GAYA KUNCI KOPER / COMBINATION LOCK) ---
+const LockCylinder = ({ digit, idx }) => {
+  const stripRef = useRef(null);
+  
+  // Membuat pita angka panjang (0-9 diulang 4 kali) untuk memberikan efek putaran yang panjang
+  const numbers = Array.from({ length: 40 }, (_, i) => i % 10);
+  const targetNum = parseInt(digit, 10);
+  
+  // Memastikan berhentinya ada di putaran terakhir (index 30 + angka target)
+  const targetIndex = 30 + targetNum;
 
   useEffect(() => {
-    let startTimestamp = null;
-    const duration = 1500; 
-    let animationFrame;
-
-    const step = (timestamp) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setDisplayValue(Math.floor(easeOut * value));
+    if (stripRef.current) {
+      // 1. Reset posisi roda gigi ke angka 0 secara instan tanpa animasi
+      stripRef.current.style.transition = 'none';
+      stripRef.current.style.transform = `translateY(0em)`;
       
-      if (progress < 1) {
-        animationFrame = window.requestAnimationFrame(step);
-      }
-    };
+      // Force reflow agar reset segera diterapkan sebelum animasi dimulai
+      void stripRef.current.offsetHeight; 
+      
+      // 2. Tentukan durasi putaran. Semakin ke kanan posisinya, semakin lama berhentinya
+      // Efek mekanik: klik... klik... klik...
+      const duration = 2.0 + (idx * 0.4); 
+      
+      // 3. Putar roda ke bawah menuju angka target
+      stripRef.current.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.2, 1)`;
+      // Karena tinggi setiap angka pasti 1.1em, kita translate sejauh (index * 1.1)em
+      stripRef.current.style.transform = `translateY(-${targetIndex * 1.1}em)`;
+    }
+  }, [digit, idx]);
 
-    animationFrame = window.requestAnimationFrame(step);
-    
-    return () => window.cancelAnimationFrame(animationFrame);
-  }, [value]);
+  return (
+    <span 
+      style={{ 
+        display: 'inline-block', 
+        height: '1.1em', 
+        lineHeight: '1.1em',
+        overflow: 'hidden', 
+        position: 'relative',
+        background: 'transparent',
+        margin: '0 1px',
+        color: '#0f172a'
+      }}
+    >
+      <span ref={stripRef} style={{ display: 'flex', flexDirection: 'column', willChange: 'transform' }}>
+        {numbers.map((num, i) => (
+          <span key={i} style={{ height: '1.1em', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>
+            {num}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+};
 
-  return <>{displayValue}</>;
+const AnimatedNumber = ({ value }) => {
+  const valStr = String(value);
+  const digits = valStr.split('');
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', margin: '0 -2px' }}>
+      {digits.map((digit, idx) => (
+        // Key unik berdasarkan total digit agar reset jika jumlah digit bertambah/berkurang
+        <LockCylinder key={`${digits.length}-${idx}`} digit={digit} idx={idx} />
+      ))}
+    </span>
+  );
 };
 
 export default function App() {
@@ -2498,8 +2539,8 @@ export default function App() {
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#10B981] flex-shrink-0"></span>
                           <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate">Baik</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.baik} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-11 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.baik} /></span>
                        </div>
                     </div>
 
@@ -2508,8 +2549,8 @@ export default function App() {
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#FBBF24] flex-shrink-0"></span>
                           <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate">Rusak Ringan</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakRingan} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-11 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakRingan} /></span>
                        </div>
                     </div>
 
@@ -2518,8 +2559,8 @@ export default function App() {
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#F97316] flex-shrink-0"></span>
                           <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate">Rusak Sedang</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakSedang} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-11 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakSedang} /></span>
                        </div>
                     </div>
 
@@ -2528,8 +2569,8 @@ export default function App() {
                           <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-sm bg-[#EF4444] flex-shrink-0"></span>
                           <span className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate">Rusak Parah</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.rusakParah} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-11 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.rusakParah} /></span>
                        </div>
                     </div>
 
@@ -2542,8 +2583,8 @@ export default function App() {
                           <span className="text-[10px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🛣️</span>
                           <span className="text-[8px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate hidden sm:inline-block">Aspal</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-8 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.aspal} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.aspal} /></span>
                        </div>
                     </div>
 
@@ -2552,8 +2593,8 @@ export default function App() {
                           <span className="text-[10px] md:text-xs leading-none grayscale opacity-80 drop-shadow-sm flex-shrink-0">🧱</span>
                           <span className="text-[8px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate hidden sm:inline-block">Beton</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-8 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.beton} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.beton} /></span>
                        </div>
                     </div>
 
@@ -2562,8 +2603,8 @@ export default function App() {
                           <span className="text-[10px] md:text-xs leading-none opacity-80 drop-shadow-sm flex-shrink-0">🟤</span>
                           <span className="text-[8px] md:text-[10px] font-medium text-slate-600 uppercase tracking-wider truncate hidden sm:inline-block">Tanah</span>
                        </div>
-                       <div className="flex items-center justify-center bg-slate-100/90 w-8 md:w-auto md:min-w-[44px] md:px-4 flex-shrink-0">
-                          <span className="text-[11px] md:text-sm font-black text-slate-800 leading-none drop-shadow-sm"><AnimatedNumber value={adminStats.tanah} /></span>
+                       <div className="flex items-center justify-center bg-slate-100/90 w-10 md:w-auto md:min-w-[46px] md:px-2 flex-shrink-0 border-l border-slate-200/50">
+                          <span className="text-xl md:text-2xl font-black text-slate-800 leading-none"><AnimatedNumber value={adminStats.tanah} /></span>
                        </div>
                     </div>
 
