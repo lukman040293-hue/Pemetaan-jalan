@@ -774,15 +774,14 @@ export default function App() {
            let accumulatedDistance = 0;
            let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
            
-           let iconHtml = '';
+           let vehicleSvg = '';
            let iconSize = [32, 50];
            let iconAnchor = [16, 25];
 
            if (animIconType === 'motorcycle') {
                iconSize = [26, 42];
                iconAnchor = [13, 21];
-               iconHtml = `
-                <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+               vehicleSvg = `
                     <svg viewBox="0 0 40 95" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
                         <!-- Roda Belakang -->
                         <rect x="17" y="72" width="6" height="20" rx="3" fill="#0f172a"/>
@@ -821,12 +820,11 @@ export default function App() {
                         <!-- Kaca Helm -->
                         <path d="M 14 43.5 Q 20 38 26 43.5 Q 20 47 14 43.5 Z" fill="#0f172a"/>
                     </svg>
-                </div>`;
+               `;
            } else if (animIconType === 'runner') {
                iconSize = [28, 28];
                iconAnchor = [14, 14];
-               iconHtml = `
-                <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+               vehicleSvg = `
                     <svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
                         <style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style>
                         <g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;">
@@ -841,12 +839,11 @@ export default function App() {
                         <circle cx="25" cy="25" r="7" fill="#fcd34d" />
                         <path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" />
                     </svg>
-                </div>`;
+               `;
            } else {
                iconSize = [24, 38];
                iconAnchor = [12, 19];
-               iconHtml = `
-                <div id="anim-car-wrapper-${vIndex}" style="width: 24px; height: 38px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+               vehicleSvg = `
                     <svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));">
                         <rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/>
                         <rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/>
@@ -870,8 +867,15 @@ export default function App() {
                         <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                         <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                     </svg>
-                </div>`;
+               `;
            }
+           
+           const iconHtml = `
+                <!-- Kendaraan Berputar -->
+                <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
+                    ${vehicleSvg}
+                </div>
+            `;
            
            const customVehicleIcon = window.L.divIcon({
               className: 'moving-vehicle-icon',
@@ -883,6 +887,39 @@ export default function App() {
            const marker = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
            activeMarkers.push(marker);
 
+           // --- FITUR BARU: LABEL NAMA JALAN STATIS DENGAN GARIS PENUNJUK ---
+           const midPointIndex = Math.floor(points.length / 2);
+           const midPoint = points[midPointIndex];
+           
+           // Bervariasi arah berdasarkan index rute agar kotak/garis tidak saling tindih
+           const dirX = vIndex % 2 === 0 ? 40 : -40; 
+           const dirY = vIndex % 3 === 0 ? -45 : (vIndex % 3 === 1 ? -25 : -65);
+           
+           const staticLabelIcon = window.L.divIcon({
+               className: 'static-route-label',
+               html: `
+                   <div style="position: relative; width: 0; height: 0; pointer-events: none;">
+                       <!-- Titik Anchor di Jalur -->
+                       <div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+                       
+                       <!-- Garis Penghubung -->
+                       <svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;">
+                           <line x1="0" y1="0" x2="${dirX}" y2="${dirY}" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+                       </svg>
+                       
+                       <!-- Kotak Nama Jalan -->
+                       <div style="position: absolute; transform: translate(calc(${dirX}px ${dirX > 0 ? '+ 3px' : '- 100% - 3px'}), calc(${dirY}px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.4);">
+                           ${road.name}
+                       </div>
+                   </div>
+               `,
+               iconSize: [0, 0],
+               iconAnchor: [0, 0]
+           });
+
+           const staticLabelMarker = window.L.marker([midPoint.lat, midPoint.lng], { icon: staticLabelIcon, interactive: false }).addTo(map);
+           activeMarkers.push(staticLabelMarker); // Dimasukkan ke array agar ikut terhapus saat animasi ditutup
+
            const animate = () => {
               if (currentIndex >= points.length) {
                  finishedCount++;
@@ -890,7 +927,6 @@ export default function App() {
                      // Jangan matikan animasi map (setIsAnimatingMap(false)), biarkan overlay tetap terbuka
                      setIsAnimPaused(true);
                      setIsAnimFinished(true);
-                     showToast("Animasi semua rute selesai.");
                  }
                  return;
               }
