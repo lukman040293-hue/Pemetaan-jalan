@@ -3010,21 +3010,21 @@ export default function App() {
 
             {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
             {isAnimatingMap && animatingRoadsList.length > 0 && (
-               <div className="absolute bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 z-[2000] flex flex-col items-center w-[92vw] sm:w-max min-w-[300px]">
+               <div className="absolute bottom-8 md:bottom-12 inset-x-0 mx-auto px-3 sm:px-0 sm:max-w-[380px] z-[2000] flex flex-col items-center pointer-events-none">
                    
                    {isAnimControlMinimized ? (
                        <button 
                            onClick={() => setIsAnimControlMinimized(false)} 
-                           className="bg-white/95 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl border border-slate-300 text-slate-700 text-xs md:text-sm font-black flex items-center space-x-1.5 hover:bg-slate-50 transition-colors animate-fade-in-up whitespace-nowrap"
+                           className="pointer-events-auto bg-white/95 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl border border-slate-300 text-slate-700 text-xs md:text-sm font-black flex items-center space-x-1.5 hover:bg-slate-50 transition-colors animate-fade-in-up whitespace-nowrap"
                        >
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
                            <span>Buka Kontrol Animasi</span>
                        </button>
                    ) : (
-                       <div className="bg-slate-50/95 backdrop-blur-xl px-3 py-3 md:px-5 md:py-4 rounded-[1.5rem] flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-full gap-2.5 md:gap-3">
+                       <div className="pointer-events-auto bg-slate-50/95 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-full gap-2.5 md:gap-3">
                            {/* Header Utama: Play, Speed Toggle, Close */}
-                           <div className="flex justify-between items-center gap-2 w-full">
-                               <div className="flex gap-1.5 items-center shrink-0">
+                           <div className="flex justify-between items-center gap-1.5 md:gap-2 w-full">
+                               <div className="flex gap-1.5 md:gap-2 items-center shrink-0">
                                    {isAnimFinished ? (
                                        <button onClick={() => {
                                            setIsAnimatingMap(false);
@@ -3046,14 +3046,14 @@ export default function App() {
                                    {/* Tombol Toggle Kecepatan */}
                                    <button 
                                        onClick={() => setShowSpeedControl(!showSpeedControl)} 
-                                       className={`px-2.5 md:px-3 py-1.5 md:py-2 rounded-full text-[11px] md:text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm whitespace-nowrap ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                                       className={`px-2 md:px-3 py-1.5 md:py-2 rounded-full text-[11px] md:text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm whitespace-nowrap ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
                                    >
                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
                                        <span>{Number(animationSpeedMultiplier).toFixed(2)}x</span>
                                    </button>
                                </div>
 
-                               <div className="flex gap-1.5 items-center shrink-0">
+                               <div className="flex gap-1 md:gap-1.5 items-center shrink-0">
                                    <button onClick={() => setIsAnimControlMinimized(true)} className="bg-slate-200/70 text-slate-600 border border-slate-300 hover:bg-slate-300 hover:text-slate-800 p-1.5 md:p-2 rounded-full transition-colors shadow-sm flex items-center justify-center shrink-0" aria-label="Sembunyikan">
                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                                    </button>
@@ -3064,24 +3064,24 @@ export default function App() {
                            </div>
                            
                            {/* Info Jarak & Pilihan Kendaraan/Ikon */}
-                           <div className="flex gap-2 w-full">
+                           <div className="flex gap-1.5 md:gap-2 w-full">
                                <div className="flex-1 bg-white border border-slate-300 rounded-xl px-2 py-1.5 md:py-2 flex items-center justify-center text-slate-800 font-mono text-[11px] md:text-base font-bold shadow-sm whitespace-nowrap min-w-0 overflow-hidden">
                                    {animatingRoadsList.length > 1 ? (
-                                       <span className="text-blue-700 truncate">{animatingRoadsList.length} Rute Aktif</span>
+                                       <span className="text-blue-700 truncate w-full text-center">{animatingRoadsList.length} Rute Aktif</span>
                                    ) : (
-                                       <span className="truncate">{currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}</span>
+                                       <span className="truncate w-full text-center">{currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}</span>
                                    )}
                                </div>
                                
                                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center gap-0.5 md:gap-1 shrink-0">
-                                   <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
-                                      <span className="text-[13px] md:text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
+                                   <button onClick={() => setAnimIconType('car')} className={`p-1.5 md:p-2 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
+                                      <span className="text-[14px] md:text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
                                    </button>
-                                   <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
-                                      <span className="text-[13px] md:text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
+                                   <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 md:p-2 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
+                                      <span className="text-[14px] md:text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
                                    </button>
-                                   <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
-                                      <span className="text-[13px] md:text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
+                                   <button onClick={() => setAnimIconType('runner')} className={`p-1.5 md:p-2 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
+                                      <span className="text-[14px] md:text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
                                    </button>
                                </div>
                            </div>
@@ -3095,7 +3095,7 @@ export default function App() {
                                    </div>
                                    
                                    <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
-                                       <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-sm md:text-lg leading-none pb-0.5 shadow-sm border border-slate-300 shrink-0">-</button>
+                                       <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-sm md:text-lg leading-none pb-0.5 shadow-sm border border-slate-300 shrink-0">-</button>
                                        
                                        <input 
                                            type="range" 
@@ -3108,7 +3108,7 @@ export default function App() {
                                            style={{ accentColor: '#2563eb' }}
                                        />
                                        
-                                       <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-sm md:text-lg leading-none pb-0.5 shadow-sm border border-slate-300 shrink-0">+</button>
+                                       <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-sm md:text-lg leading-none pb-0.5 shadow-sm border border-slate-300 shrink-0">+</button>
                                    </div>
 
                                    <div className="flex justify-between space-x-1 md:space-x-1.5">
@@ -3116,7 +3116,7 @@ export default function App() {
                                            <button 
                                                key={speed} 
                                                onClick={() => setAnimationSpeedMultiplier(speed)} 
-                                               className={`flex-1 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-colors shadow-sm border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                                               className={`flex-1 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-colors shadow-sm border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
                                            >
                                                {speed}x
                                            </button>
