@@ -3021,10 +3021,10 @@ export default function App() {
                            <span>Buka Kontrol Animasi</span>
                        </button>
                    ) : (
-                       <div className="bg-slate-50/95 backdrop-blur-xl px-5 py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[90vw] md:w-auto min-w-[320px] max-w-[350px]">
+                       <div className="bg-slate-50/95 backdrop-blur-xl px-3.5 py-3 md:px-5 md:py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[92vw] sm:w-[320px] md:w-auto max-w-[360px]">
                            {/* Header Utama: Play, Speed Toggle, Close */}
                            <div className="flex justify-between items-center">
-                               <div className="flex space-x-2 items-center">
+                               <div className="flex gap-1.5 items-center flex-wrap sm:flex-nowrap">
                                    {isAnimFinished ? (
                                        <button onClick={() => {
                                            setIsAnimatingMap(false);
@@ -3034,11 +3034,11 @@ export default function App() {
                                                setIsAnimFinished(false);
                                                setCurrentAnimDistance(0);
                                            }, 50);
-                                       }} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700">
+                                       }} className="px-3 md:px-4 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-black transition-colors shadow-sm flex items-center border bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 whitespace-nowrap">
                                            🔄 Ulangi
                                        </button>
                                    ) : (
-                                       <button onClick={() => setIsAnimPaused(!isAnimPaused)} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-blue-600 text-white border-blue-600 hover:bg-blue-700">
+                                       <button onClick={() => setIsAnimPaused(!isAnimPaused)} className="px-3 md:px-4 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-black transition-colors shadow-sm flex items-center border bg-blue-600 text-white border-blue-600 hover:bg-blue-700 whitespace-nowrap">
                                            {isAnimPaused ? '▶ Play' : '⏸ Pause'}
                                        </button>
                                    )}
@@ -3046,42 +3046,42 @@ export default function App() {
                                    {/* Tombol Toggle Kecepatan */}
                                    <button 
                                        onClick={() => setShowSpeedControl(!showSpeedControl)} 
-                                       className={`px-3 py-2.5 rounded-full text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                                       className={`px-2.5 md:px-3 py-2 md:py-2.5 rounded-full text-[11px] md:text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm whitespace-nowrap ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
                                    >
-                                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
+                                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
                                        <span>{Number(animationSpeedMultiplier).toFixed(2)}x</span>
                                    </button>
                                </div>
 
-                               <div className="flex space-x-1.5 items-center pl-2">
-                                   <button onClick={() => setIsAnimControlMinimized(true)} className="bg-slate-200/70 text-slate-600 border border-slate-300 hover:bg-slate-300 hover:text-slate-800 p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Sembunyikan">
-                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                               <div className="flex gap-1 md:gap-1.5 items-center pl-1 md:pl-2 shrink-0">
+                                   <button onClick={() => setIsAnimControlMinimized(true)} className="bg-slate-200/70 text-slate-600 border border-slate-300 hover:bg-slate-300 hover:text-slate-800 p-1.5 md:p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Sembunyikan">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                                    </button>
-                                   <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
-                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                   <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-1.5 md:p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                    </button>
                                </div>
                            </div>
                            
                            {/* Info Jarak & Pilihan Kendaraan/Ikon */}
-                           <div className="mt-3 flex space-x-2">
-                               <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-base font-bold shadow-sm whitespace-nowrap">
+                           <div className="mt-2.5 md:mt-3 flex gap-1.5 md:gap-2 w-full">
+                               <div className="flex-1 bg-white border border-slate-300 rounded-xl px-2 md:px-3 py-1.5 md:py-2 flex items-center justify-center text-slate-800 font-mono text-xs md:text-base font-bold shadow-sm whitespace-nowrap min-w-0 overflow-hidden">
                                    {animatingRoadsList.length > 1 ? (
-                                       <span className="text-blue-700">{animatingRoadsList.length} Rute Aktif</span>
+                                       <span className="text-blue-700 truncate">{animatingRoadsList.length} Rute Aktif</span>
                                    ) : (
-                                       currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'
+                                       <span className="truncate">{currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}</span>
                                    )}
                                </div>
                                
-                               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center space-x-1">
-                                   <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
-                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
+                               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center gap-0.5 md:gap-1 shrink-0">
+                                   <button onClick={() => setAnimIconType('car')} className={`p-1 md:p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
+                                      <span className="text-sm md:text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
                                    </button>
-                                   <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
-                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
+                                   <button onClick={() => setAnimIconType('motorcycle')} className={`p-1 md:p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
+                                      <span className="text-sm md:text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
                                    </button>
-                                   <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
-                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
+                                   <button onClick={() => setAnimIconType('runner')} className={`p-1 md:p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
+                                      <span className="text-sm md:text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
                                    </button>
                                </div>
                            </div>
