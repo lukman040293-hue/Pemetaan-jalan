@@ -2866,7 +2866,7 @@ export default function App() {
                   onClick={() => setSelectedRoad(null)}
                 ></div>
 
-                <div className="absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 w-[95%] md:w-11/12 max-w-2xl bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-2xl border border-white/60 flex flex-col overflow-hidden z-[1000] animate-fade-in-up max-h-[90vh]">
+                <div className="absolute bottom-2 left-2 right-2 md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-11/12 max-w-2xl bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-2xl border border-white/60 flex flex-col overflow-hidden z-[1000] animate-fade-in-up max-h-[90vh]">
                   <button onClick={() => setSelectedRoad(null)} className="absolute top-3 right-3 md:top-4 md:right-4 text-white hover:text-white bg-black/40 hover:bg-rose-600 backdrop-blur-md p-2 rounded-full z-30 transition-colors border border-white/20 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:w-5 md:h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -3010,7 +3010,7 @@ export default function App() {
 
             {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
             {isAnimatingMap && animatingRoadsList.length > 0 && (
-               <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[calc(100%-32px)] sm:max-w-[400px] z-[2000] flex flex-col items-center pointer-events-none">
+               <div className="absolute bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[400px] z-[2000] flex flex-col items-center pointer-events-none">
                    
                    {isAnimControlMinimized ? (
                        <button 
@@ -3155,7 +3155,7 @@ export default function App() {
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Panjang Rute Terecord</td><td className="py-2.5 font-bold">: {formatLength(selectedRoad.length)}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-xs font-bold text-blue-700">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold">: {selectedRoad.date}</td></tr>
-                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tim Surveyor Lapangan</td><td className="py-2.5 font-bold">: {selectedRoad.surveyor}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tim Surveyor Lapangan</td><td className="py-2.5 font-bold">: {selectedRoad.surveyor || 'Tim PUPR'}</td></tr>
               </tbody>
            </table>
 
