@@ -405,6 +405,7 @@ export default function App() {
   const drawMapInstanceRef = useRef(null);
   const drawPolylineRef = useRef(null);
   const drawMarkersGroupRef = useRef(null);
+  const drawMapCurrentLocMarkerRef = useRef(null);
 
   useEffect(() => { recordingStatusRef.current = recordingStatus; }, [recordingStatus]);
 
@@ -1065,8 +1066,34 @@ export default function App() {
       drawMapInstanceRef.current = null;
       drawPolylineRef.current = null;
       drawMarkersGroupRef.current = null;
+      drawMapCurrentLocMarkerRef.current = null;
     };
   }, [appRole, mobileScreen, isLeafletLoaded]);
+
+  // --- EFEK TITIK LOKASI BIRU DI DRAW MAP ---
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
+    const map = drawMapInstanceRef.current;
+
+    if (currentLocation) {
+        if (drawMapCurrentLocMarkerRef.current) {
+            drawMapCurrentLocMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        } else {
+            const blueDotIcon = window.L.divIcon({
+                className: 'current-location-dot',
+                html: `
+                    <div style="position: relative; width: 16px; height: 16px;">
+                        <div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div>
+                        <div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div>
+                    </div>
+                `,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            drawMapCurrentLocMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon: blueDotIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
+        }
+    }
+  }, [appRole, mobileScreen, currentLocation]);
 
   // --- LOGIKA KLIK DAN UPDATE VISUAL PADA DRAW MAP ---
   useEffect(() => {
@@ -2026,9 +2053,9 @@ export default function App() {
                      <button 
                          onClick={() => {
                              if (drawMapInstanceRef.current && currentLocation) {
-                                 drawMapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 16);
+                                 drawMapInstanceRef.current.flyTo([currentLocation.lat, currentLocation.lng], 17, { duration: 0.6 });
                              } else if (!currentLocation) {
-                                 showToast("Lokasi GPS Anda belum terdeteksi...");
+                                 showToast("Mencari sinyal GPS... Pastikan izin lokasi aktif.");
                              }
                          }}
                          className="bg-white/95 backdrop-blur-md p-3.5 rounded-full shadow-xl border border-slate-200/80 text-blue-600 hover:bg-blue-50 active:scale-95 transition-transform flex items-center justify-center"
