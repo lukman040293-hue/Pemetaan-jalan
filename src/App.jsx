@@ -284,6 +284,8 @@ export default function App() {
   const [animatingRoadsList, setAnimatingRoadsList] = useState([]); 
   const [isAnimPaused, setIsAnimPaused] = useState(false);
   const isAnimPausedRef = useRef(false);
+  const [isAnimFinished, setIsAnimFinished] = useState(false); 
+  const [isAnimControlMinimized, setIsAnimControlMinimized] = useState(false);
   const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
   const animationSpeedRef = useRef(1.0);
   const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
@@ -310,10 +312,14 @@ export default function App() {
       setIsAnimatingMap(false);
       setAnimatingRoadsList([]);
       setShowSpeedControl(false);
+      setIsAnimFinished(false);
+      setIsAnimControlMinimized(false);
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
       setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId);
       setIsAnimatingMap(false);
+      setIsAnimFinished(false);
+      setIsAnimControlMinimized(false);
     }
   }, [selectedRoad]);
 
@@ -726,28 +732,53 @@ export default function App() {
            let currentIndex = 0;
            let accumulatedDistance = 0;
            let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-           const iconColor = getConditionColor(road.condition);
            
            let iconHtml = '';
            let iconSize = [32, 50];
            let iconAnchor = [16, 25];
 
            if (animIconType === 'motorcycle') {
-               iconSize = [20, 44];
-               iconAnchor = [10, 22];
+               iconSize = [26, 42];
+               iconAnchor = [13, 21];
                iconHtml = `
                 <div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">
-                    <svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
-                        <rect x="16" y="5" width="8" height="20" rx="4" fill="#1e293b"/>
-                        <rect x="16" y="75" width="8" height="20" rx="4" fill="#1e293b"/>
-                        <rect x="24" y="60" width="4" height="25" rx="2" fill="#cbd5e1"/>
-                        <rect x="10" y="20" width="20" height="60" rx="10" fill="${iconColor}"/>
-                        <rect x="4" y="25" width="32" height="4" rx="2" fill="#475569"/>
-                        <rect x="2" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
-                        <rect x="32" y="22" width="6" height="8" rx="3" fill="#0f172a"/>
-                        <circle cx="20" cy="45" r="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-                        <circle cx="20" cy="18" r="4" fill="#fef08a"/>
-                        <rect x="16" y="78" width="8" height="4" rx="2" fill="#ef4444"/>
+                    <svg viewBox="0 0 40 95" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+                        <!-- Roda Belakang -->
+                        <rect x="17" y="72" width="6" height="20" rx="3" fill="#0f172a"/>
+                        <!-- Knalpot -->
+                        <rect x="27" y="58" width="4" height="24" rx="2" fill="#94a3b8"/>
+                        <!-- Body Belakang (Ekor) -->
+                        <path d="M 15 55 L 25 55 L 23 82 L 17 82 Z" fill="#334155"/>
+                        <!-- Lampu Belakang -->
+                        <rect x="16" y="81" width="8" height="3" rx="1" fill="#ef4444"/>
+                        
+                        <!-- Roda Depan -->
+                        <rect x="17" y="3" width="6" height="18" rx="3" fill="#0f172a"/>
+                        <!-- Spakbor Depan -->
+                        <path d="M 15 13 L 25 13 L 26 23 L 14 23 Z" fill="#334155"/>
+                        <!-- Lampu Depan -->
+                        <circle cx="20" cy="12" r="3" fill="#fef08a" />
+                        
+                        <!-- Stang / Handlebars -->
+                        <path d="M 6 28 Q 20 22 34 28" stroke="#475569" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <!-- Grip Tangan -->
+                        <rect x="4" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(15, 6, 30)"/>
+                        <rect x="31" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(-15, 34, 30)"/>
+                        
+                        <!-- Tangki Bensin -->
+                        <path d="M 13 26 Q 20 18 27 26 L 29 45 Q 20 49 11 45 Z" fill="#dc2626"/>
+                        <!-- Highlight Tangki -->
+                        <path d="M 15 28 Q 20 22 25 28 L 26 40 Q 20 42 14 40 Z" fill="rgba(255,255,255,0.2)"/>
+
+                        <!-- Jok / Seat -->
+                        <path d="M 13 45 Q 20 42 27 45 L 25 65 Q 20 70 15 65 Z" fill="#1e293b"/>
+                        
+                        <!-- Pundak Pengendara -->
+                        <path d="M 9 48 Q 20 40 31 48 L 28 55 Q 20 59 12 55 Z" fill="#334155"/>
+                        <!-- Helm Pengendara -->
+                        <circle cx="20" cy="46" r="8" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+                        <!-- Kaca Helm -->
+                        <path d="M 14 43.5 Q 20 38 26 43.5 Q 20 47 14 43.5 Z" fill="#0f172a"/>
                     </svg>
                 </div>`;
            } else if (animIconType === 'runner') {
@@ -760,11 +791,11 @@ export default function App() {
                         <g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;">
                             <rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" />
                             <rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" />
-                            <path d="M 14 25 Q 6 36 12 44" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                            <path d="M 14 25 Q 6 36 12 44" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" />
                             <circle cx="12" cy="44" r="3" fill="#fcd34d" />
-                            <path d="M 36 25 Q 44 14 38 6" fill="none" stroke="${iconColor}" stroke-width="5" stroke-linecap="round" />
+                            <path d="M 36 25 Q 44 14 38 6" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" />
                             <circle cx="38" cy="6" r="3" fill="#fcd34d" />
-                            <rect x="13" y="20" width="24" height="10" rx="5" fill="${iconColor}" />
+                            <rect x="13" y="20" width="24" height="10" rx="5" fill="#3b82f6" />
                         </g>
                         <circle cx="25" cy="25" r="7" fill="#fcd34d" />
                         <path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" />
@@ -782,9 +813,9 @@ export default function App() {
                         <rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/>
                         <rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/>
                         <rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/>
-                        <rect x="14" y="12" width="72" height="135" rx="28" fill="${iconColor}"/>
+                        <rect x="14" y="12" width="72" height="135" rx="28" fill="#94a3b8"/>
                         <rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/>
-                        <rect x="20" y="18" width="60" height="123" rx="22" fill="${iconColor}"/>
+                        <rect x="20" y="18" width="60" height="123" rx="22" fill="#cbd5e1"/>
                         <circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
                         <circle cx="26" cy="18" r="4" fill="#fef08a"/>
                         <circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
@@ -793,7 +824,7 @@ export default function App() {
                         <path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/>
                         <path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/>
                         <path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/>
-                        <rect x="28" y="72" width="44" height="38" rx="12" fill="${iconColor}"/>
+                        <rect x="28" y="72" width="44" height="38" rx="12" fill="#cbd5e1"/>
                         <rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/>
                         <rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
                         <rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/>
@@ -815,8 +846,9 @@ export default function App() {
               if (currentIndex >= points.length) {
                  finishedCount++;
                  if (finishedCount >= totalVehicles) {
-                     setIsAnimatingMap(false);
-                     setIsAnimPaused(false);
+                     // Jangan matikan animasi map (setIsAnimatingMap(false)), biarkan overlay tetap terbuka
+                     setIsAnimPaused(true);
+                     setIsAnimFinished(true);
                      showToast("Animasi semua rute selesai.");
                  }
                  return;
@@ -2611,6 +2643,8 @@ export default function App() {
                          setIsAnimatingMap(true);
                          setIsAnimPaused(true); // Diubah menjadi true agar menunggu diklik play
                          setAnimationSpeedMultiplier(1.0);
+                         setIsAnimFinished(false);
+                         setIsAnimControlMinimized(false);
                          if(window.innerWidth < 768) setIsSidebarOpen(false);
                       }}
                       className={`${selectedAdminRouteIds.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-500 hover:bg-emerald-600'} text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-sm flex items-center space-x-1 transition-colors group`}
@@ -2770,6 +2804,8 @@ export default function App() {
                              setCurrentAnimDistance(0);
                              setAnimationSpeedMultiplier(1.0);
                              setShowSpeedControl(false);
+                             setIsAnimFinished(false);
+                             setIsAnimControlMinimized(false);
                              if(window.innerWidth < 768) setIsSidebarOpen(false); 
                          }} className="text-[10px] md:text-xs text-amber-600 hover:bg-amber-100/80 font-medium px-2.5 py-1.5 transition-colors rounded-full flex items-center bg-amber-50/50 shadow-sm border border-amber-100">
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>
@@ -2860,89 +2896,120 @@ export default function App() {
 
             {/* OVERLAY TOMBOL SAAT ANIMASI BERJALAN */}
             {isAnimatingMap && animatingRoadsList.length > 0 && (
-               <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-50/95 backdrop-blur-xl px-5 py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[90%] max-w-[340px]">
+               <div className="absolute bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-[2000] flex flex-col items-center">
                    
-                   {/* Header Utama: Play, Speed Toggle, Close */}
-                   <div className="flex justify-between items-center">
-                       <div className="flex space-x-2 items-center">
-                           <button onClick={() => setIsAnimPaused(!isAnimPaused)} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-blue-600 text-white border-blue-600 hover:bg-blue-700">
-                               {isAnimPaused ? '▶ Play' : '⏸ Pause'}
-                           </button>
-                           
-                           {/* Tombol Toggle Kecepatan */}
-                           <button 
-                               onClick={() => setShowSpeedControl(!showSpeedControl)} 
-                               className={`px-3 py-2.5 rounded-full text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
-                           >
-                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
-                               <span>{Number(animationSpeedMultiplier).toFixed(2)}x</span>
-                           </button>
-                       </div>
-
-                       <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
-                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                   {isAnimControlMinimized ? (
+                       <button 
+                           onClick={() => setIsAnimControlMinimized(false)} 
+                           className="bg-white/95 backdrop-blur-xl px-5 py-3 rounded-full shadow-2xl border border-slate-300 text-slate-700 text-sm font-black flex items-center space-x-2 hover:bg-slate-50 transition-colors animate-fade-in-up"
+                       >
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+                           <span>Buka Kontrol Animasi</span>
                        </button>
-                   </div>
-                   
-                   {/* Info Jarak & Pilihan Kendaraan/Ikon */}
-                   <div className="mt-3 flex space-x-2">
-                       <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-base font-bold shadow-sm whitespace-nowrap">
-                           {animatingRoadsList.length > 1 ? (
-                               <span className="text-blue-700">{animatingRoadsList.length} Rute Aktif</span>
-                           ) : (
-                               currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'
-                           )}
-                       </div>
-                       
-                       <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center space-x-1">
-                           <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
-                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
-                           </button>
-                           <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
-                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
-                           </button>
-                           <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
-                              <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
-                           </button>
-                       </div>
-                   </div>
+                   ) : (
+                       <div className="bg-slate-50/95 backdrop-blur-xl px-5 py-4 rounded-3xl flex flex-col shadow-2xl border border-slate-300 animate-fade-in-up w-[90vw] md:w-auto min-w-[320px] max-w-[350px]">
+                           {/* Header Utama: Play, Speed Toggle, Close */}
+                           <div className="flex justify-between items-center">
+                               <div className="flex space-x-2 items-center">
+                                   {isAnimFinished ? (
+                                       <button onClick={() => {
+                                           setIsAnimatingMap(false);
+                                           setTimeout(() => {
+                                               setIsAnimatingMap(true);
+                                               setIsAnimPaused(false);
+                                               setIsAnimFinished(false);
+                                               setCurrentAnimDistance(0);
+                                           }, 50);
+                                       }} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700">
+                                           🔄 Ulangi
+                                       </button>
+                                   ) : (
+                                       <button onClick={() => setIsAnimPaused(!isAnimPaused)} className="px-4 py-2.5 rounded-full text-sm font-black transition-colors shadow-sm flex items-center border bg-blue-600 text-white border-blue-600 hover:bg-blue-700">
+                                           {isAnimPaused ? '▶ Play' : '⏸ Pause'}
+                                       </button>
+                                   )}
+                                   
+                                   {/* Tombol Toggle Kecepatan */}
+                                   <button 
+                                       onClick={() => setShowSpeedControl(!showSpeedControl)} 
+                                       className={`px-3 py-2.5 rounded-full text-xs font-bold transition-all border flex items-center space-x-1 shadow-sm ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                                   >
+                                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" /></svg>
+                                       <span>{Number(animationSpeedMultiplier).toFixed(2)}x</span>
+                                   </button>
+                               </div>
 
-                   {/* Kotak Pengaturan Kecepatan (Warna Putih Teks Hitam) */}
-                   {showSpeedControl && (
-                       <div className="mt-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-md animate-fade-in text-slate-900">
-                           <div className="flex justify-between items-center mb-3">
-                               <span className="text-xs font-bold tracking-wide uppercase text-slate-500">Kecepatan Rute</span>
-                               <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200">{Number(animationSpeedMultiplier).toFixed(2)}x</span>
+                               <div className="flex space-x-1.5 items-center pl-2">
+                                   <button onClick={() => setIsAnimControlMinimized(true)} className="bg-slate-200/70 text-slate-600 border border-slate-300 hover:bg-slate-300 hover:text-slate-800 p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Sembunyikan">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                                   </button>
+                                   <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-500 hover:text-white p-2 rounded-full transition-colors shadow-sm flex items-center justify-center" aria-label="Tutup">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                   </button>
+                               </div>
                            </div>
                            
-                           <div className="flex items-center space-x-3 mb-4">
-                               <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">-</button>
+                           {/* Info Jarak & Pilihan Kendaraan/Ikon */}
+                           <div className="mt-3 flex space-x-2">
+                               <div className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 font-mono text-base font-bold shadow-sm whitespace-nowrap">
+                                   {animatingRoadsList.length > 1 ? (
+                                       <span className="text-blue-700">{animatingRoadsList.length} Rute Aktif</span>
+                                   ) : (
+                                       currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'
+                                   )}
+                               </div>
                                
-                               <input 
-                                   type="range" 
-                                   min="0.25" 
-                                   max="3.0" 
-                                   step="0.25" 
-                                   value={animationSpeedMultiplier} 
-                                   onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))}
-                                   className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" 
-                                   style={{ accentColor: '#2563eb' }}
-                               />
-                               
-                               <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">+</button>
+                               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm items-center space-x-1">
+                                   <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'car' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Mobil">
+                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🚗</span>
+                                   </button>
+                                   <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'motorcycle' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Motor">
+                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏍️</span>
+                                   </button>
+                                   <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg transition-colors ${animIconType === 'runner' ? 'bg-white shadow-sm border border-slate-200 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Orang/Pelari">
+                                      <span className="text-base leading-none block grayscale filter drop-shadow-sm">🏃</span>
+                                   </button>
+                               </div>
                            </div>
 
-                           <div className="flex justify-between space-x-1.5">
-                               {[1.0, 1.5, 2.0, 2.5, 3.0].map(speed => (
-                                   <button 
-                                       key={speed} 
-                                       onClick={() => setAnimationSpeedMultiplier(speed)} 
-                                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
-                                   >
-                                       {speed}x
-                                   </button>
-                               ))}
-                           </div>
+                           {/* Kotak Pengaturan Kecepatan (Warna Putih Teks Hitam) */}
+                           {showSpeedControl && (
+                               <div className="mt-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-md animate-fade-in text-slate-900">
+                                   <div className="flex justify-between items-center mb-3">
+                                       <span className="text-xs font-bold tracking-wide uppercase text-slate-500">Kecepatan Rute</span>
+                                       <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200">{Number(animationSpeedMultiplier).toFixed(2)}x</span>
+                                   </div>
+                                   
+                                   <div className="flex items-center space-x-3 mb-4">
+                                       <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">-</button>
+                                       
+                                       <input 
+                                           type="range" 
+                                           min="0.25" 
+                                           max="3.0" 
+                                           step="0.25" 
+                                           value={animationSpeedMultiplier} 
+                                           onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))}
+                                           className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" 
+                                           style={{ accentColor: '#2563eb' }}
+                                       />
+                                       
+                                       <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-lg leading-none pb-1 shadow-sm border border-slate-300">+</button>
+                                   </div>
+
+                                   <div className="flex justify-between space-x-1.5">
+                                       {[1.0, 1.5, 2.0, 2.5, 3.0].map(speed => (
+                                           <button 
+                                               key={speed} 
+                                               onClick={() => setAnimationSpeedMultiplier(speed)} 
+                                               className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                                           >
+                                               {speed}x
+                                           </button>
+                                       ))}
+                                   </div>
+                               </div>
+                           )}
                        </div>
                    )}
                </div>
