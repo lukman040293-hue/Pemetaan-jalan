@@ -1587,7 +1587,7 @@ export default function App() {
                      <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/30 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px]">Daftar Rute Tersimpan</span>
+                             <span className="font-bold text-slate-900 text-[13px]">Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/50 border border-white/40 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{filteredRoads.length}</span>
