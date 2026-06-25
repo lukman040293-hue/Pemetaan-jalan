@@ -1087,10 +1087,14 @@ export default function App() {
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
-        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* PERBAIKAN: Menghapus translate(-50%) yang menyebabkan modal bergeser ke kiri */
+        .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        
         body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -1117,7 +1121,7 @@ export default function App() {
         .leaflet-popup-close-button:hover { color: #dc2626 !important; }
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
-        
+
         @media print {
           @page { size: A4; margin: 20mm; } 
           body { background-color: white !important; overflow: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1768,26 +1772,30 @@ export default function App() {
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
-          <div className="fixed inset-0 z-[1500] flex items-end md:items-center justify-center p-0 md:p-6 pointer-events-none">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={closeAdminModal}></div>
+          <>
+            {/* Layer Gelap (Backdrop) */}
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500]" onClick={closeAdminModal}></div>
             
-            <div className="relative w-full md:w-[600px] max-h-[85vh] md:max-h-[90vh] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto animate-fade-in-up md:animate-fade-in z-[1600]">
+            {/* Wrapper Pemusat Modal (100% Center di Layar) */}
+            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none">
               
-              <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
-                <h3 className="font-black text-slate-900">Detail Rute</h3>
-                <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
-              </div>
+              <div className="relative w-full md:w-[600px] h-[85vh] md:h-[80vh] max-h-[800px] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto animate-fade-in-up md:animate-fade-in">
+                
+                <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
+                  <h3 className="font-black text-slate-900">Detail Rute</h3>
+                  <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
 
-              <div className="h-[250px] md:h-[320px] bg-slate-900 relative shrink-0">
-                {videoSnapshot.length > 0 ? (
-                    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
-                        {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
-                    </div>
-                  ) : selectedRoad.videoUrl ? (
-                    <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain"></video>
-                  ) : selectedRoad.photoUrls?.length > 0 ? (
-                    <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
+                <div className="h-[250px] md:h-[320px] bg-slate-900 relative shrink-0">
+                  {videoSnapshot.length > 0 ? (
+                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                          {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                      </div>
+                    ) : selectedRoad.videoUrl ? (
+                      <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain"></video>
+                    ) : selectedRoad.photoUrls?.length > 0 ? (
+                      <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
                 </div>
                 
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
@@ -1816,10 +1824,11 @@ export default function App() {
                 </div>
               </div>
             </div>
-          )}
+          </>
+        )}
 
-          {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
-          {isAnimatingMap && animatingRoadsList.length > 0 && (
+        {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
+        {isAnimatingMap && animatingRoadsList.length > 0 && (
              <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[420px] z-[2000] flex flex-col pointer-events-none">
                  
                  {isAnimControlMinimized ? (
