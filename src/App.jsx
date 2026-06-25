@@ -210,8 +210,42 @@ const AnimatedNumber = ({ value }) => {
 export default function App() {
   // --- STATE APLIKASI UTAMA ---
   const [appRole, setAppRole] = useState(null); 
+  const [mobileScreen, setMobileScreen] = useState('home'); 
+  const [selectedRoad, setSelectedRoad] = useState(null);
+
   const [supabase, setSupabase] = useState(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
+
+  // --- ROUTING (MENDUKUNG TOMBOL BACK BROWSER & FISIK DI HP) ---
+  useEffect(() => {
+      const handleHashChange = () => {
+          const hash = window.location.hash;
+          
+          if (hash === '#/' || hash === '') {
+              setAppRole(null);
+          } else if (hash === '#/admin') {
+              setAppRole('admin');
+              setSelectedRoad(null); // Tutup modal jika user menekan kembali ke dashboard
+          } else if (hash === '#/admin/detail') {
+              setAppRole('admin');
+          } else if (hash.startsWith('#/surveyor')) {
+              setAppRole('surveyor');
+              const screen = hash.replace('#/surveyor/', '');
+              setMobileScreen(screen || 'home');
+          }
+      };
+
+      window.addEventListener('hashchange', handleHashChange);
+      
+      // Set initial route jika belum ada
+      if (!window.location.hash) {
+          window.location.hash = '#/';
+      } else {
+          handleHashChange(); // Sync state dengan URL hash saat ini ketika load/refresh
+      }
+
+      return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const [toastMessage, setToastMessage] = useState(null);
   const showToast = (message) => {
@@ -259,7 +293,6 @@ export default function App() {
 
   const [syncedRoads, setSyncedRoads] = useState([]); 
   const [drafts, setDrafts] = useState([]); 
-  const [selectedRoad, setSelectedRoad] = useState(null);
   const [videoSnapshot, setVideoSnapshot] = useState([]); 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
@@ -337,8 +370,16 @@ export default function App() {
     setSelectedAdminRouteIds(prev => prev.includes(id) ? prev.filter(rId => rId !== id) : [...prev, id]);
   };
 
+  const closeAdminModal = () => {
+      // Kembali ke path history sebelumnya (#/admin) secara natural agar tombol back browser tersinkron
+      if (window.location.hash === '#/admin/detail') {
+          window.history.back();
+      } else {
+          setSelectedRoad(null);
+      }
+  };
+
   // --- STATE SURVEYOR ---
-  const [mobileScreen, setMobileScreen] = useState('home'); 
   const [isRecording, setIsRecording] = useState(false);
   const [realGpsPoints, setRealGpsPoints] = useState([]);
   const [manualDrawnPoints, setManualDrawnPoints] = useState([]);
@@ -379,6 +420,18 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [recordingStatus]);
+
+  // --- CLEANUP JIKA USER MENEKAN BACK BROWSER/HP SAAT MEREKAM LALU PINDAH HALAMAN ---
+  useEffect(() => {
+     if (mobileScreen !== 'record' && isRecording) {
+         if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+         if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+         if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+         setIsRecording(false);
+         setRecordingStatus('idle');
+         showToast("Perekaman dibatalkan otomatis.");
+     }
+  }, [mobileScreen, isRecording]);
 
   const [selectedDraftIds, setSelectedDraftIds] = useState([]);
   const [formData, setFormData] = useState({
@@ -512,7 +565,7 @@ export default function App() {
           marker.on('popupopen', () => {
             setHighlightedRoadId(roadId);
             const btn = document.getElementById(`btn-detail-${uniqueId}`);
-            if (btn) btn.onclick = () => { setSelectedRoad(road); setVideoSnapshot([]); if (window.innerWidth < 768) setIsSidebarOpen(false); };
+            if (btn) btn.onclick = () => { setSelectedRoad(road); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); };
           });
           marker.on('popupclose', () => setHighlightedRoadId(prev => prev === roadId ? null : prev));
         }
@@ -784,7 +837,7 @@ export default function App() {
 
   // --- FUNGSI UTILITI & PEREKAMAN GPS ---
   const startRealHardware = async () => {
-    setRealGpsPoints([]); setIsRecording(true); setMobileScreen('record'); setRecordingStatus('locating'); setRecordTab('map'); 
+    setRealGpsPoints([]); setIsRecording(true); window.location.hash = '#/surveyor/record'; setRecordingStatus('locating'); setRecordTab('map'); 
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0); setRecordingDuration(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null); setEditingDraftId(null); isGpsForcedRef.current = false;
@@ -833,7 +886,7 @@ export default function App() {
 
   const startManualDrawing = () => {
     setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
-    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); setMobileScreen('draw_map');
+    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/draw_map';
   };
 
   const undoLastDrawnPoint = () => {
@@ -847,21 +900,21 @@ export default function App() {
 
   const finishManualDrawing = () => {
     if (manualDrawnPoints.length < 2) return showToast("Gambarkan minimal 2 titik!");
-    setRealGpsPoints(manualDrawnPoints); setMobileScreen('form');
+    setRealGpsPoints(manualDrawnPoints); window.location.hash = '#/surveyor/form';
   };
 
   const stopRealHardware = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); setMobileScreen('form');
+    setIsRecording(false); setRecordingStatus('idle'); window.location.hash = '#/surveyor/form';
   };
 
   const cancelRecording = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); setMobileScreen('home');
+    setIsRecording(false); setRecordingStatus('idle'); window.location.hash = '#/surveyor/home';
   };
 
   useEffect(() => {
@@ -925,7 +978,7 @@ export default function App() {
     setFormData({ name: draft.name, kelurahan: draft.kelurahan, jenisJalan: draft.jenisJalan || 'Aspal', condition: draft.condition, notes: draft.notes });
     setRealGpsPoints(draft.realGps); setTotalDistance(parseFloat(draft.length) * 1000 || 0); setRecordingDuration(draft.duration || 0); setPinLocation(draft.pinLocation);
     setUploadedVideoFile(draft.videoFile || null); setUploadedVideoUrl(draft.localVideoUrl || null); setUploadedPhotoFiles(draft.photoFiles || []); setUploadedPhotoUrls(draft.localPhotoUrls || []);
-    setEditingDraftId(draft.id); setMobileScreen('form');     
+    setEditingDraftId(draft.id); window.location.hash = '#/surveyor/form';     
   };
 
   const deleteDraft = (id) => {
@@ -963,7 +1016,7 @@ export default function App() {
     else { setDrafts(prev => [...prev, newDraft]); showToast(compressionRate > 0 ? `Tersimpan! Kompresi GPS ${compressionRate}%` : "Tersimpan ke Draf Luring!"); }
 
     setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
-    setUploadedVideoFile(null); setUploadedVideoUrl(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); setMobileScreen('drafts'); 
+    setUploadedVideoFile(null); setUploadedVideoUrl(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/drafts'; 
   };
 
   const syncDataToCloud = async () => {
@@ -1022,7 +1075,9 @@ export default function App() {
      try {
         const { error } = await supabase.from('mapped_roads').delete().eq('id', dbId);
         if(error) throw error;
-        setSelectedRoad(null); showToast("Rute dihapus."); fetchRoads(); 
+        showToast("Rute dihapus."); fetchRoads(); 
+        if (window.location.hash === '#/admin/detail') window.history.back();
+        else setSelectedRoad(null);
      } catch (err) { showToast("Gagal menghapus."); }
   };
 
@@ -1146,7 +1201,7 @@ export default function App() {
             )}
 
             <div className="space-y-4">
-              <button onClick={() => setAppRole('surveyor')} className="w-full bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
+              <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="w-full bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
                 <div className="bg-blue-100 text-blue-600 p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
                 </div>
@@ -1156,7 +1211,7 @@ export default function App() {
                 </div>
               </button>
 
-              <button onClick={() => { setAppRole('admin'); fetchRoads(); }} className="w-full bg-white border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
+              <button onClick={() => { window.location.hash = '#/admin'; fetchRoads(); }} className="w-full bg-white border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
                 <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
                 </div>
@@ -1188,7 +1243,7 @@ export default function App() {
             {mobileScreen === 'home' && (
               <div className="flex-1 p-6 flex flex-col overflow-y-auto">
                 <div className="flex justify-end mb-2">
-                   <button onClick={() => setAppRole(null)} className="text-rose-500 font-bold text-xs bg-rose-50 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">Keluar</button>
+                   <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 font-bold text-xs bg-rose-50 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">Keluar</button>
                 </div>
 
                 <div className="flex space-x-3 mb-4 mt-2">
@@ -1207,7 +1262,7 @@ export default function App() {
                     </button>
                 </div>
 
-                <button onClick={() => setMobileScreen('drafts')} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                <button onClick={() => { window.location.hash = '#/surveyor/drafts'; }} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="text-slate-600 pl-1">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
@@ -1255,7 +1310,7 @@ export default function App() {
                      </div>
 
                      <div className="w-full flex space-x-3">
-                         <button onClick={() => setMobileScreen('home')} className="w-1/3 bg-slate-800/80 backdrop-blur-md border border-white/10 text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg">Batal</button>
+                         <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="w-1/3 bg-slate-800/80 backdrop-blur-md border border-white/10 text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg">Batal</button>
                          <button onClick={finishManualDrawing} disabled={manualDrawnPoints.length < 2} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 border ${manualDrawnPoints.length >= 2 ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600' : 'bg-slate-800/95 backdrop-blur-md text-slate-400 border-white/5 cursor-not-allowed scale-95'}`}>
                              <span>SELESAI GAMBAR</span>
                          </button>
@@ -1334,7 +1389,7 @@ export default function App() {
                     <div className="bg-blue-100 text-blue-600 p-2.5 rounded-2xl"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></div>
                     <div><div className="text-slate-900 font-bold text-sm">Jalur Tersimpan</div><div className="text-slate-500 text-xs">{realGpsPoints.length} ttk | {(totalDistance/1000).toFixed(2)} km</div></div>
                   </div>
-                  <button type="button" onClick={() => setMobileScreen('pin_map')} className="bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold active:scale-95">Lihat Peta</button>
+                  <button type="button" onClick={() => { window.location.hash = '#/surveyor/pin_map'; }} className="bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold active:scale-95">Lihat Peta</button>
                 </div>
 
                 <form onSubmit={saveDraft} className="space-y-5">
@@ -1342,7 +1397,7 @@ export default function App() {
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Pin Lokasi Utama</label>
                     <div className="bg-slate-50 px-4 py-3 min-h-[3.5rem] rounded-2xl flex items-center justify-between border border-slate-100">
                       <div className={`flex flex-col justify-center ${pinLocation ? 'text-blue-600' : 'text-slate-500'}`}><span className="text-sm font-semibold">{pinLocation ? '📍 Lokasi Terkunci' : 'Belum ditandai'}</span></div>
-                      <button type="button" onClick={() => setMobileScreen('pin_map')} className="text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold">{pinLocation ? 'Ubah' : 'Buka Peta'}</button>
+                      <button type="button" onClick={() => { window.location.hash = '#/surveyor/pin_map'; }} className="text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold">{pinLocation ? 'Ubah' : 'Buka Peta'}</button>
                     </div>
                   </div>
 
@@ -1423,7 +1478,7 @@ export default function App() {
 
                   <div className="pt-2 pb-8 flex flex-col space-y-3">
                     <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base shadow-sm">{editingDraftId ? 'Perbarui Draft' : 'Simpan ke Draft'}</button>
-                    <button type="button" onClick={() => { setMobileScreen('drafts'); setEditingDraftId(null); }} className="w-full bg-white border border-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm">Batal</button>
+                    <button type="button" onClick={() => { window.location.hash = editingDraftId ? '#/surveyor/drafts' : '#/surveyor/home'; setEditingDraftId(null); }} className="w-full bg-white border border-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm">Batal</button>
                   </div>
                 </form>
               </div>
@@ -1433,7 +1488,7 @@ export default function App() {
               <div className="flex-1 flex flex-col bg-slate-100 relative">
                 <div className="bg-white px-5 py-4 border-b border-slate-200 flex justify-between items-center z-10 shadow-sm">
                   <div><h3 className="font-extrabold text-slate-800 text-base">Letakkan Pin</h3></div>
-                  <button onClick={() => setMobileScreen('form')} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm shadow-md">Selesai</button>
+                  <button onClick={() => { window.location.hash = '#/surveyor/form'; }} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm shadow-md">Selesai</button>
                 </div>
                 <div className="absolute bottom-6 right-4 z-20"><button onClick={() => currentLocation && surveyorMapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 18)} className="bg-white p-3 rounded-full shadow-xl text-blue-600">GPS</button></div>
                 <div className="flex-1 relative z-0"><div ref={surveyorMapContainerRef} className="absolute inset-0 bg-slate-200"></div></div>
@@ -1443,7 +1498,7 @@ export default function App() {
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
                 <div className="px-6 pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
-                  <div className="flex justify-end mb-4"><button onClick={() => setMobileScreen('home')} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
+                  <div className="flex justify-end mb-4"><button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
                   {drafts.length > 0 && (
                      <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
                        <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
@@ -1498,7 +1553,7 @@ export default function App() {
             </div>
             <div className="flex items-center space-x-2 md:space-x-4">
               <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold">Refresh</button>
-              <button onClick={() => setAppRole(null)} className="text-rose-500 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold">Keluar</button>
+              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold">Keluar</button>
             </div>
           </header>
 
@@ -1589,7 +1644,7 @@ export default function App() {
                   {filteredRoads.map((road) => {
                       const roadId = road.id || road.dbId; const isHighlighted = highlightedRoadId === roadId; const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
                       return (
-                      <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} className={`p-2.5 rounded-xl border bg-white cursor-pointer relative ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200'}`}>
+                      <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} className={`p-2.5 rounded-xl border bg-white cursor-pointer relative ${isHighlighted ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200'}`}>
                         <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 z-10 ${isSelectedAdmin ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}></div>
                         <div className="flex gap-2">
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 shrink-0">
@@ -1611,9 +1666,9 @@ export default function App() {
             {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
             {selectedRoad && !isAnimatingMap && (
               <>
-                <div className="fixed inset-0 z-[990] bg-slate-900/30 backdrop-blur-sm" onClick={() => setSelectedRoad(null)}></div>
+                <div className="fixed inset-0 z-[990] bg-slate-900/30 backdrop-blur-sm" onClick={closeAdminModal}></div>
                 <div className="absolute bottom-2 left-2 right-2 md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-11/12 max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[1000] max-h-[85vh]">
-                  <button onClick={() => setSelectedRoad(null)} className="absolute top-3 right-3 text-white bg-black/40 p-2 rounded-full z-30">x</button>
+                  <button onClick={closeAdminModal} className="absolute top-3 right-3 text-white bg-black/40 p-2 rounded-full z-30">x</button>
                   <div className="w-full bg-black relative border-b border-slate-200 aspect-video shrink-0">
                     {selectedRoad.videoUrl ? (
                       <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain"></video>
