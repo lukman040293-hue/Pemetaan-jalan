@@ -256,7 +256,6 @@ export default function App() {
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  const [showFloatingLegend, setShowFloatingLegend] = useState(window.innerWidth >= 768);
 
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
@@ -966,15 +965,33 @@ export default function App() {
   };
 
   const hapusDataCloud = async (dbId) => {
-     if(!supabase) return;
-     if(!window.confirm("Hapus rute ini dari database pusat?")) return;
+     if(!supabase) {
+         showToast("Koneksi Supabase belum diatur!");
+         return;
+     }
+     if(!window.confirm("Hapus rute ini dari database pusat secara permanen?")) return;
+     
      try {
+        // Hapus sementara dari UI agar terasa instan (Optimistic Update)
+        setSyncedRoads(prev => prev.filter(r => (r.id || r.dbId) !== dbId));
+        
         const { error } = await supabase.from('mapped_roads').delete().eq('id', dbId);
-        if(error) throw error;
-        showToast("Rute dihapus."); fetchRoads(); 
-        if (window.location.hash === '#/admin/detail') window.history.back();
-        else setSelectedRoad(null);
-     } catch (err) { showToast("Gagal menghapus."); }
+        if(error) {
+            fetchRoads(); // Kembalikan data jika di server ternyata gagal
+            throw error;
+        }
+        
+        showToast("✅ Rute berhasil dihapus.");
+        
+        // Tutup popup jika rute yang sedang dibuka ternyata dihapus
+        if (selectedRoad && (selectedRoad.id === dbId || selectedRoad.dbId === dbId)) {
+            if (window.location.hash === '#/admin/detail') window.history.back();
+            else setSelectedRoad(null);
+        }
+     } catch (err) { 
+        console.error("Error Hapus Supabase:", err);
+        showToast(`❌ Gagal menghapus: ${err.message || 'Periksa izin RLS'}`); 
+     }
   };
 
   const handleExportKML = () => {
@@ -1442,16 +1459,43 @@ export default function App() {
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
           
           {/* --- HEADER MAP AREA (Di atas Sidebar) --- */}
-          <header className="bg-white border-b border-slate-200 px-4 md:px-6 flex justify-between items-center z-[1100] shadow-sm h-14 md:h-16 shrink-0 relative w-full">
-            <div className="flex items-center space-x-2 md:space-x-3">
+          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3">
+            <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
               </button>
-              <div className="hidden md:block bg-blue-600 text-white p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
+              <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
             </div>
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold">Refresh</button>
-              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold">Keluar</button>
+
+            {/* --- STATISTIK LEGENDA DI HEADER --- */}
+            <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
+              </div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
+              </div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
+              </div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-1.5 md:space-x-2 shrink-0">
+              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <span className="hidden md:inline">Refresh</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:hidden"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+              </button>
+              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <span className="hidden md:inline">Keluar</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:hidden"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
+              </button>
             </div>
           </header>
 
@@ -1610,15 +1654,27 @@ export default function App() {
                                   return (
                                   <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
                                        className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]' : 'bg-white/40 border-white/50 hover:bg-white/80 shadow-sm'}`}>
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/60 border-slate-400 hover:border-blue-400'}`}>
+                                    
+                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/60 border-slate-400 hover:border-blue-400'}`} title="Pilih untuk Animasi">
                                         {isSelectedAdmin && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                                     </div>
-                                    <div className="flex gap-3">
+
+                                    <button 
+                                        type="button"
+                                        onPointerDown={(e) => e.stopPropagation()} 
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId); }} 
+                                        className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
+                                        title="Hapus Rute"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                    </button>
+
+                                    <div className="flex gap-3 pr-8">
                                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200/50 flex items-center justify-center">
                                         {road.photoUrls?.length > 0 ? <img src={road.photoUrls[0]} className="w-full h-full object-cover" /> : road.videoUrl ? <video src={`${road.videoUrl}#t=0.5`} className="w-full h-full object-cover" /> : <span className="text-[8px] text-slate-500 font-bold">No Media</span>}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-6 leading-tight">{road.name}</h4>
+                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
                                         <div className="flex gap-2 mt-1.5 items-center">
                                            <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
                                            <span className="text-[11px] font-medium text-slate-700 truncate">{formatKel(road.kelurahan)}</span>
@@ -1643,34 +1699,6 @@ export default function App() {
 
             {/* --- MAIN CONTENT (MAP & WIDGETS) --- */}
             <main className="flex-1 relative w-full h-full">
-              
-              {/* --- FLOATING WIDGETS (KOTAK LEGENDA MENGAMBANG) --- */}
-              <div className={`absolute top-3 md:top-5 z-[400] pointer-events-none transition-all pr-3 ${isSidebarOpen ? 'md:left-[360px] pl-[50px] md:pl-5 w-[calc(100%-360px)]' : 'left-0 pl-[50px] md:pl-5 w-full'}`}>
-                 <div className="pointer-events-none md:hidden mb-2">
-                    <button onClick={() => setShowFloatingLegend(!showFloatingLegend)} className="pointer-events-auto bg-white/90 shadow-sm border px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-700 w-auto">
-                       {showFloatingLegend ? 'Tutup Legenda' : 'Buka Legenda'}
-                    </button>
-                 </div>
-
-                 <div className={`${showFloatingLegend ? 'flex' : 'hidden'} md:flex flex-nowrap md:flex-wrap items-center gap-2 pointer-events-auto overflow-x-auto hide-scrollbar pb-3`}>
-                    <div className="flex items-stretch rounded-lg shadow-sm border border-slate-200 overflow-hidden h-9 md:h-11 shrink-0 bg-white min-w-[130px] md:min-w-0">
-                       <div className="flex-1 flex items-center gap-1.5 px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] font-medium text-slate-600 uppercase">Baik</span></div>
-                       <div className="flex items-center justify-center bg-slate-50 px-3 border-l border-slate-200"><span className="text-lg md:text-xl font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
-                    </div>
-                    <div className="flex items-stretch rounded-lg shadow-sm border border-slate-200 overflow-hidden h-9 md:h-11 shrink-0 bg-white min-w-[130px] md:min-w-0">
-                       <div className="flex-1 flex items-center gap-1.5 px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] font-medium text-slate-600 uppercase">Rsk Ringan</span></div>
-                       <div className="flex items-center justify-center bg-slate-50 px-3 border-l border-slate-200"><span className="text-lg md:text-xl font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
-                    </div>
-                    <div className="flex items-stretch rounded-lg shadow-sm border border-slate-200 overflow-hidden h-9 md:h-11 shrink-0 bg-white min-w-[130px] md:min-w-0">
-                       <div className="flex-1 flex items-center gap-1.5 px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] font-medium text-slate-600 uppercase">Rsk Sedang</span></div>
-                       <div className="flex items-center justify-center bg-slate-50 px-3 border-l border-slate-200"><span className="text-lg md:text-xl font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
-                    </div>
-                    <div className="flex items-stretch rounded-lg shadow-sm border border-slate-200 overflow-hidden h-9 md:h-11 shrink-0 bg-white min-w-[130px] md:min-w-0">
-                       <div className="flex-1 flex items-center gap-1.5 px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] font-medium text-slate-600 uppercase">Rsk Parah</span></div>
-                       <div className="flex items-center justify-center bg-slate-50 px-3 border-l border-slate-200"><span className="text-lg md:text-xl font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
-                    </div>
-                 </div>
-              </div>
 
               {/* Peta Container */}
               <div className={`absolute inset-0 transition-all duration-300 ${isSidebarOpen ? 'admin-map-shifted' : 'left-0 w-full'}`}>
@@ -1701,6 +1729,7 @@ export default function App() {
                 
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
                   <div className="flex flex-wrap gap-2 justify-end mb-4">
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus Rute</button>
                        <button onClick={() => { if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(false); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
                        <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
