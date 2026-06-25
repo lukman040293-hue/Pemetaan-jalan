@@ -1768,17 +1768,17 @@ export default function App() {
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
-          <>
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[1500]" onClick={closeAdminModal}></div>
+          <div className="fixed inset-0 z-[1500] flex items-end md:items-center justify-center p-0 md:p-6 pointer-events-none">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={closeAdminModal}></div>
             
-            <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:h-[80vh] md:max-h-[700px] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl z-[1600] flex flex-col overflow-hidden animate-fade-in-up md:animate-fade-in">
+            <div className="relative w-full md:w-[600px] max-h-[85vh] md:max-h-[90vh] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto animate-fade-in-up md:animate-fade-in z-[1600]">
               
               <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
                 <h3 className="font-black text-slate-900">Detail Rute</h3>
                 <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
 
-              <div className="h-[25vh] md:h-[35%] bg-slate-900 relative shrink-0">
+              <div className="h-[250px] md:h-[320px] bg-slate-900 relative shrink-0">
                 {videoSnapshot.length > 0 ? (
                     <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
                         {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
@@ -1815,7 +1815,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
