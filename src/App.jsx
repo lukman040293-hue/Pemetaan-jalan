@@ -178,6 +178,9 @@ export default function App() {
 
   const [supabase, setSupabase] = useState(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  
+  // --- STATE MODAL KUSTOM ---
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', actionLabel: '', onConfirm: null, isDanger: true });
 
   // --- ROUTING ---
   useEffect(() => {
@@ -235,7 +238,7 @@ export default function App() {
   const [activeKelurahan, setActiveKelurahan] = useState(initialKelurahanState);
   const [activeConditions, setActiveConditions] = useState({ 'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true });
   const [activeJenis, setActiveJenis] = useState({ 'Aspal': true, 'Beton': true, 'Tanah': true });
-  const [expandedSection, setExpandedSection] = useState('kondisi'); 
+  const [expandedSection, setExpandedSection] = useState(null); 
 
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
   const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); 
@@ -876,17 +879,40 @@ export default function App() {
     setEditingDraftId(draft.id); window.location.hash = '#/surveyor/form';     
   };
 
+  // --- LOGIKA HAPUS DENGAN MODAL ---
+  const executeDeleteDraft = (id) => {
+      setDrafts(prev => prev.filter(d => d.id !== id));
+      setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); 
+      showToast("Draft dihapus.");
+  };
+
   const deleteDraft = (id) => {
-    if(window.confirm("Hapus draft offline ini permanen?")) {
-      setDrafts(prev => prev.filter(d => d.id !== id)); setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); showToast("Draft dihapus.");
-    }
+      setConfirmModal({
+          isOpen: true,
+          title: 'Hapus Draft',
+          message: 'Hapus draft offline ini secara permanen?',
+          actionLabel: 'Hapus',
+          onConfirm: () => executeDeleteDraft(id),
+          isDanger: true
+      });
+  };
+
+  const executeDeleteSelectedDrafts = () => {
+      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id))); 
+      setSelectedDraftIds([]); 
+      showToast("Draft terpilih dihapus.");
   };
 
   const deleteSelectedDrafts = () => {
-    if (selectedDraftIds.length === 0) return;
-    if (window.confirm(`Hapus ${selectedDraftIds.length} draft terpilih?`)) {
-      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id))); setSelectedDraftIds([]); showToast("Draft terpilih dihapus.");
-    }
+      if (selectedDraftIds.length === 0) return;
+      setConfirmModal({
+          isOpen: true,
+          title: 'Hapus Draft Terpilih',
+          message: `Anda yakin ingin menghapus ${selectedDraftIds.length} draft yang dipilih?`,
+          actionLabel: 'Hapus',
+          onConfirm: () => executeDeleteSelectedDrafts(),
+          isDanger: true
+      });
   };
 
   const saveDraft = (e) => {
@@ -964,26 +990,23 @@ export default function App() {
     } catch (error) { showToast(`Gagal mengunggah: ${error.message}`); } finally { setIsSyncing(false); setSyncMessage(""); }
   };
 
-  const hapusDataCloud = async (dbId) => {
+  const executeHapusDataCloud = async (dbId) => {
      if(!supabase) {
          showToast("Koneksi Supabase belum diatur!");
          return;
      }
-     if(!window.confirm("Hapus rute ini dari database pusat secara permanen?")) return;
      
      try {
-        // Hapus sementara dari UI agar terasa instan (Optimistic Update)
         setSyncedRoads(prev => prev.filter(r => (r.id || r.dbId) !== dbId));
         
         const { error } = await supabase.from('mapped_roads').delete().eq('id', dbId);
         if(error) {
-            fetchRoads(); // Kembalikan data jika di server ternyata gagal
+            fetchRoads(); 
             throw error;
         }
         
         showToast("✅ Rute berhasil dihapus.");
         
-        // Tutup popup jika rute yang sedang dibuka ternyata dihapus
         if (selectedRoad && (selectedRoad.id === dbId || selectedRoad.dbId === dbId)) {
             if (window.location.hash === '#/admin/detail') window.history.back();
             else setSelectedRoad(null);
@@ -992,6 +1015,17 @@ export default function App() {
         console.error("Error Hapus Supabase:", err);
         showToast(`❌ Gagal menghapus: ${err.message || 'Periksa izin RLS'}`); 
      }
+  };
+
+  const hapusDataCloud = (dbId, roadName) => {
+      setConfirmModal({
+          isOpen: true,
+          title: `Hapus Jalur "${roadName}"`,
+          message: 'Hapus rute ini dari database pusat secara permanen?',
+          actionLabel: 'Hapus',
+          onConfirm: () => executeHapusDataCloud(dbId),
+          isDanger: true
+      });
   };
 
   const handleExportKML = () => {
@@ -1091,9 +1125,33 @@ export default function App() {
         }
       `}} />
 
+      {/* --- TOAST ALERTS --- */}
       {toastMessage && (
-        <div className="fixed top-14 md:top-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
+        <div className="fixed top-14 md:top-6 left-1/2 transform -translate-x-1/2 z-[9999] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
           <span className="text-sm font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* --- CUSTOM MODAL POP-UP --- */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print-hidden animate-fade-in" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                <div className="p-6 pb-2">
+                    <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
+                        {confirmModal.isDanger ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.518c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.828v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
+                        )}
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900 mb-2">{confirmModal.title}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed">{confirmModal.message}</p>
+                </div>
+                <div className="p-4 mt-6 flex gap-3 bg-slate-50">
+                    <button onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors">Batal</button>
+                    <button onClick={() => { if (confirmModal.onConfirm) confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} className={`flex-1 py-3 rounded-xl font-bold text-sm text-white shadow-sm transition-colors ${confirmModal.isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{confirmModal.actionLabel}</button>
+                </div>
+            </div>
         </div>
       )}
 
@@ -1505,32 +1563,32 @@ export default function App() {
             {/* Overlay Layar Gelap Mobile */}
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
-            {/* --- SIDEBAR KIRI (LIGHT GLASSMORPHISM LAYER LIST 20%) --- */}
-            <aside className={`bg-white/20 backdrop-blur-xl flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/30 ${isSidebarOpen ? 'w-[85vw] md:w-[340px]' : 'w-0 border-r-0'}`}>
-              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-800">
+            {/* --- SIDEBAR KIRI (FLOATING GLASSMORPHISM) --- */}
+            <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
+              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
                 
                 {/* Header Sidebar Internal */}
-                <div className="p-4 flex justify-between items-center border-b border-white/20 bg-white/30">
-                  <h3 className="font-black text-slate-800 text-xs md:text-sm tracking-[0.15em] uppercase">Daftar Layer</h3>
-                  <button onClick={() => setIsSidebarOpen(false)} className="border border-white/30 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-600 transition-colors shadow-sm">
+                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
+                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
                 
                 {/* Search Layer */}
-                <div className="px-4 py-4 border-b border-white/20 bg-white/10">
-                  <div className="bg-white/40 border border-white/40 rounded-md flex items-center px-3 py-2.5 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400 transition-all shadow-inner">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-600 font-medium" />
+                <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
+                  <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
                   </div>
                 </div>
 
                 {/* Semua Layer Actions */}
-                <div className="px-4 py-3 flex justify-between items-center border-b border-white/20 bg-white/10">
-                  <span className="text-[10px] font-black text-slate-600 tracking-widest uppercase">Semua Layer</span>
+                <div className="px-4 py-3 flex justify-between items-center border-b border-slate-300/40 bg-transparent">
+                  <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
                   <div className="flex space-x-2">
-                    <button onClick={() => { setActiveConditions({'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true}); setActiveJenis({'Aspal': true, 'Beton': true, 'Tanah': true}); setActiveKelurahan(initialKelurahanState); }} className="border border-white/50 text-slate-800 hover:text-blue-700 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white bg-white/30 transition-all shadow-sm">Aktifkan</button>
-                    <button onClick={() => { setActiveConditions({'Baik': false, 'Rusak Ringan': false, 'Rusak Sedang': false, 'Rusak Parah': false}); setActiveJenis({'Aspal': false, 'Beton': false, 'Tanah': false}); setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); }} className="border border-white/50 text-slate-800 hover:text-rose-700 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white bg-white/30 transition-all shadow-sm">Nonaktifkan</button>
+                    <button onClick={() => { setActiveConditions({'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true}); setActiveJenis({'Aspal': true, 'Beton': true, 'Tanah': true}); setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
+                    <button onClick={() => { setActiveConditions({'Baik': false, 'Rusak Ringan': false, 'Rusak Sedang': false, 'Rusak Parah': false}); setActiveJenis({'Aspal': false, 'Beton': false, 'Tanah': false}); setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
                   </div>
                 </div>
 
@@ -1538,27 +1596,27 @@ export default function App() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
                   {/* WILAYAH KELURAHAN */}
-                  <div className="border-b border-white/20">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/30 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kelurahan' ? null : 'kelurahan')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kelurahan' ? null : 'kelurahan')}>
                          <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.5)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px]">Wilayah Kelurahan</span>
+                             <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Wilayah Kelurahan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/50 border border-white/40 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{Object.values(activeKelurahan).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-600 transition-transform ${expandedSection === 'kelurahan' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeKelurahan).filter(Boolean).length}</span>
+                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'kelurahan' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                          </div>
                      </div>
                      {expandedSection === 'kelurahan' && (
                          <div className="pb-3 bg-white/10 max-h-64 overflow-y-auto custom-scrollbar">
                             {KELURAHAN_LIST.map(kel => (
-                               <div key={kel} className="flex items-center justify-between px-4 py-2 hover:bg-white/40 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
+                               <div key={kel} className="flex items-center justify-between px-4 py-2 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
                                   <div className="flex items-center space-x-4 ml-2">
                                       <LayerToggle active={activeKelurahan[kel]} color="#8b5cf6" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
-                                      <span className={`text-[12px] font-bold truncate max-w-[150px] ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
+                                      <span className={`text-[12px] font-bold truncate max-w-[150px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-700'}`}>{formatKel(kel)}</span>
                                   </div>
                                   <div className="flex items-center space-x-3">
-                                      <span className="bg-white/50 border border-white/30 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-700">{syncedRoads.filter(r => r.kelurahan === kel).length}</span>
+                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800">{syncedRoads.filter(r => r.kelurahan === kel).length}</span>
                                   </div>
                                </div>
                             ))}
@@ -1567,28 +1625,28 @@ export default function App() {
                   </div>
 
                   {/* KONDISI JALAN */}
-                  <div className="border-b border-white/20">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/30 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kondisi' ? null : 'kondisi')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kondisi' ? null : 'kondisi')}>
                          <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px]">Kondisi Jalan</span>
+                             <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Kondisi Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/50 border border-white/40 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{Object.values(activeConditions).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-600 transition-transform ${expandedSection === 'kondisi' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeConditions).filter(Boolean).length}</span>
+                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'kondisi' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                          </div>
                      </div>
                      {expandedSection === 'kondisi' && (
                          <div className="pb-3 bg-white/10">
                             {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
-                               <div key={cond} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/40 transition-colors cursor-pointer" onClick={() => setActiveConditions(prev => ({...prev, [cond]: !prev[cond]}))}>
+                               <div key={cond} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveConditions(prev => ({...prev, [cond]: !prev[cond]}))}>
                                   <div className="flex items-center space-x-4 ml-2">
                                       <LayerToggle active={activeConditions[cond]} color={getConditionColor(cond)} onClick={() => setActiveConditions(prev => ({...prev, [cond]: !prev[cond]}))} />
-                                      <span className={`text-[13px] font-bold ${activeConditions[cond] ? 'text-slate-900' : 'text-slate-500'}`}>{cond}</span>
+                                      <span className={`text-[13px] font-bold drop-shadow-sm ${activeConditions[cond] ? 'text-slate-900' : 'text-slate-700'}`}>{cond}</span>
                                   </div>
                                   <div className="flex items-center space-x-3">
-                                      <span className="bg-white/50 border border-white/30 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">{adminStats[cond === 'Baik' ? 'baik' : cond === 'Rusak Ringan' ? 'rusakRingan' : cond === 'Rusak Sedang' ? 'rusakSedang' : 'rusakParah']}</span>
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[cond === 'Baik' ? 'baik' : cond === 'Rusak Ringan' ? 'rusakRingan' : cond === 'Rusak Sedang' ? 'rusakSedang' : 'rusakParah']}</span>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                   </div>
                                </div>
                             ))}
@@ -1597,28 +1655,28 @@ export default function App() {
                   </div>
 
                   {/* MATERIAL JALAN */}
-                  <div className="border-b border-white/20">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/30 transition-colors" onClick={() => setExpandedSection(expandedSection === 'material' ? null : 'material')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'material' ? null : 'material')}>
                          <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#FBBF24] shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px]">Material Jalan</span>
+                             <div className="w-2.5 h-2.5 rounded-full bg-[#FBBF24] shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Material Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/50 border border-white/40 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{Object.values(activeJenis).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-600 transition-transform ${expandedSection === 'material' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeJenis).filter(Boolean).length}</span>
+                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'material' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                          </div>
                      </div>
                      {expandedSection === 'material' && (
                          <div className="pb-3 bg-white/10">
                             {['Aspal', 'Beton', 'Tanah'].map(mat => (
-                               <div key={mat} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/40 transition-colors cursor-pointer" onClick={() => setActiveJenis(prev => ({...prev, [mat]: !prev[mat]}))}>
+                               <div key={mat} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveJenis(prev => ({...prev, [mat]: !prev[mat]}))}>
                                   <div className="flex items-center space-x-4 ml-2">
                                       <LayerToggle active={activeJenis[mat]} color="#3B82F6" onClick={() => setActiveJenis(prev => ({...prev, [mat]: !prev[mat]}))} />
-                                      <span className={`text-[13px] font-bold ${activeJenis[mat] ? 'text-slate-900' : 'text-slate-500'}`}>{mat}</span>
+                                      <span className={`text-[13px] font-bold drop-shadow-sm ${activeJenis[mat] ? 'text-slate-900' : 'text-slate-700'}`}>{mat}</span>
                                   </div>
                                   <div className="flex items-center space-x-3">
-                                      <span className="bg-white/50 border border-white/30 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">{adminStats[mat.toLowerCase()]}</span>
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[mat.toLowerCase()]}</span>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                   </div>
                                </div>
                             ))}
@@ -1627,15 +1685,15 @@ export default function App() {
                   </div>
 
                   {/* DAFTAR RUTE AKTIF */}
-                  <div className="border-b border-white/20">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/30 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px]">Jalan</span>
+                             <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/50 border border-white/40 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{filteredRoads.length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-600 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{filteredRoads.length}</span>
+                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                          </div>
                      </div>
                      {expandedSection === 'rute' && (
@@ -1653,31 +1711,31 @@ export default function App() {
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
                                   return (
                                   <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
-                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]' : 'bg-white/40 border-white/50 hover:bg-white/80 shadow-sm'}`}>
+                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
                                     
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/60 border-slate-400 hover:border-blue-400'}`} title="Pilih untuk Animasi">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Pilih untuk Animasi">
                                         {isSelectedAdmin && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                                     </div>
 
                                     <button 
                                         type="button"
                                         onPointerDown={(e) => e.stopPropagation()} 
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId); }} 
-                                        className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId, road.name); }} 
+                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
                                         title="Hapus Rute"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                     </button>
 
                                     <div className="flex gap-3 pr-8">
-                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200/50 flex items-center justify-center">
-                                        {road.photoUrls?.length > 0 ? <img src={road.photoUrls[0]} className="w-full h-full object-cover" /> : road.videoUrl ? <video src={`${road.videoUrl}#t=0.5`} className="w-full h-full object-cover" /> : <span className="text-[8px] text-slate-500 font-bold">No Media</span>}
+                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 shrink-0 border border-slate-300/50 flex items-center justify-center">
+                                        {road.photoUrls?.length > 0 ? <img src={road.photoUrls[0]} className="w-full h-full object-cover" /> : road.videoUrl ? <video src={`${road.videoUrl}#t=0.5`} className="w-full h-full object-cover" /> : <span className="text-[8px] text-slate-600 font-bold">No Media</span>}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                                         <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
                                         <div className="flex gap-2 mt-1.5 items-center">
                                            <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
-                                           <span className="text-[11px] font-medium text-slate-700 truncate">{formatKel(road.kelurahan)}</span>
+                                           <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
                                         </div>
                                       </div>
                                     </div>
@@ -1691,17 +1749,17 @@ export default function App() {
                 </div>
 
                 {/* Footer Sidebar */}
-                <div className="p-4 border-t border-white/30 bg-white/20 backdrop-blur-md">
-                    <div className="text-[11px] font-bold text-blue-700 tracking-wider">{Object.values(activeConditions).filter(Boolean).length + Object.values(activeJenis).filter(Boolean).length + Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
+                <div className="p-4 border-t border-slate-300/40 bg-white/20 backdrop-blur-md">
+                    <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeConditions).filter(Boolean).length + Object.values(activeJenis).filter(Boolean).length + Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
                 </div>
               </div>
             </aside>
 
             {/* --- MAIN CONTENT (MAP & WIDGETS) --- */}
             <main className="flex-1 relative w-full h-full">
-
+              
               {/* Peta Container */}
-              <div className={`absolute inset-0 transition-all duration-300 ${isSidebarOpen ? 'admin-map-shifted' : 'left-0 w-full'}`}>
+              <div className="absolute inset-0 w-full h-full z-0">
                  <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
                  {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
               </div>
@@ -1709,18 +1767,23 @@ export default function App() {
           </div>
 
           {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
-          {selectedRoad && !isAnimatingMap && (
+          {selectedRoad && (
             <>
-              <div className="fixed inset-0 z-[1100] bg-slate-900/30 backdrop-blur-sm" onClick={closeAdminModal}></div>
-              <div className="fixed bottom-2 left-2 right-2 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-y-1/2 md:-translate-x-1/2 md:w-11/12 max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[1200] max-h-[85vh]">
-                <button onClick={closeAdminModal} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white bg-black/40 hover:bg-black/60 rounded-full z-30 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                </button>
-                <div className="w-full bg-black relative border-b border-slate-200 aspect-video shrink-0">
-                  <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-                      <div className="text-white/40 font-black text-lg md:text-2xl tracking-[0.2em] uppercase drop-shadow-md mix-blend-overlay select-none">{selectedRoad.date}</div>
-                  </div>
-                  {selectedRoad.videoUrl ? (
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[1500]" onClick={closeAdminModal}></div>
+              
+              <div className="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:h-[80vh] md:max-h-[700px] bg-white md:rounded-3xl shadow-2xl z-[1600] flex flex-col overflow-hidden animate-fade-in-up md:animate-fade-in">
+                
+                <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
+                  <h3 className="font-black text-slate-900">Detail Rute</h3>
+                  <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
+
+                <div className="h-[25vh] md:h-[35%] bg-slate-900 relative shrink-0">
+                  {videoSnapshot.length > 0 ? (
+                    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                        {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                    </div>
+                  ) : selectedRoad.videoUrl ? (
                     <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls className="absolute inset-0 w-full h-full object-contain"></video>
                   ) : selectedRoad.photoUrls?.length > 0 ? (
                     <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
@@ -1729,7 +1792,7 @@ export default function App() {
                 
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
                   <div className="flex flex-wrap gap-2 justify-end mb-4">
-                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus Rute</button>
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
                        <button onClick={() => { if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(false); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
                        <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
