@@ -292,6 +292,11 @@ export default function App() {
     return matchKel && matchCond && matchJenis && matchSearch;
   });
 
+  // Pencarian khusus untuk daftar "Jalan" agar tidak hilang saat layer dimatikan
+  const searchedRoads = syncedRoads.filter(road => {
+    return road.name.toLowerCase().includes(searchQuery.toLowerCase()) || (road.kelurahan && road.kelurahan.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
+
   const adminStats = {
     total: filteredRoads.length,
     baik: filteredRoads.filter(r => r.condition === 'Baik').length,
@@ -1689,7 +1694,6 @@ export default function App() {
                   </div>
 
                   {/* DAFTAR RUTE AKTIF */}
-                  {filteredRoads.length > 0 && (
                   <div className="border-b border-slate-300/40">
                      <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
@@ -1697,20 +1701,20 @@ export default function App() {
                              <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{filteredRoads.length}</span>
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{searchedRoads.length}</span>
                              <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                          </div>
                      </div>
                      {expandedSection === 'rute' && (
                          <div className="pb-3 px-3 space-y-2 bg-white/10 pt-2">
                              <button onClick={() => {
-                                 let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : filteredRoads.filter(r => r.realGps && r.realGps.length > 1);
+                                 let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : searchedRoads.filter(r => r.realGps && r.realGps.length > 1);
                                  if(validRoads.length === 0) return showToast("Tidak ada rute valid.");
                                  setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(false); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
                                  if(window.innerWidth < 768) setIsSidebarOpen(false);
-                             }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : filteredRoads.length})</button>
+                             }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : searchedRoads.length})</button>
 
-                              {filteredRoads.map((road) => {
+                              {searchedRoads.map((road) => {
                                   const roadId = road.id || road.dbId; 
                                   const isHighlighted = highlightedRoadId === roadId; 
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
@@ -1750,7 +1754,6 @@ export default function App() {
                          </div>
                      )}
                   </div>
-                  )}
 
                 </div>
 
@@ -1776,10 +1779,10 @@ export default function App() {
         {selectedRoad && (
           <>
             {/* Layer Gelap (Backdrop) */}
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500]" onClick={closeAdminModal}></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
             
             {/* Wrapper Pemusat Modal (100% Center di Layar) */}
-            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none">
+            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
               
               <div className="relative w-full md:w-[600px] h-[85vh] md:h-[80vh] max-h-[800px] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto animate-fade-in-up md:animate-fade-in">
                 
@@ -1919,6 +1922,31 @@ export default function App() {
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold">: {selectedRoad.date}</td></tr>
               </tbody>
            </table>
+
+           {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
+           <div>
+              <h3 className="font-bold text-lg border-b-2 border-slate-800 mb-4 pb-1">Lampiran Visual Lapangan</h3>
+              {videoSnapshot.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {videoSnapshot.map((snap, i) => (
+                       <div key={i} className="aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden border border-slate-300 relative">
+                          <img src={snap} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
+                       </div>
+                    ))}
+                 </div>
+              ) : selectedRoad.photoUrls?.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {selectedRoad.photoUrls.slice(0, 4).map((url, i) => (
+                       <div key={i} className="aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden border border-slate-300">
+                          <img src={url} className="w-full h-full object-cover" />
+                       </div>
+                    ))}
+                 </div>
+              ) : (
+                 <div className="text-sm text-slate-500 italic p-4 bg-slate-50 rounded-lg border border-slate-200">Tidak ada media visual yang dilampirkan pada survei ini.</div>
+              )}
+           </div>
         </div>
       )}
     </div>
