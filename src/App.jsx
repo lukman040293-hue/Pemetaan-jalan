@@ -128,6 +128,24 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
   });
 };
 
+// --- BANTUAN BASEMAP LEAFLET ---
+const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
+  const baseMaps = {
+    "Google Maps (Jalan)": L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+    "Google Hybrid (Satelit)": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+    "OSM Default": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
+    "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+    "Peta Topografi": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 }),
+    "Mode Terang (Light)": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }),
+    "Mode Gelap (Dark)": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 })
+  };
+  
+  if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map);
+  else baseMaps["OSM Default"].addTo(map);
+  
+  L.control.layers(baseMaps, null, { position }).addTo(map);
+};
+
 const LockCylinder = ({ digit, idx }) => {
   const stripRef = useRef(null);
   const numbers = Array.from({ length: 40 }, (_, i) => i % 10);
@@ -392,11 +410,7 @@ export default function App() {
     const map = window.L.map(adminMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 13);
     window.L.control.zoom({ position: 'topright' }).addTo(map);
 
-    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
-    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
-    
-    osm.addTo(map);
-    window.L.control.layers({ "Jalanan (OSM)": osm, "Citra Satelit": satelit }, null, { position: 'topright' }).addTo(map);
+    initBaseMaps(map, window.L, "OSM Default", 'topright');
     
     adminMapInstanceRef.current = map;
     adminLayerGroupRef.current = window.L.layerGroup().addTo(map);
@@ -641,9 +655,7 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
     const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
-    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    window.L.control.layers({ "Peta Jalan (OSM)": osm, "Citra Satelit (Esri)": satelit }, null, { position: 'topleft' }).addTo(map);
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
     drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
     drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
     if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
@@ -689,9 +701,7 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
     const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
-    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    window.L.control.layers({ "Peta Jalan (OSM)": osm, "Citra Satelit": satelit }, null, { position: 'topleft' }).addTo(map);
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
     if (realGpsPoints.length > 0) {
@@ -834,9 +844,7 @@ export default function App() {
   useEffect(() => {
     if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
     const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
-    const osm = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    const satelit = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    window.L.control.layers({ "Peta (OSM)": osm, "Satelit": satelit }, null, { position: 'topleft' }).addTo(map);
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
     liveMapInstanceRef.current = map;
     liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
     setTimeout(() => map.invalidateSize(), 300);
@@ -1588,14 +1596,12 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-1.5 md:space-x-2 shrink-0">
-              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-colors">
-                <span className="hidden md:inline">Refresh</span>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:hidden"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+            <div className="flex items-center space-x-2 shrink-0">
+              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
               </button>
-              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-colors">
-                <span className="hidden md:inline">Keluar</span>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 md:hidden"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
+              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
               </button>
             </div>
           </header>
