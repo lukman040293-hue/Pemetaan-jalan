@@ -1998,7 +1998,7 @@ export default function App() {
            </table>
 
            {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
-           <div>
+           <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
               <h3 className="font-bold text-lg border-b-2 border-slate-800 mb-4 pb-1">Lampiran Visual Lapangan</h3>
               {videoSnapshot.length > 0 ? (
                  <div className="grid grid-cols-2 gap-4">
