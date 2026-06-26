@@ -257,6 +257,7 @@ export default function App() {
   const [activeConditions, setActiveConditions] = useState({ 'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true });
   const [activeJenis, setActiveJenis] = useState({ 'Aspal': true, 'Beton': true, 'Tanah': true });
   const [expandedSection, setExpandedSection] = useState(null); 
+  const [sortConfig, setSortConfig] = useState('date_desc'); 
 
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
   const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); 
@@ -313,6 +314,15 @@ export default function App() {
   // Pencarian khusus untuk daftar "Jalan" agar tidak hilang saat layer dimatikan
   const searchedRoads = syncedRoads.filter(road => {
     return road.name.toLowerCase().includes(searchQuery.toLowerCase()) || (road.kelurahan && road.kelurahan.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
+
+  const sortedRoads = [...searchedRoads].sort((a, b) => {
+      if (sortConfig === 'name_asc') return a.name.localeCompare(b.name);
+      if (sortConfig === 'name_desc') return b.name.localeCompare(a.name);
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (sortConfig === 'date_asc') return dateA - dateB;
+      return dateB - dateA;
   });
 
   const adminStats = {
@@ -1216,8 +1226,7 @@ export default function App() {
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/30">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2">R-Map Sistem</h1>
-            <p className="text-slate-500 text-sm mb-6">Pilih peran Anda untuk masuk ke dalam sistem terpadu.</p>
+            <h1 className="text-3xl font-black text-slate-900 mb-6">Map Sistem</h1>
 
             {(!supabase) && (
               <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-xs text-left">
@@ -1758,14 +1767,22 @@ export default function App() {
                      </div>
                      {expandedSection === 'rute' && (
                          <div className="pb-3 px-3 space-y-2 bg-white/10 pt-2">
+                             <div className="flex gap-2 mb-3">
+                                 <select value={sortConfig} onChange={e => setSortConfig(e.target.value)} className="w-full bg-white border border-slate-300/50 text-slate-700 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm cursor-pointer">
+                                     <option value="date_desc">📅 Terkini (Baru - Lama)</option>
+                                     <option value="date_asc">📅 Terlama (Lama - Baru)</option>
+                                     <option value="name_asc">🔤 Nama Jalan (A - Z)</option>
+                                     <option value="name_desc">🔤 Nama Jalan (Z - A)</option>
+                                 </select>
+                             </div>
                              <button onClick={() => {
-                                 let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : searchedRoads.filter(r => r.realGps && r.realGps.length > 1);
+                                 let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : sortedRoads.filter(r => r.realGps && r.realGps.length > 1);
                                  if(validRoads.length === 0) return showToast("Tidak ada rute valid.");
                                  setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(true); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
                                  if(window.innerWidth < 768) setIsSidebarOpen(false);
-                             }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : searchedRoads.length})</button>
+                             }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : sortedRoads.length})</button>
 
-                              {searchedRoads.map((road) => {
+                              {sortedRoads.map((road) => {
                                   const roadId = road.id || road.dbId; 
                                   const isHighlighted = highlightedRoadId === roadId; 
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
