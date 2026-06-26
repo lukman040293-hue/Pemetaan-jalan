@@ -557,7 +557,7 @@ export default function App() {
                iconSize = [28, 28]; iconAnchor = [14, 14];
                vehicleSvg = `<svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));"><style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style><g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;"><rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" /><rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" /><path d="M 14 25 Q 6 36 12 44" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="12" cy="44" r="3" fill="#fcd34d" /><path d="M 36 25 Q 44 14 38 6" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="38" cy="6" r="3" fill="#fcd34d" /><rect x="13" y="20" width="24" height="10" rx="5" fill="#3b82f6" /></g><circle cx="25" cy="25" r="7" fill="#fcd34d" /><path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" /></svg>`;
            } else if (animIconType === 'truck') {
-               iconSize = [30, 75]; iconAnchor = [15, 37];
+               iconSize = [24, 60]; iconAnchor = [12, 30];
                vehicleSvg = `<svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.5));"><rect x="4" y="25" width="32" height="70" rx="4" fill="#64748b"/><rect x="6" y="27" width="28" height="66" rx="2" fill="#94a3b8"/><rect x="6" y="4" width="28" height="20" rx="4" fill="#eab308"/><rect x="8" y="14" width="24" height="6" rx="2" fill="#1e293b"/><rect x="8" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="26" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="2" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="35" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="2" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="2" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="16" y="22" width="8" height="6" fill="#334155"/></svg>`;
            } else {
                iconSize = [24, 38]; iconAnchor = [12, 19];
@@ -627,7 +627,15 @@ export default function App() {
        });
 
        const allRouteBounds = animatingRoadsList.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
-       if (allRouteBounds.length > 0) map.fitBounds(window.L.latLngBounds(allRouteBounds), { paddingTopLeft: [80, 80], paddingBottomRight: [80, 180] });
+       if (allRouteBounds.length > 0) {
+           const isMobile = window.innerWidth < 768;
+           map.fitBounds(window.L.latLngBounds(allRouteBounds), { 
+               // Padding kiri-atas & kanan-bawah disesuaikan agar lebih proporsional di HP (Zoom-In lebih dekat)
+               paddingTopLeft: isMobile ? [20, 40] : [80, 80], 
+               paddingBottomRight: isMobile ? [20, 240] : [80, 180],
+               maxZoom: 18
+           });
+       }
     }
 
     return () => {
