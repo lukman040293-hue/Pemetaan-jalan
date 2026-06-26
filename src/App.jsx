@@ -273,10 +273,10 @@ export default function App() {
 
   useEffect(() => {
     if (!selectedRoad) {
-      setHighlightedRoadId(null); setIsAnimatingMap(false); setAnimatingRoadsList([]); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false);
+      setHighlightedRoadId(null); 
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
-      setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId); setIsAnimatingMap(false); setIsAnimFinished(false); setIsAnimControlMinimized(false);
+      setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId); 
     }
   }, [selectedRoad]);
 
@@ -1069,42 +1069,49 @@ export default function App() {
 
   const handlePrint = async () => {
     if (!selectedRoad) return;
+
+    // Jika tidak ada video, langsung cetak tanpa delay agar lolos blokir Popup HP
+    if (!selectedRoad.videoUrl || videoSnapshot.length > 0) {
+       window.print();
+       return;
+    }
+
+    // Ekstraksi 4 frame jika video ada
+    showToast("Mengekstrak frame video untuk cetak...");
     let snapshots = [];
-    if (selectedRoad.videoUrl) {
-      try {
-        const videoEl = document.getElementById('admin-vid-player');
-        if (videoEl && videoEl.readyState >= 2 && videoEl.duration > 0) { 
-          showToast("Mengekstrak frame video...");
-          const originalTime = videoEl.currentTime; const isPaused = videoEl.paused; const duration = videoEl.duration;
-          for (let t of [duration * 0.1, duration * 0.35, duration * 0.6, duration * 0.85]) {
-             await new Promise(resolve => {
-                const onSeeked = () => {
-                   videoEl.removeEventListener('seeked', onSeeked); clearTimeout(fallback); 
-                   try {
-                     const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight;
-                     canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-                     snapshots.push(canvas.toDataURL('image/jpeg', 0.8));
-                   } catch(e) {}
-                   resolve();
-                };
-                const fallback = setTimeout(() => { videoEl.removeEventListener('seeked', onSeeked); resolve(); }, 1500); 
-                videoEl.addEventListener('seeked', onSeeked); videoEl.currentTime = t; 
-             });
-          }
-          videoEl.currentTime = originalTime; if (!isPaused) videoEl.play();
+    try {
+      const videoEl = document.getElementById('admin-vid-player');
+      if (videoEl && videoEl.readyState >= 2 && videoEl.duration > 0) { 
+        const originalTime = videoEl.currentTime; const isPaused = videoEl.paused; const duration = videoEl.duration;
+        for (let t of [duration * 0.1, duration * 0.35, duration * 0.6, duration * 0.85]) {
+           await new Promise(resolve => {
+              const onSeeked = () => {
+                 videoEl.removeEventListener('seeked', onSeeked); clearTimeout(fallback); 
+                 try {
+                   const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight;
+                   canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                   snapshots.push(canvas.toDataURL('image/jpeg', 0.8));
+                 } catch(e) {}
+                 resolve();
+              };
+              const fallback = setTimeout(() => { videoEl.removeEventListener('seeked', onSeeked); resolve(); }, 1500); 
+              videoEl.addEventListener('seeked', onSeeked); videoEl.currentTime = t; 
+           });
         }
-      } catch (err) {}
-    } 
-    setVideoSnapshot(snapshots); setTimeout(() => { window.print(); }, 800);
+        videoEl.currentTime = originalTime; if (!isPaused) videoEl.play();
+      }
+    } catch (err) {}
+    
+    setVideoSnapshot(snapshots); 
+    setTimeout(() => { window.print(); }, 400); // Jeda kecil agar React merender 4 foto ke DOM cetakan
   };
 
   return (
-    <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print:relative print:h-auto print:overflow-visible print:bg-white">
+    <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
         
-        /* PERBAIKAN: Menghapus translate(-50%) yang menyebabkan modal bergeser ke kiri */
         .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -1137,11 +1144,19 @@ export default function App() {
         .leaflet-popup-close-button:hover { color: #dc2626 !important; }
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
+        
+        /* CLASS CUSTOM UNTUK MENGIMBANGI POSISI MODAL */
+        @media (min-width: 768px) {
+            .modal-offset-sidebar { padding-left: 356px !important; }
+        }
 
+        /* --- ARSITEKTUR KHUSUS CETAK PDF AGAR JALAN DI HP --- */
         @media print {
-          @page { size: A4; margin: 20mm; } 
-          body { background-color: white !important; overflow: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @page { size: A4; margin: 10mm; } 
+          html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .print-hidden { display: none !important; } 
+          .print-static-root { position: static !important; height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; background: white !important; }
+          .print-show { display: block !important; position: static !important; width: 100% !important; margin: 0; padding: 0; }
         }
       `}} />
 
@@ -1542,10 +1557,10 @@ export default function App() {
 
       {/* --- RENDER DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-hidden">
+        <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
           {/* --- HEADER MAP AREA (Di atas Sidebar) --- */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3">
+          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
             <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
@@ -1586,7 +1601,7 @@ export default function App() {
           </header>
 
           {/* --- AREA BAWAH HEADER (SIDEBAR & MAP) --- */}
-          <div className="flex-1 flex relative overflow-hidden w-full">
+          <div className="flex-1 flex relative overflow-hidden w-full print-hidden">
             
             {/* Overlay Layar Gelap Mobile */}
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
@@ -1729,7 +1744,7 @@ export default function App() {
                              <button onClick={() => {
                                  let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : searchedRoads.filter(r => r.realGps && r.realGps.length > 1);
                                  if(validRoads.length === 0) return showToast("Tidak ada rute valid.");
-                                 setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(false); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
+                                 setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(true); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
                                  if(window.innerWidth < 768) setIsSidebarOpen(false);
                              }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : searchedRoads.length})</button>
 
@@ -1834,7 +1849,7 @@ export default function App() {
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
                   <div className="flex flex-wrap gap-2 justify-end mb-4">
                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(false); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
                        <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
                        <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
@@ -1862,42 +1877,59 @@ export default function App() {
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
-             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[420px] z-[2000] flex flex-col pointer-events-none">
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[350px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
                  {isAnimControlMinimized ? (
                      <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
                          Buka Kontrol Animasi
                      </button>
                  ) : (
-                     <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-2.5">
+                     <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-3">
                          
                          <div className="flex justify-between items-center w-full">
-                             <div className="flex gap-1.5 md:gap-2 items-center">
+                             <div className="flex gap-2 items-center">
                                  {isAnimFinished ? (
-                                     <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-black shadow-sm bg-emerald-600 text-white">🔄 Ulang</button>
+                                     <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors" title="Ulang">
+                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                     </button>
                                  ) : (
-                                     <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-black shadow-sm text-white ${isAnimPaused ? 'bg-emerald-500 animate-pulse' : 'bg-blue-600'}`}>{isAnimPaused ? '▶ PLAY' : '⏸ PAUSE'}</button>
+                                     <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white shadow-sm transition-colors ${isAnimPaused ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`} title={isAnimPaused ? "Play" : "Pause"}>
+                                        {isAnimPaused ? 
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5"><path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" /></svg> : 
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75V5.25z" clipRule="evenodd" /></svg>
+                                        }
+                                     </button>
                                  )}
-                                 <button onClick={() => setShowSpeedControl(!showSpeedControl)} className={`px-2.5 md:px-3 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-bold border shadow-sm ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700 border-slate-300'}`}>
+                                 <button onClick={() => setShowSpeedControl(!showSpeedControl)} className={`px-3 py-1 h-10 rounded-full text-[11px] md:text-xs font-bold border shadow-sm flex items-center justify-center ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700 border-slate-300'}`}>
                                      {Number(animationSpeedMultiplier).toFixed(2)}x
                                  </button>
                              </div>
 
-                             <div className="flex gap-1.5 md:gap-2 items-center">
-                                 <button onClick={() => setIsAnimControlMinimized(true)} className="bg-slate-100 text-slate-600 border border-slate-300 p-1.5 md:p-2 rounded-full shrink-0">_</button>
-                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="bg-rose-100 text-rose-600 border border-rose-200 p-1.5 md:p-2 rounded-full shrink-0">x</button>
+                             <div className="flex gap-1.5 items-center">
+                                 <button onClick={() => setIsAnimControlMinimized(true)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full shrink-0 hover:bg-slate-200 transition-colors" title="Sembunyikan">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                                 </button>
+                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                 </button>
                              </div>
                          </div>
                          
-                         <div className="flex gap-2 w-full">
-                             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 flex items-center justify-center text-slate-800 text-xs font-bold shadow-inner">
-                                 {animatingRoadsList.length > 1 ? (<span className="text-blue-700 truncate">{animatingRoadsList.length} Rute Aktif</span>) : (<span className="truncate">{currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}</span>)}
+                         <div className="flex gap-2 w-full items-stretch">
+                             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 shadow-inner">
+                                 {animatingRoadsList.length > 1 ? (
+                                     <span className="text-blue-700 text-sm font-black truncate">{animatingRoadsList.length} Rute Aktif</span>
+                                 ) : (
+                                     <span className="text-base md:text-lg font-black truncate tracking-wide">
+                                         {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                                     </span>
+                                 )}
                              </div>
                              
                              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-                                 <button onClick={() => setAnimIconType('car')} className={`p-1 md:p-1.5 rounded-lg ${animIconType === 'car' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚗</button>
-                                 <button onClick={() => setAnimIconType('motorcycle')} className={`p-1 md:p-1.5 rounded-lg ${animIconType === 'motorcycle' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏍️</button>
-                                 <button onClick={() => setAnimIconType('runner')} className={`p-1 md:p-1.5 rounded-lg ${animIconType === 'runner' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏃</button>
+                                 <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg ${animIconType === 'car' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚗</button>
+                                 <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg ${animIconType === 'motorcycle' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏍️</button>
+                                 <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg ${animIconType === 'runner' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏃</button>
                              </div>
                          </div>
 
@@ -1924,7 +1956,7 @@ export default function App() {
 
       {/* --- AREA CETAK PDF --- */}
       {appRole === 'admin' && selectedRoad && (
-        <div className="hidden print:block w-full bg-white text-black p-8 absolute top-0 left-0 z-[99999]" style={{ minHeight: '297mm' }}>
+        <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
            <div className="text-center border-b-4 border-slate-800 pb-4 mb-6">
               <h1 className="text-2xl font-black uppercase tracking-wide">Laporan Survei Kondisi Jalan</h1>
               <p className="text-slate-500 mt-1 text-sm font-semibold">Dokumen Resmi Sistem WebGIS R-Map</p>
