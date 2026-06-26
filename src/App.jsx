@@ -740,7 +740,10 @@ export default function App() {
 
   // --- FUNGSI UTILITI & PEREKAMAN GPS ---
   const startRealHardware = async () => {
-    setRealGpsPoints([]); setIsRecording(true); window.location.hash = '#/surveyor/record'; setRecordingStatus('locating'); setRecordTab('map'); 
+    setMobileScreen('record'); // Mencegah race condition dari delay hash route
+    window.location.hash = '#/surveyor/record'; 
+    setRealGpsPoints([]); setIsRecording(true); 
+    setRecordingStatus('locating'); setRecordTab('map'); 
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0); setRecordingDuration(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null); setEditingDraftId(null); isGpsForcedRef.current = false;
@@ -788,8 +791,10 @@ export default function App() {
   };
 
   const startManualDrawing = () => {
+    setMobileScreen('draw_map');
+    window.location.hash = '#/surveyor/draw_map';
     setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
-    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/draw_map';
+    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); 
   };
 
   const undoLastDrawnPoint = () => {
@@ -803,21 +808,27 @@ export default function App() {
 
   const finishManualDrawing = () => {
     if (manualDrawnPoints.length < 2) return showToast("Gambarkan minimal 2 titik!");
-    setRealGpsPoints(manualDrawnPoints); window.location.hash = '#/surveyor/form';
+    setRealGpsPoints(manualDrawnPoints); 
+    setMobileScreen('form');
+    window.location.hash = '#/surveyor/form';
   };
 
   const stopRealHardware = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); window.location.hash = '#/surveyor/form';
+    setIsRecording(false); setRecordingStatus('idle'); 
+    setMobileScreen('form');
+    window.location.hash = '#/surveyor/form';
   };
 
   const cancelRecording = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); window.location.hash = '#/surveyor/home';
+    setIsRecording(false); setRecordingStatus('idle'); 
+    setMobileScreen('home');
+    window.location.hash = '#/surveyor/home';
   };
 
   useEffect(() => {
@@ -1327,39 +1338,47 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="absolute bottom-[80px] left-4 right-4 bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 z-30 shadow-2xl flex flex-col gap-3">
-                    <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
-                        <span className="text-blue-600 font-bold flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>Log: {realGpsPoints.length}</span>
-                        <span className="text-emerald-600 font-mono tracking-tight font-bold">{realGpsPoints.length > 0 ? `${realGpsPoints[realGpsPoints.length-1].lat.toFixed(5)}, ${realGpsPoints[realGpsPoints.length-1].lng.toFixed(5)}` : 'Satelit...'}</span>
+                {/* AREA KONTROL BAWAH (STATISTIK & TOMBOL) */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-30 flex flex-col gap-4">
+                    
+                    <div className="bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 shadow-2xl flex flex-col gap-3">
+                        <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
+                            <span className="text-blue-600 font-bold flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>Log: {realGpsPoints.length}</span>
+                            <span className="text-emerald-600 font-mono tracking-tight font-bold">{realGpsPoints.length > 0 ? `${realGpsPoints[realGpsPoints.length-1].lat.toFixed(5)}, ${realGpsPoints[realGpsPoints.length-1].lng.toFixed(5)}` : 'Satelit...'}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center px-1">
+                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Waktu</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{formatDuration(recordingDuration)}</div></div>
+                            <div className="w-px h-8 bg-slate-200"></div>
+                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-[10px] font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span></div></div>
+                            <div className="w-px h-8 bg-slate-200"></div>
+                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Speed</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-[10px] font-medium text-slate-500">km/h</span></div></div>
+                            <div className="w-px h-8 bg-slate-200"></div>
+                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div><div className={`text-lg md:text-xl font-black leading-none ${gpsAccuracy === '-' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : 'text-amber-500'}`}>{gpsAccuracy} <span className="text-[10px] font-medium text-slate-500">m</span></div></div>
+                        </div>
                     </div>
 
-                    <div className="flex justify-between items-center px-1">
-                        <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Waktu</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{formatDuration(recordingDuration)}</div></div>
-                        <div className="w-px h-8 bg-slate-200"></div>
-                        <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Jarak</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{totalDistance < 1000 ? Math.round(totalDistance) : (totalDistance/1000).toFixed(2)} <span className="text-[10px] font-medium text-slate-500">{totalDistance < 1000 ? 'm' : 'km'}</span></div></div>
-                        <div className="w-px h-8 bg-slate-200"></div>
-                        <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Speed</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-[10px] font-medium text-slate-500">km/h</span></div></div>
-                        <div className="w-px h-8 bg-slate-200"></div>
-                        <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div><div className={`text-lg md:text-xl font-black leading-none ${gpsAccuracy === '-' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : 'text-amber-500'}`}>{gpsAccuracy} <span className="text-[10px] font-medium text-slate-500">m</span></div></div>
+                    <div className="w-full flex items-center justify-center">
+                      {recordingStatus === 'locating' || recordingStatus === 'ready' ? (
+                         <div className="w-full flex space-x-3">
+                             <button onClick={cancelRecording} className="w-1/3 bg-slate-800/80 backdrop-blur-md text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg hover:bg-slate-700 transition-colors">Batal</button>
+                             <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center transition-colors ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-800/80 text-slate-400 cursor-not-allowed'}`}>{recordingStatus === 'locating' ? 'Mencari GPS...' : 'START REKAM'}</button>
+                         </div>
+                      ) : recordingStatus === 'idle' ? (
+                         <div className="w-full flex space-x-3">
+                             <button onClick={cancelRecording} className="w-full bg-slate-800/80 backdrop-blur-md text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg hover:bg-slate-700 transition-colors">Kembali ke Beranda</button>
+                         </div>
+                      ) : (
+                         <div className="w-full flex space-x-3">
+                             {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
+                                 <><button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>JEDA</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
+                             )}
+                             {recordingStatus === 'paused' && (
+                                 <><button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>LANJUT</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
+                             )}
+                         </div>
+                      )}
                     </div>
-                </div>
-
-                <div className="absolute bottom-4 left-4 right-4 z-30 flex items-center justify-center">
-                  {recordingStatus === 'locating' || recordingStatus === 'ready' ? (
-                     <div className="w-full flex space-x-3">
-                         <button onClick={cancelRecording} className="w-1/3 bg-slate-800/80 backdrop-blur-md text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg">Batal</button>
-                         <button onClick={() => setRecordingStatus('recording')} disabled={recordingStatus === 'locating'} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center ${recordingStatus === 'ready' ? 'bg-emerald-500 text-white' : 'bg-slate-800/80 text-slate-400 cursor-not-allowed'}`}>{recordingStatus === 'locating' ? 'Mencari...' : 'START'}</button>
-                     </div>
-                  ) : (
-                     <div className="w-full flex space-x-3">
-                         {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
-                             <><button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>JEDA</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
-                         )}
-                         {recordingStatus === 'paused' && (
-                             <><button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>LANJUT</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
-                         )}
-                     </div>
-                  )}
                 </div>
               </div>
             )}
