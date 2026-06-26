@@ -128,79 +128,6 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
   });
 };
 
-// --- ALGORITMA KOMPRESI VIDEO LOKAL (CANVAS + MEDIA RECORDER) ---
-const compressVideoClientSide = (file, onProgress) => {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.playsInline = true;
-    video.muted = true; // Wajib dimatikan agar autoplay jalan tanpa interaksi
-
-    video.onloadedmetadata = () => {
-      // Skalakan ke resolusi maksimal lebar 640px (Sekitar 480p) agar sizenya drop drastis
-      const maxWidth = 640; 
-      let width = video.videoWidth;
-      let height = video.videoHeight;
-      if (width > maxWidth) {
-        height = Math.round((height * maxWidth) / width);
-        width = maxWidth;
-      }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      
-      let stream;
-      if (canvas.captureStream) {
-         stream = canvas.captureStream(20); // 20 FPS cukup lancar untuk survey
-      } else {
-         return reject(new Error("Browser Anda tidak mendukung fitur captureStream untuk kompresi lokal."));
-      }
-
-      let options = { mimeType: 'video/webm' };
-      if (MediaRecorder.isTypeSupported('video/webm; codecs=vp9')) {
-          options = { mimeType: 'video/webm; codecs=vp9' };
-      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-          options = { mimeType: 'video/mp4' };
-      }
-
-      let recorder;
-      try {
-         recorder = new MediaRecorder(stream, options);
-      } catch(e) { return reject(e); }
-
-      const chunks = [];
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
-         const blob = new Blob(chunks, { type: options.mimeType });
-         resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.webm", { type: options.mimeType }));
-      };
-
-      video.onplay = () => {
-         recorder.start();
-         const draw = () => {
-            if (video.paused || video.ended) return;
-            ctx.drawImage(video, 0, 0, width, height);
-            if (onProgress) onProgress(Math.min(99, Math.round((video.currentTime / video.duration) * 100)));
-            requestAnimationFrame(draw);
-         };
-         draw();
-      };
-
-      video.onended = () => {
-         recorder.stop();
-      };
-
-      // Trik Utama: Mainkan video pada kecepatan 4x Lipat (Memotong waktu kompresi secara dramatis)
-      // *Catatan: Suara video asli akan otomatis terbuang dengan trik kanvas ini,
-      // menghasilkan ukuran akhir yang super ringan.
-      video.playbackRate = 4.0;
-      video.play().catch(reject);
-    };
-    video.onerror = reject;
-  });
-};
-
 // --- BANTUAN BASEMAP LEAFLET ---
 const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
   const baseMaps = {
@@ -410,7 +337,6 @@ export default function App() {
   const [currentLocation, setCurrentLocation] = useState(null); 
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
   const [uploadedVideoFile, setUploadedVideoFile] = useState(null); 
-  const [videoCompressionProgress, setVideoCompressionProgress] = useState(null); // State progres kompresi
   const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
   const [recordingStatus, setRecordingStatus] = useState('idle'); 
@@ -831,7 +757,6 @@ export default function App() {
     setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0); setRecordingDuration(0);
     setUploadedVideoUrl(null); setUploadedVideoFile(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
     setPinLocation(null); setEditingDraftId(null); isGpsForcedRef.current = false;
-    setVideoCompressionProgress(null);
 
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     locatingTimeoutRef.current = setTimeout(() => {
@@ -880,7 +805,6 @@ export default function App() {
     window.location.hash = '#/surveyor/draw_map';
     setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); 
-    setVideoCompressionProgress(null);
   };
 
   const undoLastDrawnPoint = () => {
@@ -1556,66 +1480,28 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Auto-Kompres Lokal)</label>
-                    {videoCompressionProgress !== null ? (
-                      <div className="bg-slate-50 border border-blue-200 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[3.5rem] shadow-sm">
-                         <div className="flex items-center gap-4 w-full">
-                             <div className="w-7 h-7 border-[3px] border-blue-100 border-t-blue-600 rounded-full animate-spin shrink-0"></div>
-                             <div className="flex-1">
-                                 <div className="flex justify-between">
-                                    <div className="text-blue-700 font-black text-xs mb-1.5 drop-shadow-sm">Mengompresi Latar Belakang...</div>
-                                    <div className="text-blue-700 font-bold text-xs">{videoCompressionProgress}%</div>
-                                 </div>
-                                 <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden shadow-inner">
-                                    <div className="bg-gradient-to-r from-blue-500 to-blue-400 h-1.5 rounded-full transition-all duration-300" style={{ width: `${videoCompressionProgress}%` }}></div>
-                                 </div>
-                                 <div className="text-[9px] text-slate-500 font-semibold mt-1.5">(Trik cepat: Suara dibuang agar file ringan. Jangan tutup layar ini)</div>
-                             </div>
-                         </div>
-                      </div>
-                    ) : !uploadedVideoUrl ? (
-                      <div className="relative border border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50 transition-colors">
-                        <input type="file" accept="video/*" onChange={async (e) => { 
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 150MB)</label>
+                    {!uploadedVideoUrl ? (
+                      <div className="relative border border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50">
+                        <input type="file" accept="video/*" onChange={(e) => { 
                             const f = e.target.files[0]; 
                             if(f){ 
-                              // Jika ukuran video di atas 50MB, otomatis aktifkan kompresor browser!
-                              if (f.size > 50 * 1024 * 1024) { 
-                                  showToast("⚠️ Video Anda cukup besar! Memulai kompresi otomatis...");
-                                  setVideoCompressionProgress(0);
-                                  try {
-                                      const compressedFile = await compressVideoClientSide(f, setVideoCompressionProgress);
-                                      setUploadedVideoUrl(URL.createObjectURL(compressedFile)); 
-                                      setUploadedVideoFile(compressedFile);
-                                      showToast("✅ Berhasil! Ukuran video berhasil diciutkan.");
-                                  } catch (err) {
-                                      console.error(err);
-                                      showToast("❌ Browser HP gagal melakukan kompresi otomatis. Coba lagi.");
-                                  } finally {
-                                      setVideoCompressionProgress(null);
-                                  }
-                              } else {
-                                  setUploadedVideoUrl(URL.createObjectURL(f)); setUploadedVideoFile(f); showToast("Video disiapkan."); 
-                              }
+                              if (f.size > 150*1024*1024) return showToast("Ukuran video melebihi 150MB.");
+                              setUploadedVideoUrl(URL.createObjectURL(f)); setUploadedVideoFile(f); showToast("Video disiapkan."); 
                             } 
                           }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <div className="text-slate-500 text-sm font-bold flex items-center gap-2">
-                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                           Pilih / Rekam Video
-                        </div>
+                        <div className="text-slate-500 text-sm font-medium flex items-center gap-2">Pilih Video</div>
                       </div>
                     ) : (
-                      <div className="bg-emerald-50 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-between border border-emerald-200 shadow-sm">
-                         <div className="text-emerald-700 font-bold text-sm truncate max-w-[200px] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-                            {uploadedVideoFile?.name || 'video_tersimpan.webm'}
-                         </div>
-                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); }} className="bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg p-1.5 transition-colors font-black text-xs">Hapus</button>
+                      <div className="bg-emerald-50 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-between border border-emerald-100">
+                         <div className="text-emerald-700 font-medium text-sm truncate max-w-[200px]">{uploadedVideoFile?.name || 'video.mp4'}</div>
+                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); }} className="text-rose-500 p-1.5">x</button>
                       </div>
                     )}
                   </div>
 
                   <div className="pt-2 pb-8 flex flex-col space-y-3">
-                    <button type="submit" disabled={videoCompressionProgress !== null} className={`w-full text-white py-4 rounded-2xl font-black text-base shadow-sm transition-colors ${videoCompressionProgress !== null ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{editingDraftId ? 'Perbarui Draft' : 'Simpan ke Draft'}</button>
+                    <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base shadow-sm">{editingDraftId ? 'Perbarui Draft' : 'Simpan ke Draft'}</button>
                     <button type="button" onClick={() => { window.location.hash = editingDraftId ? '#/surveyor/drafts' : '#/surveyor/home'; setEditingDraftId(null); }} className="w-full bg-white border border-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm">Batal</button>
                   </div>
                 </form>
