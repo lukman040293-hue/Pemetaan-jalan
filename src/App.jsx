@@ -1592,7 +1592,7 @@ export default function App() {
                   <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
                   <div className="flex space-x-2">
                     <button onClick={() => { setActiveConditions({'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true}); setActiveJenis({'Aspal': true, 'Beton': true, 'Tanah': true}); setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
-                    <button onClick={() => { setActiveConditions({'Baik': false, 'Rusak Ringan': false, 'Rusak Sedang': false, 'Rusak Parah': false}); setActiveJenis({'Aspal': false, 'Beton': false, 'Tanah': false}); setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
+                    <button onClick={() => { setActiveConditions({'Baik': false, 'Rusak Ringan': false, 'Rusak Sedang': false, 'Rusak Parah': false}); setActiveJenis({'Aspal': false, 'Beton': false, 'Tanah': false}); setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
                   </div>
                 </div>
 
@@ -1689,6 +1689,7 @@ export default function App() {
                   </div>
 
                   {/* DAFTAR RUTE AKTIF */}
+                  {filteredRoads.length > 0 && (
                   <div className="border-b border-slate-300/40">
                      <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
@@ -1749,6 +1750,7 @@ export default function App() {
                          </div>
                      )}
                   </div>
+                  )}
 
                 </div>
 
@@ -1796,6 +1798,15 @@ export default function App() {
                     ) : selectedRoad.photoUrls?.length > 0 ? (
                       <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
+                  
+                  {/* --- WATERMARK OVERLAY --- */}
+                  {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
+                       <div className="text-lg md:text-xl font-black text-white/50 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-wide">
+                          {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
+                       </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
