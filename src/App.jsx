@@ -1541,8 +1541,8 @@ export default function App() {
 
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
-                <div className="px-6 pt-8 pb-2 flex-shrink-0 bg-slate-100 z-10">
-                  <div className="flex justify-end mb-4"><button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
+                <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                  <div className="flex justify-end mb-3"><button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
                   {drafts.length > 0 && (
                      <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
                        <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
