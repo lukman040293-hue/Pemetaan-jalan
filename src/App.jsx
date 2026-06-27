@@ -354,7 +354,6 @@ export default function App() {
   const lastMoveTimeRef = useRef(Date.now());
   const [recordTab, setRecordTab] = useState('camera'); 
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [showAddModal, setShowAddModal] = useState(false);
 
   const liveMapContainerRef = useRef(null);
   const liveMapInstanceRef = useRef(null);
@@ -1266,7 +1265,7 @@ export default function App() {
         <div className="h-full bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
           
           {isSyncing && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-[80%] text-center">
                 <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
                 <h3 className="font-black text-slate-800 mb-1">Menyinkronkan Data</h3>
@@ -1278,56 +1277,38 @@ export default function App() {
 
           <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
             {mobileScreen === 'home' && (
-              <div className="flex-1 p-5 flex flex-col overflow-y-auto bg-slate-50 custom-scrollbar pb-[90px]">
-                
-                <div className="flex justify-between items-center mb-4 px-1 mt-1">
-                    <h1 className="font-black text-xl text-slate-800 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                        App Surveyor
-                    </h1>
-                    <button onClick={() => window.location.hash = '#/'} className="text-rose-500 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Keluar</button>
+              <div className="flex-1 p-6 flex flex-col overflow-y-auto">
+                <div className="flex justify-end mb-2">
+                   <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 font-bold text-xs bg-rose-50 px-4 py-2 rounded-xl hover:bg-rose-100 transition-colors">Keluar</button>
                 </div>
 
-                {/* NEW DASHBOARD LAYOUT */}
-                <div className="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-500/30 mb-6 relative overflow-hidden shrink-0">
-                    <div className="relative z-10">
-                        <h2 className="text-2xl font-black mb-1">Halo, Tim!</h2>
-                        <p className="text-blue-100 text-sm mb-4">Siap memetakan jalan hari ini?</p>
-                        <div className="flex gap-4">
-                           <div className="flex-1">
-                               <div className="text-3xl font-black">{syncedRoads.length}</div>
-                               <div className="text-[10px] uppercase tracking-wider font-bold text-blue-200 mt-1">Total Rute Cloud</div>
-                           </div>
-                           <div className="w-px bg-blue-400/50"></div>
-                           <div className="flex-1">
-                               <div className="text-3xl font-black">{drafts.length}</div>
-                               <div className="text-[10px] uppercase tracking-wider font-bold text-blue-200 mt-1">Draft Offline</div>
-                           </div>
+                <div className="flex space-x-3 mb-4 mt-2">
+                    <button onClick={startRealHardware} className="w-1/2 bg-white border-2 border-blue-500 hover:bg-blue-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
+                        <div className="bg-blue-100 text-blue-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                         </div>
-                    </div>
-                    <svg className="absolute top-0 right-0 w-40 h-40 text-white/10 transform translate-x-8 -translate-y-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5L3.5 7 12 2.75 20.5 7 12 9.5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                
-                <h3 className="font-bold text-slate-800 mb-3 ml-1 text-sm">Informasi Sistem</h3>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${isDbConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                        {isDbConnected ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        )}
-                    </div>
-                    <div>
-                        <div className="font-bold text-slate-900 text-sm">{isDbConnected ? 'Cloud Terhubung' : 'Cloud Terputus'}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{isDbConnected ? 'Data siap disinkronisasikan.' : 'Periksa koneksi internet Anda.'}</div>
-                    </div>
+                        <span className="font-extrabold text-sm leading-tight text-center group-hover:text-blue-700 transition-colors">Rekam<br/>GPS Live</span>
+                    </button>
+
+                    <button onClick={startManualDrawing} className="w-1/2 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
+                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg>
+                        </div>
+                        <span className="font-extrabold text-sm leading-tight text-center group-hover:text-emerald-700 transition-colors">Gambar<br/>Rute Manual</span>
+                    </button>
                 </div>
 
-                <div className="mt-6 p-5 bg-slate-100 border border-slate-200 rounded-3xl text-center">
-                    <div className="text-4xl mb-2">📍</div>
-                    <h4 className="font-bold text-slate-700 text-sm mb-1">Perekaman Cepat</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">Gunakan tombol <strong className="text-blue-600">Biru Tengah</strong> di navigasi bawah untuk memulai proses memetakan jalan secara presisi.</p>
-                </div>
+                <button onClick={() => { window.location.hash = '#/surveyor/drafts'; }} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-slate-600 pl-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-lg">Draft</div>
+                    </div>
+                  </div>
+                  <span className="bg-rose-500 text-white px-3 py-1 rounded-full text-sm font-bold">{drafts.length}</span>
+                </button>
               </div>
             )}
 
@@ -1559,20 +1540,18 @@ export default function App() {
             )}
 
             {mobileScreen === 'drafts' && (
-              <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20 pb-[80px]">
-                <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10 border-b border-slate-200/60">
-                  <div className="flex justify-between items-center mb-1 mt-1">
-                     <h2 className="font-black text-xl text-slate-800">Draft Offline</h2>
-                  </div>
+              <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
+                <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                  <div className="flex justify-end mb-3"><button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
                   {drafts.length > 0 && (
-                     <div className="mt-3 flex justify-between items-center bg-white px-4 py-3 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
+                     <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
                        <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
                        <div className={`w-5 h-5 rounded-full border-2 ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div>
                      </div>
                   )}
                 </div>
 
-                <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pt-3 pb-4 custom-scrollbar">
+                <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pb-4 custom-scrollbar">
                   {drafts.length === 0 ? (<div className="text-center text-slate-400 mt-10 p-8 border-2 border-dashed border-slate-300 rounded-2xl">Belum ada survei tersimpan.</div>) : (
                     drafts.map(d => {
                       const isSelected = selectedDraftIds.includes(d.id);
@@ -1593,62 +1572,12 @@ export default function App() {
                 </div>
 
                 {drafts.length > 0 && (
-                  <div className="p-4 bg-white border-t border-slate-200 flex space-x-3 shrink-0">
+                  <div className="p-4 bg-white border-t border-slate-200 flex space-x-3">
                     <button onClick={deleteSelectedDrafts} disabled={selectedDraftIds.length === 0} className={`w-1/3 py-4 rounded-2xl font-black text-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>HAPUS</button>
                     <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-2/3 py-4 rounded-2xl text-white font-black text-sm ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600' : 'bg-slate-400'}`}>UNGGAH ({selectedDraftIds.length})</button>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* --- ACTION SHEET TAMBAH RUTE --- */}
-            {showAddModal && ['home', 'drafts'].includes(mobileScreen) && (
-                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] flex justify-center items-end" onClick={() => setShowAddModal(false)}>
-                    <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-fade-in-up pb-8" onClick={e => e.stopPropagation()}>
-                        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5"></div>
-                        <h3 className="font-black text-lg text-slate-900 mb-4 text-center">Pilih Metode Perekaman</h3>
-                        <div className="grid gap-3">
-                            <button onClick={() => { setShowAddModal(false); startRealHardware(); }} className="bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-4 px-4 rounded-2xl font-bold flex items-center justify-start gap-4 transition-colors text-left">
-                                <div className="bg-blue-600 text-white p-3 rounded-full shrink-0"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></div>
-                                <div>
-                                   <div className="text-sm">Rekam GPS Live (Otomatis)</div>
-                                   <div className="text-[10px] font-medium text-blue-500 mt-0.5">Berkendara untuk merekam jejak nyata jalan</div>
-                                </div>
-                            </button>
-                            <button onClick={() => { setShowAddModal(false); startManualDrawing(); }} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 py-4 px-4 rounded-2xl font-bold flex items-center justify-start gap-4 transition-colors text-left">
-                                <div className="bg-emerald-600 text-white p-3 rounded-full shrink-0"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg></div>
-                                <div>
-                                   <div className="text-sm">Gambar Rute Manual</div>
-                                   <div className="text-[10px] font-medium text-emerald-600 mt-0.5">Ketuk pada peta untuk menarik garis rute</div>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- BOTTOM NAVIGATION BAR (SURVEYOR) --- */}
-            {['home', 'drafts'].includes(mobileScreen) && (
-                <div className="absolute bottom-0 left-0 w-full bg-white border-t border-slate-200 flex items-center justify-around pt-2 pb-5 px-2 shrink-0 z-[100] rounded-t-[20px] shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.05)]">
-                    <button onClick={() => { setShowAddModal(false); window.location.hash = '#/surveyor/home'; }} className={`flex flex-col items-center w-20 py-1 transition-colors ${mobileScreen === 'home' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
-                        <span className="text-[10px] font-bold tracking-wide">Beranda</span>
-                    </button>
-                    
-                    <div className="relative -top-7">
-                        <button onClick={() => setShowAddModal(true)} className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl border-[5px] border-slate-50 transition-transform active:scale-95 ${showAddModal ? 'bg-slate-800 rotate-45 shadow-none border-slate-100' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/40'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3.5" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                        </button>
-                    </div>
-                    
-                    <button onClick={() => { setShowAddModal(false); window.location.hash = '#/surveyor/drafts'; }} className={`flex flex-col items-center w-20 py-1 relative transition-colors ${mobileScreen === 'drafts' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                        <div className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.08-.81 1.95-1.87 2A19.74 19.74 0 0112 20.82a19.74 19.74 0 01-8.38-.42c-1.06-.05-1.87-.92-1.87-2v-4.25m16.5 0v-.67c0-1.13-.81-2.07-1.92-2.16A20.31 20.31 0 0012 10.3c-2.73 0-5.38.33-7.83.94-1.11.09-1.92 1.03-1.92 2.16v.67m16.5 0L12 6.75l-8.25 7.4M12 6.75V3m0 0h3m-3 0H9" /></svg>
-                            {drafts.length > 0 && <span className="absolute -top-1 -right-2 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{drafts.length}</span>}
-                        </div>
-                        <span className="text-[10px] font-bold tracking-wide">Draft</span>
-                    </button>
-                </div>
             )}
           </div>
         </div>
@@ -1659,44 +1588,35 @@ export default function App() {
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
           {/* --- HEADER MAP AREA (Di atas Sidebar) --- */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-14 md:h-16 shrink-0 relative w-full gap-2 md:gap-3 print-hidden">
-            
-            {/* Desktop Left Side */}
-            <div className="hidden md:flex items-center space-x-2 shrink-0">
+          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
+            <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
               </button>
-              <div className="bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
-            </div>
-
-            {/* Mobile Left Side */}
-            <div className="md:hidden flex items-center space-x-1.5 shrink-0 pr-2">
-               <div className="bg-blue-600 text-white p-1.5 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
-               <span className="font-black text-slate-800 text-sm tracking-tight">R-Map</span>
+              <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
             </div>
 
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-8 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[9px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-8 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[9px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-8 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[9px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-8 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[9px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
 
-            {/* Desktop Right Side */}
-            <div className="hidden md:flex items-center space-x-2 shrink-0">
+            <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
               </button>
@@ -1916,34 +1836,11 @@ export default function App() {
           <main className="flex-1 relative w-full h-full">
             
             {/* Peta Container */}
-            <div className="absolute inset-0 w-full h-full z-0 pb-14 md:pb-0">
+            <div className="absolute inset-0 w-full h-full z-0">
                <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
                {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
             </div>
           </main>
-
-          {/* --- BOTTOM NAVIGATION ADMIN (MOBILE ONLY) --- */}
-          <div className="md:hidden bg-white border-t border-slate-200 flex items-center justify-around pb-2 pt-1 shrink-0 z-[1100] relative">
-              <button onClick={() => setIsSidebarOpen(false)} className={`flex flex-col items-center flex-1 py-2 transition-colors ${!isSidebarOpen && !selectedRoad ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
-                  <span className="text-[10px] font-bold tracking-wide">Peta Utama</span>
-              </button>
-              
-              <button onClick={() => setIsSidebarOpen(true)} className={`flex flex-col items-center flex-1 py-2 transition-colors ${isSidebarOpen ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5h12M6 9h12M6 13.5h12M6 18h12" /></svg>
-                  <span className="text-[10px] font-bold tracking-wide">Layer Data</span>
-              </button>
-              
-              <button onClick={() => { fetchRoads(); showToast("Data diperbarui"); }} className="flex flex-col items-center flex-1 py-2 text-slate-400 hover:text-slate-600 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                  <span className="text-[10px] font-bold tracking-wide">Refresh</span>
-              </button>
-              
-              <button onClick={() => window.location.hash = '#/'} className="flex flex-col items-center flex-1 py-2 text-rose-400 hover:text-rose-600 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
-                  <span className="text-[10px] font-bold tracking-wide">Keluar</span>
-              </button>
-          </div>
         </div>
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
@@ -2014,7 +1911,7 @@ export default function App() {
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
-             <div className="fixed bottom-20 md:bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[350px] z-[2000] flex flex-col pointer-events-none print-hidden">
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[350px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
                  {isAnimControlMinimized ? (
                      <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
