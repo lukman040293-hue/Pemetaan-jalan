@@ -2,17 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 
 // =========================================================================
 // 🔴 KONFIGURASI SUPABASE ANDA 
-// Masukkan URL dan Publishable Key dari Project Supabase Anda di sini:
 // =========================================================================
 const SUPABASE_URL = 'https://bucyrbywyrkvjwqpzetk.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR'; 
 
 // =========================================================================
 // 🔵 KONFIGURASI CLOUDINARY (PENYIMPANAN MEDIA PIHAK KETIGA)
-// Digunakan agar storage Supabase (1GB limit) tidak cepat penuh.
 // =========================================================================
-const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; // Ganti dengan "Cloud Name" dari dashboard Cloudinary Anda
-const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; // Ganti dengan "Upload Preset" tipe Unsigned milik Anda
+const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; 
+const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; 
 
 // --- DATA RUJUKAN ---
 const KELURAHAN_LIST = [
@@ -36,13 +34,11 @@ const getConditionColor = (condition) => {
   }
 };
 
-// --- HELPER: FORMAT NAMA KELURAHAN ---
 const formatKel = (nama) => {
   if (!nama) return '-';
   return /^(kel\.|kelurahan)\s/i.test(nama) ? nama : `Kel. ${nama}`;
 };
 
-// --- ALGORITMA MATEMATIKA KOORDINAT ---
 const getDistanceMeters = (lat1, lon1, lat2, lon2) => {
   const R = 6371e3; 
   const p1 = lat1 * Math.PI/180;
@@ -165,7 +161,7 @@ const LayerToggle = ({ active, color, onClick }) => (
   </div>
 );
 
-// --- KOMPONEN EXPORT VIDEO 3D DRONE (Murni Proses Render WebGL -> Video) ---
+// --- KOMPONEN EXPORT VIDEO 3D DRONE (DIBERSIHKAN DARI CDN FALLBACK) ---
 const DroneVideoExporter = ({ road, onClose }) => {
     const mapContainerRef = useRef(null);
     const [progress, setProgress] = useState(0);
@@ -174,7 +170,17 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     useEffect(() => {
         let isMounted = true;
-        if (!road || !road.realGps || road.realGps.length < 2) { setStatus('Data rute tidak valid untuk dirender.'); return; }
+        
+        // Cek jika library belum ditambahkan di index.html
+        if (!window.maplibregl) {
+            setStatus('MapLibre tidak ditemukan. Pastikan Anda sudah menambahkan script di index.html!');
+            return;
+        }
+
+        if (!road || !road.realGps || road.realGps.length < 2) { 
+            setStatus('Data rute tidak valid untuk dirender.'); 
+            return; 
+        }
         
         let mapInstance = null;
         let animationFrameId = null;
@@ -218,39 +224,61 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     mapInstance.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
                     mapInstance.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': 12, 'line-opacity': 0.8 } });
 
-                    const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; const ctx = outCanvas.getContext('2d');
+                    const outCanvas = document.createElement('canvas'); 
+                    outCanvas.width = 1280; 
+                    outCanvas.height = 720; 
+                    const ctx = outCanvas.getContext('2d');
+                    
                     const mapCanvas = mapInstance.getCanvas();
                     const outStream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null); 
                     
                     if (!outStream) { setStatus('Fitur Export tidak didukung browser ini.'); return; }
                     if (typeof MediaRecorder === 'undefined') { setStatus('MediaRecorder tidak didukung.'); return; }
 
-                    try { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); } 
-                    catch (e) { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); }
+                    try { 
+                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); 
+                    } catch (e) { 
+                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); 
+                    }
 
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                     mediaRecorder.onstop = () => {
                         if (!isMounted) return;
-                        const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
-                        setDownloadUrl(url); setStatus('Selesai!');
-                        const a = document.createElement('a'); a.href = url; a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        setDownloadUrl(url); 
+                        setStatus('Selesai!');
+                        
+                        const a = document.createElement('a'); 
+                        a.href = url; 
+                        a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; 
+                        document.body.appendChild(a); 
+                        a.click(); 
+                        document.body.removeChild(a);
                     };
 
-                    mediaRecorder.start(); setStatus('Merekam Animasi...');
-                    let startTime = null; const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
+                    mediaRecorder.start(); 
+                    setStatus('Merekam Animasi...');
+                    
+                    let startTime = null; 
+                    const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
                     let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
                     const animate = (timestamp) => {
                         if (!startTime) startTime = timestamp;
-                        let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
+                        let p = (timestamp - startTime) / duration; 
+                        if (p > 1) p = 1;
                         if (isMounted) setProgress(Math.round(p * 100));
 
                         const targetDist = p * totalDist;
                         let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                        const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
+                        const p1 = points[i]; 
+                        const p2 = points[Math.min(i + 1, points.length - 1)];
                         const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
                         const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                        
+                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
+                        const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
                         
                         if (i < points.length - 1) {
                             let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
@@ -259,116 +287,39 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         }
 
                         mapInstance.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
+                        
                         ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-                        const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
-                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
+                        const grad = ctx.createLinearGradient(0, 500, 0, 720); 
+                        grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); 
+                        ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
+                        
+                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; 
+                        ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
+                        
                         ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi Dominan: `, 50, 675);
                         ctx.fillStyle = getConditionColor(road.condition); ctx.fillText(`${road.condition}`, 240, 675);
                         ctx.fillStyle = '#cbd5e1'; ctx.fillText(` • Panjang: ${(totalDist/1000).toFixed(2)} km • Wilayah: ${formatKel(road.kelurahan)}`, 240 + ctx.measureText(road.condition).width, 675);
-                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                        
+                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); 
+                        ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
 
-                        if (p < 1) { animationFrameId = requestAnimationFrame(animate); } 
-                        else { setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); }
+                        if (p < 1) { 
+                            animationFrameId = requestAnimationFrame(animate); 
+                        } else { 
+                            setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); 
+                        }
                     };
                     setTimeout(() => { if(isMounted) animationFrameId = requestAnimationFrame(animate); }, 1000);
                 });
             } catch (err) {
                 if (!isMounted) return;
                 console.error(err);
-                if (err.name === 'SecurityError' || (err.message && err.message.includes('cross-origin'))) {
-                     setStatus('Browser memblokir Engine 3D. Silakan akses website via link Vercel langsung (bukan preview/iframe).');
-                } else {
-                     setStatus('Error internal menyiapkan engine 3D.');
-                }
+                setStatus('Error menyiapkan engine 3D. Pastikan WebGL didukung browser Anda.');
             }
         };
 
-        const loadMapLibre = () => {
-            if (window.maplibregl) {
-                initRenderer();
-                return;
-            }
-
-            setStatus('Mendownload Modul 3D...');
-
-            // Cegah duplikasi unduhan jika tombol diklik berulang kali
-            if (document.getElementById('maplibre-js-core')) {
-                return; 
-            }
-
-            // [SOLUSI UTAMA] Masking AMD / CommonJS
-            // Menghapus definisi module loader sementara waktu agar MapLibre GL 
-            // dipaksa menempel ke global window (window.maplibregl) dan tidak dibajak oleh sistem Preview.
-            const tempDefine = window.define;
-            const tempExports = window.exports;
-            const tempModule = window.module;
-            
-            window.define = undefined;
-            window.exports = undefined;
-            window.module = undefined;
-
-            const cdns = [
-                { js: 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js', css: 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css' },
-                { js: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js', css: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css' },
-                { js: 'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js', css: 'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.css' }
-            ];
-
-            const restoreEnv = () => {
-                window.define = tempDefine;
-                window.exports = tempExports;
-                window.module = tempModule;
-            };
-
-            const tryLoad = (index) => {
-                if (!isMounted) return;
-                if (index >= cdns.length) {
-                    restoreEnv();
-                    setStatus('Gagal memuat modul MapLibre. Cek koneksi / matikan Adblock.');
-                    return;
-                }
-
-                if (!document.getElementById(`maplibre-css-core`)) {
-                    const link = document.createElement('link');
-                    link.id = `maplibre-css-core`;
-                    link.rel = 'stylesheet';
-                    link.href = cdns[index].css;
-                    document.head.appendChild(link);
-                }
-
-                const script = document.createElement('script');
-                script.id = index === 0 ? 'maplibre-js-core' : `maplibre-js-fallback-${index}`;
-                script.src = cdns[index].js;
-                script.crossOrigin = 'anonymous';
-
-                script.onload = () => {
-                    restoreEnv(); // Segera kembalikan enviroment asli
-                    let attempts = 0;
-                    const checkInterval = setInterval(() => {
-                        if (!isMounted) { clearInterval(checkInterval); return; }
-                        if (window.maplibregl) {
-                            clearInterval(checkInterval);
-                            initRenderer();
-                        } else if (attempts > 20) {
-                            clearInterval(checkInterval);
-                            // Jika script terunduh tapi tetap gagal inisialisasi, coba CDN berikutnya
-                            tryLoad(index + 1);
-                        }
-                        attempts++;
-                    }, 200);
-                };
-
-                script.onerror = () => {
-                    // Coba CDN fallback jika gagal diunduh
-                    tryLoad(index + 1);
-                };
-
-                document.head.appendChild(script);
-            };
-
-            tryLoad(0);
-        };
-
-        loadMapLibre();
+        // Eksekusi langsung jika library sudah diload dari index.html
+        initRenderer();
 
         return () => {
             isMounted = false;
@@ -380,23 +331,18 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
-            
             <div className="relative bg-black rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-700 w-full max-w-[800px] aspect-video flex items-center justify-center">
-                {/* Container Peta yang "Tersembunyi" (Di-scale kecil untuk preview, tapi render aslinya 1280x720) 
-                  Ini penting agar kita mengekspor resolusi HD (720p) tanpa pecah.
-                */}
                 <div 
                     ref={mapContainerRef} 
                     style={{ width: '1280px', height: '720px', position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: 'scale(1)', zIndex: 1, pointerEvents: 'none', opacity: status === 'Selesai!' ? 0 : 1 }} 
                     className="origin-top-left"
                 ></div>
                 
-                {/* Overlay Text UI untuk pengguna */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-slate-900/40 backdrop-blur-[2px]">
                     {status !== 'Selesai!' ? (
                        <>
                          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 shadow-lg"></div>
-                         <h2 className="text-2xl font-black text-white drop-shadow-md">{status}</h2>
+                         <h2 className="text-2xl font-black text-white drop-shadow-md text-center px-4">{status}</h2>
                          <p className="text-slate-300 font-bold mt-2">Merender Video 720p HD... {progress}%</p>
                          <div className="w-64 h-3 bg-slate-800 rounded-full mt-4 overflow-hidden border border-slate-700"><div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${progress}%` }}></div></div>
                        </>
@@ -480,7 +426,6 @@ export default function App() {
     try { const draftsToSave = drafts.map(({ videoFile, photoFiles, ...safeDraft }) => safeDraft); localStorage.setItem('rmap_drafts', JSON.stringify(draftsToSave)); } catch (e) {}
   }, [drafts]);
 
-  // --- STATE ADMIN ---
   const initialKelurahanState = KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = true; return acc; }, {});
   const [searchQuery, setSearchQuery] = useState('');
   const [activeKelurahan, setActiveKelurahan] = useState(initialKelurahanState);
@@ -504,7 +449,6 @@ export default function App() {
   const [showSpeedControl, setShowSpeedControl] = useState(false);
   const [animIconType, setAnimIconType] = useState('car'); 
 
-  // --- STATE EXPORT VIDEO (DRONE VIEW) ---
   const [isExportingDroneVideo, setIsExportingDroneVideo] = useState(false);
 
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
@@ -566,7 +510,6 @@ export default function App() {
     tanah: filteredRoads.filter(r => r.jenisJalan === 'Tanah').length,
   };
 
-  // --- STATE SURVEYOR ---
   const [isRecording, setIsRecording] = useState(false);
   const [realGpsPoints, setRealGpsPoints] = useState([]);
   const [manualDrawnPoints, setManualDrawnPoints] = useState([]);
@@ -613,14 +556,19 @@ export default function App() {
   const videoRef = useRef(null); const streamRef = useRef(null); const watchIdRef = useRef(null);
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
+
+  // Status map (kini mengasumsikan map library di load dari HTML)
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
   useEffect(() => {
-    if (window.L) { setIsLeafletLoaded(true); } 
-    else if (!document.getElementById('leaflet-js-script')) {
-      const script = document.createElement('script'); script.id = 'leaflet-js-script'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => setIsLeafletLoaded(true); document.head.appendChild(script);
-    }
+    // Mengecek secara berkala apakah library dari index.html sudah di-load oleh browser
+    const checkMaps = setInterval(() => {
+        if (window.L) {
+            setIsLeafletLoaded(true);
+            clearInterval(checkMaps);
+        }
+    }, 500);
+    return () => clearInterval(checkMaps);
   }, []);
 
   const formatRoadData = (road) => {
@@ -645,7 +593,6 @@ export default function App() {
 
   useEffect(() => { if (!supabase) return; fetchRoads(); const intervalId = setInterval(() => { fetchRoads(); }, 15000); return () => clearInterval(intervalId); }, [supabase]);
 
-  // --- EFEK PETA ADMIN ---
   useEffect(() => {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
     
@@ -758,7 +705,6 @@ export default function App() {
     if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
   }, [isSidebarOpen, appRole]);
 
-  // --- EFEK: ANIMASI RUTE DI ADMIN ---
   useEffect(() => {
     let onInteractionStart = null; let onInteractionEnd = null;
     let activeTimeouts = []; let activeMarkers = [];
@@ -816,13 +762,9 @@ export default function App() {
            const animate = () => {
               if (currentIndex >= points.length) {
                  finishedCount++;
-                 if (finishedCount >= totalVehicles) { 
-                     setIsAnimPaused(true); 
-                     setIsAnimFinished(true); 
-                 }
+                 if (finishedCount >= totalVehicles) { setIsAnimPaused(true); setIsAnimFinished(true); }
                  return;
               }
-
               if (isAnimPausedRef.current) { activeTimeouts.push(setTimeout(animate, 100)); return; }
               
               const pt = points[currentIndex];
@@ -867,9 +809,7 @@ export default function App() {
        if (allRouteBounds.length > 0) {
            const isMobile = window.innerWidth < 768;
            map.fitBounds(window.L.latLngBounds(allRouteBounds), { 
-               paddingTopLeft: isMobile ? [20, 40] : [80, 80], 
-               paddingBottomRight: isMobile ? [20, 240] : [80, 180],
-               maxZoom: 18
+               paddingTopLeft: isMobile ? [20, 40] : [80, 80], paddingBottomRight: isMobile ? [20, 240] : [80, 180], maxZoom: 18
            });
        }
     }
@@ -884,7 +824,6 @@ export default function App() {
     };
   }, [isAnimatingMap, animatingRoadsList, animIconType]);
 
-  // --- PEMANTAU LOKASI SURVEYOR ---
   useEffect(() => {
       if (appRole !== 'surveyor') return;
       let watchId;
@@ -898,7 +837,6 @@ export default function App() {
       return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
   }, [appRole]);
 
-  // --- EFEK PETA DRAW MAP & PIN ---
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
     const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
@@ -995,7 +933,6 @@ export default function App() {
   }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
 
 
-  // --- FUNGSI UTILITI & PEREKAMAN GPS ---
   const startRealHardware = async () => {
     setMobileScreen('record'); 
     window.location.hash = '#/surveyor/record'; 
