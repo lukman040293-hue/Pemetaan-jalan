@@ -161,7 +161,7 @@ const LayerToggle = ({ active, color, onClick }) => (
   </div>
 );
 
-// --- KOMPONEN EXPORT VIDEO 3D DRONE (DIBERSIHKAN DARI CDN FALLBACK) ---
+// --- KOMPONEN EXPORT VIDEO 3D DRONE ---
 const DroneVideoExporter = ({ road, onClose }) => {
     const mapContainerRef = useRef(null);
     const [progress, setProgress] = useState(0);
@@ -170,17 +170,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     useEffect(() => {
         let isMounted = true;
-        
-        // Cek jika library belum ditambahkan di index.html
-        if (!window.maplibregl) {
-            setStatus('MapLibre tidak ditemukan. Pastikan Anda sudah menambahkan script di index.html!');
-            return;
-        }
-
-        if (!road || !road.realGps || road.realGps.length < 2) { 
-            setStatus('Data rute tidak valid untuk dirender.'); 
-            return; 
-        }
+        if (!road || !road.realGps || road.realGps.length < 2) { setStatus('Data rute tidak valid untuk dirender.'); return; }
         
         let mapInstance = null;
         let animationFrameId = null;
@@ -224,61 +214,39 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     mapInstance.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
                     mapInstance.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': 12, 'line-opacity': 0.8 } });
 
-                    const outCanvas = document.createElement('canvas'); 
-                    outCanvas.width = 1280; 
-                    outCanvas.height = 720; 
-                    const ctx = outCanvas.getContext('2d');
-                    
+                    const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; const ctx = outCanvas.getContext('2d');
                     const mapCanvas = mapInstance.getCanvas();
                     const outStream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null); 
                     
                     if (!outStream) { setStatus('Fitur Export tidak didukung browser ini.'); return; }
                     if (typeof MediaRecorder === 'undefined') { setStatus('MediaRecorder tidak didukung.'); return; }
 
-                    try { 
-                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); 
-                    } catch (e) { 
-                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); 
-                    }
+                    try { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); } 
+                    catch (e) { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); }
 
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                     mediaRecorder.onstop = () => {
                         if (!isMounted) return;
-                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                        const url = URL.createObjectURL(blob);
-                        setDownloadUrl(url); 
-                        setStatus('Selesai!');
-                        
-                        const a = document.createElement('a'); 
-                        a.href = url; 
-                        a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; 
-                        document.body.appendChild(a); 
-                        a.click(); 
-                        document.body.removeChild(a);
+                        const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
+                        setDownloadUrl(url); setStatus('Selesai!');
+                        const a = document.createElement('a'); a.href = url; a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     };
 
-                    mediaRecorder.start(); 
-                    setStatus('Merekam Animasi...');
-                    
-                    let startTime = null; 
-                    const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
+                    mediaRecorder.start(); setStatus('Merekam Animasi...');
+                    let startTime = null; const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
                     let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
                     const animate = (timestamp) => {
                         if (!startTime) startTime = timestamp;
-                        let p = (timestamp - startTime) / duration; 
-                        if (p > 1) p = 1;
+                        let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
                         if (isMounted) setProgress(Math.round(p * 100));
 
                         const targetDist = p * totalDist;
                         let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                        const p1 = points[i]; 
-                        const p2 = points[Math.min(i + 1, points.length - 1)];
+                        const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
                         const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
                         const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                        
-                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
-                        const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
                         
                         if (i < points.length - 1) {
                             let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
@@ -287,39 +255,53 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         }
 
                         mapInstance.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
-                        
                         ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-                        const grad = ctx.createLinearGradient(0, 500, 0, 720); 
-                        grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); 
-                        ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
-                        
-                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; 
-                        ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
-                        
+                        const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
+                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
                         ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi Dominan: `, 50, 675);
                         ctx.fillStyle = getConditionColor(road.condition); ctx.fillText(`${road.condition}`, 240, 675);
                         ctx.fillStyle = '#cbd5e1'; ctx.fillText(` • Panjang: ${(totalDist/1000).toFixed(2)} km • Wilayah: ${formatKel(road.kelurahan)}`, 240 + ctx.measureText(road.condition).width, 675);
-                        
-                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); 
-                        ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
 
-                        if (p < 1) { 
-                            animationFrameId = requestAnimationFrame(animate); 
-                        } else { 
-                            setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); 
-                        }
+                        if (p < 1) { animationFrameId = requestAnimationFrame(animate); } 
+                        else { setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); }
                     };
                     setTimeout(() => { if(isMounted) animationFrameId = requestAnimationFrame(animate); }, 1000);
                 });
             } catch (err) {
                 if (!isMounted) return;
-                console.error(err);
-                setStatus('Error menyiapkan engine 3D. Pastikan WebGL didukung browser Anda.');
+                setStatus('Error internal WebGL / Keamanan Browser.');
             }
         };
 
-        // Eksekusi langsung jika library sudah diload dari index.html
-        initRenderer();
+        const loadMapLibre = () => {
+            if (window.maplibregl) { initRenderer(); return; }
+            if (document.getElementById('maplibre-js-core')) return;
+
+            if (!document.getElementById('maplibre-css-core')) {
+                const link = document.createElement('link'); link.id = 'maplibre-css-core'; link.rel = 'stylesheet';
+                link.href = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css';
+                document.head.appendChild(link);
+            }
+
+            const script = document.createElement('script');
+            script.id = 'maplibre-js-core';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js';
+            
+            script.onload = () => {
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    if (!isMounted) { clearInterval(checkInterval); return; }
+                    if (window.maplibregl) { clearInterval(checkInterval); initRenderer(); } 
+                    else if (attempts > 20) { clearInterval(checkInterval); setStatus('Gagal inisialisasi MapLibre.'); }
+                    attempts++;
+                }, 200);
+            };
+            script.onerror = () => { setStatus('Gagal mengunduh modul 3D.'); };
+            document.head.appendChild(script);
+        };
+
+        loadMapLibre();
 
         return () => {
             isMounted = false;
@@ -557,18 +539,35 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
 
-  // Status map (kini mengasumsikan map library di load dari HTML)
+  // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
   useEffect(() => {
-    // Mengecek secara berkala apakah library dari index.html sudah di-load oleh browser
-    const checkMaps = setInterval(() => {
-        if (window.L) {
+    if (window.L) {
+        setIsLeafletLoaded(true);
+        return;
+    }
+
+    if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+        document.head.appendChild(link);
+    }
+
+    if (!document.getElementById('leaflet-js-script')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-js-script';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+        script.onload = () => {
             setIsLeafletLoaded(true);
-            clearInterval(checkMaps);
+        };
+        script.onerror = () => {
+            console.error("Gagal memuat Leaflet");
         }
-    }, 500);
-    return () => clearInterval(checkMaps);
+        document.head.appendChild(script);
+    }
   }, []);
 
   const formatRoadData = (road) => {
