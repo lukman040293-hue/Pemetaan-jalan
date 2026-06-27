@@ -28,10 +28,10 @@ const KELURAHAN_LIST = [
 
 const getConditionColor = (condition) => {
   switch (condition) {
-    case 'Baik': return '#10B981';         // Hijau
-    case 'Rusak Ringan': return '#FBBF24'; // Kuning/Amber
-    case 'Rusak Sedang': return '#F97316'; // Oranye
-    case 'Rusak Parah': return '#EF4444';  // Merah
+    case 'Baik': return '#10B981';         
+    case 'Rusak Ringan': return '#FBBF24'; 
+    case 'Rusak Sedang': return '#F97316'; 
+    case 'Rusak Parah': return '#EF4444';  
     default: return '#6B7280';
   }
 };
@@ -249,7 +249,7 @@ export default function App() {
     try { const draftsToSave = drafts.map(({ videoFile, photoFiles, ...safeDraft }) => safeDraft); localStorage.setItem('rmap_drafts', JSON.stringify(draftsToSave)); } catch (e) {}
   }, [drafts]);
 
-  // --- STATE ADMIN BARU (DAFTAR LAYER) ---
+  // --- STATE ADMIN ---
   const initialKelurahanState = KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = true; return acc; }, {});
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -274,8 +274,16 @@ export default function App() {
   const [showSpeedControl, setShowSpeedControl] = useState(false);
   const [animIconType, setAnimIconType] = useState('car'); 
 
+  // --- NEW STATES FOR 3D & RECORDING ---
+  const [is3DMode, setIs3DMode] = useState(false);
+  const [isRecordingScreen, setIsRecordingScreen] = useState(false);
+  const isRecordingScreenRef = useRef(false);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
+  useEffect(() => { isRecordingScreenRef.current = isRecordingScreen; }, [isRecordingScreen]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
 
@@ -285,7 +293,6 @@ export default function App() {
   const adminHighlightLayerGroupRef = useRef(null);
   const hasFittedAdminMapRef = useRef(false);
 
-  // Memastikan peta mengkalkulasi ulang lebar dan posisinya setiap kali filter atau tampilan awal diakses
   useEffect(() => {
       if (appRole === 'admin') hasFittedAdminMapRef.current = false;
   }, [appRole, searchQuery, activeKelurahan, activeConditions, activeJenis]);
@@ -302,7 +309,6 @@ export default function App() {
   const toggleAdminRouteSelection = (id) => { setSelectedAdminRouteIds(prev => prev.includes(id) ? prev.filter(rId => rId !== id) : [...prev, id]); };
   const closeAdminModal = () => { if (window.location.hash === '#/admin/detail') window.history.back(); else setSelectedRoad(null); };
 
-  // --- FILTERING LOGIC SECARA GLOBAL ---
   const filteredRoads = syncedRoads.filter(road => {
     const matchKel = road.kelurahan ? activeKelurahan[road.kelurahan] !== false : true;
     const matchCond = activeConditions[road.condition] !== false;
@@ -311,7 +317,6 @@ export default function App() {
     return matchKel && matchCond && matchJenis && matchSearch;
   });
 
-  // Pencarian khusus untuk daftar "Jalan" agar tidak hilang saat layer dimatikan
   const searchedRoads = syncedRoads.filter(road => {
     return road.name.toLowerCase().includes(searchQuery.toLowerCase()) || (road.kelurahan && road.kelurahan.toLowerCase().includes(searchQuery.toLowerCase()));
   });
@@ -526,6 +531,74 @@ export default function App() {
     if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
   }, [isSidebarOpen, appRole]);
 
+  // --- LOGIKA SCREEN RECORDING EXPORT VIDEO ---
+  const stopScreenRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+    }
+  };
+
+  const startScreenRecording = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { displaySurface: 'browser' },
+            audio: false
+        });
+        
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        mediaRecorderRef.current = mediaRecorder;
+        recordedChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Export_Rute_3D_${new Date().getTime()}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            setIsRecordingScreen(false);
+            setIs3DMode(false); // Kembalikan ke normal
+            stream.getTracks().forEach(track => track.stop());
+            showToast("Video berhasil diekspor!");
+        };
+
+        // Jika user stop manual lewat notifikasi browser
+        stream.getVideoTracks()[0].onended = () => {
+            stopScreenRecording();
+        };
+
+        mediaRecorder.start();
+        setIsRecordingScreen(true);
+        
+        // Auto masuk mode 3D & Play Animasi
+        setIs3DMode(true);
+        setIsAnimPaused(false);
+        showToast("Sedang merekam layar. Animasi dimulai!");
+        
+    } catch (err) {
+        showToast("Batal merekam atau izin ditolak.");
+        setIsRecordingScreen(false);
+    }
+  };
+
+  // Listener untuk menghentikan rekaman saat animasi selesai
+  useEffect(() => {
+    const onAnimFinish = () => {
+        if (isRecordingScreenRef.current) {
+            setTimeout(() => { stopScreenRecording(); }, 1500); // Beri delay 1.5 dtk sebelum cut
+        }
+    };
+    window.addEventListener('rmap-anim-finished', onAnimFinish);
+    return () => window.removeEventListener('rmap-anim-finished', onAnimFinish);
+  }, []);
+
+
   // --- EFEK: ANIMASI RUTE DI ADMIN ---
   useEffect(() => {
     let onInteractionStart = null; let onInteractionEnd = null;
@@ -592,7 +665,11 @@ export default function App() {
            const animate = () => {
               if (currentIndex >= points.length) {
                  finishedCount++;
-                 if (finishedCount >= totalVehicles) { setIsAnimPaused(true); setIsAnimFinished(true); }
+                 if (finishedCount >= totalVehicles) { 
+                     setIsAnimPaused(true); 
+                     setIsAnimFinished(true); 
+                     window.dispatchEvent(new Event('rmap-anim-finished'));
+                 }
                  return;
               }
 
@@ -640,7 +717,6 @@ export default function App() {
        if (allRouteBounds.length > 0) {
            const isMobile = window.innerWidth < 768;
            map.fitBounds(window.L.latLngBounds(allRouteBounds), { 
-               // Padding kiri-atas & kanan-bawah disesuaikan agar lebih proporsional di HP (Zoom-In lebih dekat)
                paddingTopLeft: isMobile ? [20, 40] : [80, 80], 
                paddingBottomRight: isMobile ? [20, 240] : [80, 180],
                maxZoom: 18
@@ -771,7 +847,7 @@ export default function App() {
 
   // --- FUNGSI UTILITI & PEREKAMAN GPS ---
   const startRealHardware = async () => {
-    setMobileScreen('record'); // Mencegah race condition dari delay hash route
+    setMobileScreen('record'); 
     window.location.hash = '#/surveyor/record'; 
     setRealGpsPoints([]); setIsRecording(true); 
     setRecordingStatus('locating'); setRecordTab('map'); 
@@ -924,7 +1000,6 @@ export default function App() {
     setEditingDraftId(draft.id); window.location.hash = '#/surveyor/form';     
   };
 
-  // --- LOGIKA HAPUS DENGAN MODAL ---
   const executeDeleteDraft = (id) => {
       setDrafts(prev => prev.filter(d => d.id !== id));
       setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); 
@@ -1099,13 +1174,11 @@ export default function App() {
   const handlePrint = async () => {
     if (!selectedRoad) return;
 
-    // Jika tidak ada video, langsung cetak tanpa delay agar lolos blokir Popup HP
     if (!selectedRoad.videoUrl || videoSnapshot.length > 0) {
        window.print();
        return;
     }
 
-    // Ekstraksi 4 frame jika video ada
     showToast("Mengekstrak frame video untuk cetak...");
     let snapshots = [];
     try {
@@ -1132,7 +1205,7 @@ export default function App() {
     } catch (err) {}
     
     setVideoSnapshot(snapshots); 
-    setTimeout(() => { window.print(); }, 400); // Jeda kecil agar React merender 4 foto ke DOM cetakan
+    setTimeout(() => { window.print(); }, 400); 
   };
 
   return (
@@ -1154,7 +1227,6 @@ export default function App() {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Dark Scrollbar untuk Sidebar Admin */
         .custom-scrollbar-dark::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar-dark::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar-dark::-webkit-scrollbar-thumb { background-color: #4a5568; border-radius: 10px; }
@@ -1166,7 +1238,6 @@ export default function App() {
         .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
         .leaflet-touch .leaflet-control-layers-toggle { width: 34px !important; height: 34px !important; background-size: 18px !important; }
         
-        /* OVERRIDE DESAIN POPUP LEAFLET AGAR LEBIH RAPAT DAN SUDUT MEMBULAT */
         .leaflet-popup-content-wrapper { border-radius: 12px !important; padding: 0 !important; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; }
         .leaflet-popup-content { margin: 14px 16px !important; width: 260px !important; line-height: 1.4 !important; }
         .leaflet-popup-close-button { top: 8px !important; right: 8px !important; color: #ef4444 !important; font-weight: bold !important; font-size: 16px !important; }
@@ -1174,12 +1245,10 @@ export default function App() {
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         
-        /* CLASS CUSTOM UNTUK MENGIMBANGI POSISI MODAL */
         @media (min-width: 768px) {
             .modal-offset-sidebar { padding-left: 356px !important; }
         }
 
-        /* --- ARSITEKTUR KHUSUS CETAK PDF AGAR JALAN DI HP --- */
         @media print {
           @page { size: A4; margin: 10mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1778,7 +1847,7 @@ export default function App() {
                              <button onClick={() => {
                                  let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : sortedRoads.filter(r => r.realGps && r.realGps.length > 1);
                                  if(validRoads.length === 0) return showToast("Tidak ada rute valid.");
-                                 setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(true); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
+                                 setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(true); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false); setIs3DMode(false);
                                  if(window.innerWidth < 768) setIsSidebarOpen(false);
                              }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-[11px] tracking-wider font-black shadow-md mb-3 transition-colors">▶ PLAY ANIMASI ({selectedAdminRouteIds.length > 0 ? selectedAdminRouteIds.length : sortedRoads.length})</button>
 
@@ -1833,12 +1902,24 @@ export default function App() {
             </aside>
 
             {/* --- MAIN CONTENT (MAP & WIDGETS) --- */}
-          <main className="flex-1 relative w-full h-full">
+          <main className={`flex-1 relative w-full h-full transition-colors duration-1000 ${is3DMode ? 'bg-[#0f172a]' : 'bg-transparent'}`}>
             
-            {/* Peta Container */}
-            <div className="absolute inset-0 w-full h-full z-0">
-               <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
-               {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
+            {/* Peta Container dengan dukungan Efek 3D */}
+            <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden" style={{ perspective: '1200px' }}>
+               <div 
+                   className="w-full h-full relative"
+                   style={{ 
+                       transform: is3DMode ? 'rotateX(55deg) scale(1.35) translateY(-5%)' : 'rotateX(0deg) scale(1) translateY(0)', 
+                       transformStyle: 'preserve-3d',
+                       transition: 'transform 1.2s cubic-bezier(0.25, 1, 0.5, 1), border-radius 1.2s, box-shadow 1.2s',
+                       borderRadius: is3DMode ? '24px' : '0',
+                       boxShadow: is3DMode ? '0 30px 60px rgba(0,0,0,0.8)' : 'none',
+                       overflow: 'hidden'
+                   }}
+               >
+                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
+               </div>
             </div>
           </main>
         </div>
@@ -1883,7 +1964,7 @@ export default function App() {
                 <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
                   <div className="flex flex-wrap gap-2 justify-end mb-4">
                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); setIs3DMode(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
                        <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
                        <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
@@ -1911,7 +1992,7 @@ export default function App() {
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
-             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[350px] z-[2000] flex flex-col pointer-events-none print-hidden">
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
                  {isAnimControlMinimized ? (
                      <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
@@ -1920,6 +2001,7 @@ export default function App() {
                  ) : (
                      <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-3">
                          
+                         {/* --- HEADER KONTROL --- */}
                          <div className="flex justify-between items-center w-full">
                              <div className="flex gap-2 items-center">
                                  {isAnimFinished ? (
@@ -1948,12 +2030,13 @@ export default function App() {
                                  <button onClick={() => setIsAnimControlMinimized(true)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full shrink-0 hover:bg-slate-200 transition-colors" title="Sembunyikan">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
                                  </button>
-                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
+                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); setIs3DMode(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                  </button>
                              </div>
                          </div>
                          
+                         {/* --- INFO KENDARAAN & JARAK --- */}
                          <div className="flex gap-2 w-full items-stretch">
                              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 shadow-inner">
                                  {animatingRoadsList.length > 1 ? (
@@ -1973,8 +2056,9 @@ export default function App() {
                              </div>
                          </div>
 
+                         {/* --- KONTROL SPEED --- */}
                          {showSpeedControl && (
-                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full mt-1">
+                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
                                  <div className="flex items-center space-x-2 md:space-x-3 mb-3">
                                      <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-6 h-6 bg-white text-slate-800 rounded-full font-black border border-slate-300">-</button>
                                      <input type="range" min="0.25" max="3.0" step="0.25" value={animationSpeedMultiplier} onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))} className="flex-1 h-1.5 bg-slate-300 rounded-lg" style={{ accentColor: '#2563eb' }}/>
@@ -1987,6 +2071,19 @@ export default function App() {
                                  </div>
                              </div>
                          )}
+
+                         {/* --- NEW: TOMBOL 3D & RECORDING --- */}
+                         <div className="flex gap-2 w-full items-stretch pt-1">
+                             <button onClick={() => setIs3DMode(!is3DMode)} className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 ${is3DMode ? 'bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.513 1.324 1.513 3.518 0 4.842a3.75 3.75 0 01-.837.552c-.676.328-1.028.774-1.028 1.152v.75a.75.75 0 01-1.5 0v-.75c0-1.279 1.06-2.107 1.875-2.502.182-.088.351-.199.503-.331.89-.777.89-2.038 0-2.815zM12 15a.75.75 0 110 1.5.75.75 0 010-1.5z" clipRule="evenodd" /></svg>
+                                 {is3DMode ? 'Matikan 3D' : 'Tampilan 3D'}
+                             </button>
+                             <button onClick={startScreenRecording} disabled={isRecordingScreen} className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 ${isRecordingScreen ? 'bg-rose-500 text-white border-rose-600 animate-pulse' : 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200'}`}>
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>
+                                 {isRecordingScreen ? 'Merekam Video...' : 'Export Video'}
+                             </button>
+                         </div>
+
                      </div>
                  )}
              </div>
