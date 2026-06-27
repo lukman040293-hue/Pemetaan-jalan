@@ -283,22 +283,92 @@ const DroneVideoExporter = ({ road, onClose }) => {
             }
         };
 
-        if (window.maplibregl) {
-            initRenderer();
-        } else {
-            let attempts = 0;
-            const checkInterval = setInterval(() => {
-                if (!isMounted) { clearInterval(checkInterval); return; }
-                attempts++;
-                if (window.maplibregl) {
-                    clearInterval(checkInterval);
-                    initRenderer();
-                } else if (attempts >= 30) { // Timeout setelah 15 detik
-                    clearInterval(checkInterval);
-                    setStatus('Gagal memuat modul MapLibre. Cek koneksi Anda.');
+        const loadMapLibre = () => {
+            if (window.maplibregl) {
+                initRenderer();
+                return;
+            }
+
+            setStatus('Mendownload Modul 3D...');
+
+            // Cegah duplikasi unduhan jika tombol diklik berulang kali
+            if (document.getElementById('maplibre-js-core')) {
+                return; 
+            }
+
+            // [SOLUSI UTAMA] Masking AMD / CommonJS
+            // Menghapus definisi module loader sementara waktu agar MapLibre GL 
+            // dipaksa menempel ke global window (window.maplibregl) dan tidak dibajak oleh sistem Preview.
+            const tempDefine = window.define;
+            const tempExports = window.exports;
+            const tempModule = window.module;
+            
+            window.define = undefined;
+            window.exports = undefined;
+            window.module = undefined;
+
+            const cdns = [
+                { js: 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js', css: 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css' },
+                { js: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js', css: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css' },
+                { js: 'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js', css: 'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.css' }
+            ];
+
+            const restoreEnv = () => {
+                window.define = tempDefine;
+                window.exports = tempExports;
+                window.module = tempModule;
+            };
+
+            const tryLoad = (index) => {
+                if (!isMounted) return;
+                if (index >= cdns.length) {
+                    restoreEnv();
+                    setStatus('Gagal memuat modul MapLibre. Cek koneksi / matikan Adblock.');
+                    return;
                 }
-            }, 500);
-        }
+
+                if (!document.getElementById(`maplibre-css-core`)) {
+                    const link = document.createElement('link');
+                    link.id = `maplibre-css-core`;
+                    link.rel = 'stylesheet';
+                    link.href = cdns[index].css;
+                    document.head.appendChild(link);
+                }
+
+                const script = document.createElement('script');
+                script.id = index === 0 ? 'maplibre-js-core' : `maplibre-js-fallback-${index}`;
+                script.src = cdns[index].js;
+                script.crossOrigin = 'anonymous';
+
+                script.onload = () => {
+                    restoreEnv(); // Segera kembalikan enviroment asli
+                    let attempts = 0;
+                    const checkInterval = setInterval(() => {
+                        if (!isMounted) { clearInterval(checkInterval); return; }
+                        if (window.maplibregl) {
+                            clearInterval(checkInterval);
+                            initRenderer();
+                        } else if (attempts > 20) {
+                            clearInterval(checkInterval);
+                            // Jika script terunduh tapi tetap gagal inisialisasi, coba CDN berikutnya
+                            tryLoad(index + 1);
+                        }
+                        attempts++;
+                    }, 200);
+                };
+
+                script.onerror = () => {
+                    // Coba CDN fallback jika gagal diunduh
+                    tryLoad(index + 1);
+                };
+
+                document.head.appendChild(script);
+            };
+
+            tryLoad(0);
+        };
+
+        loadMapLibre();
 
         return () => {
             isMounted = false;
@@ -550,31 +620,6 @@ export default function App() {
     else if (!document.getElementById('leaflet-js-script')) {
       const script = document.createElement('script'); script.id = 'leaflet-js-script'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.onload = () => setIsLeafletLoaded(true); document.head.appendChild(script);
-    }
-
-    if (!window.maplibregl && !document.getElementById('maplibre-core-script')) {
-      const loadMapLibreGlobal = async () => {
-        const cdns = [
-          'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js',
-          'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js',
-          'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js'
-        ];
-        for (let i = 0; i < cdns.length; i++) {
-          try {
-            await new Promise((resolve, reject) => {
-              const script = document.createElement('script');
-              script.id = i === 0 ? 'maplibre-core-script' : 'maplibre-fallback-' + i;
-              script.src = cdns[i];
-              script.onload = () => { if (window.maplibregl) resolve(); else reject(); };
-              script.onerror = reject;
-              document.head.appendChild(script);
-            });
-            const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = cdns[i].replace('.js', '.css'); document.head.appendChild(link);
-            break; 
-          } catch (err) { console.warn(`Gagal memuat MapLibre dari CDN ${i+1}`); }
-        }
-      };
-      loadMapLibreGlobal();
     }
   }, []);
 
