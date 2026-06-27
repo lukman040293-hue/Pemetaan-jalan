@@ -173,6 +173,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const [downloadUrl, setDownloadUrl] = useState(null);
 
     useEffect(() => {
+        let isMounted = true;
         if (!road || !road.realGps || road.realGps.length < 2) { setStatus('Data rute tidak valid untuk dirender.'); return; }
         
         let mapInstance = null;
@@ -181,11 +182,11 @@ const DroneVideoExporter = ({ road, onClose }) => {
         let recordedChunks = [];
 
         const initRenderer = () => {
+            if (!isMounted) return;
             try {
                 setStatus('Menyiapkan Peta...');
                 const points = road.realGps;
                 
-                // Hitung jarak kumulatif antar titik
                 let cumulativeDistances = [0];
                 let totalDist = 0;
                 for (let i = 1; i < points.length; i++) {
@@ -194,7 +195,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     cumulativeDistances.push(totalDist);
                 }
 
-                // Inisialisasi MapLibre GL dengan source Citra Satelit yang menunjang CORS (Esri)
                 mapInstance = new window.maplibregl.Map({
                     container: mapContainerRef.current,
                     style: {
@@ -212,181 +212,96 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 });
 
                 mapInstance.on('load', () => {
+                    if (!isMounted) return;
                     setStatus('Menyiapkan Render...');
                     
-                    // Tambahkan Rute Jalur di Peta 3D
-                    mapInstance.addSource('route', {
-                        'type': 'geojson',
-                        'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } }
-                    });
-                    mapInstance.addLayer({
-                        'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' },
-                        'paint': { 'line-color': getConditionColor(road.condition), 'line-width': 12, 'line-opacity': 0.8 }
-                    });
+                    mapInstance.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
+                    mapInstance.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': 12, 'line-opacity': 0.8 } });
 
-                    // Siapkan External Canvas untuk Watermark + Video Frame
-                    const outCanvas = document.createElement('canvas');
-                    outCanvas.width = 1280; outCanvas.height = 720;
-                    const ctx = outCanvas.getContext('2d');
-                    
-                    // Ambil stream WebGL MapLibre
+                    const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; const ctx = outCanvas.getContext('2d');
                     const mapCanvas = mapInstance.getCanvas();
                     const outStream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null); 
                     
-                    if (!outStream) {
-                        setStatus('Fitur Export tidak didukung di browser ini.');
-                        return;
-                    }
+                    if (!outStream) { setStatus('Fitur Export tidak didukung browser ini.'); return; }
+                    if (typeof MediaRecorder === 'undefined') { setStatus('MediaRecorder tidak didukung.'); return; }
 
-                    if (typeof MediaRecorder === 'undefined') {
-                        setStatus('MediaRecorder tidak didukung di browser ini.');
-                        return;
-                    }
-
-                    try {
-                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' });
-                    } catch (e) {
-                        mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' });
-                    }
+                    try { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); } 
+                    catch (e) { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); }
 
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                     mediaRecorder.onstop = () => {
-                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                        const url = URL.createObjectURL(blob);
-                        setDownloadUrl(url);
-                        setStatus('Selesai!');
-                        
-                        // Auto Download
-                        const a = document.createElement('a'); a.href = url; a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`;
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        if (!isMounted) return;
+                        const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
+                        setDownloadUrl(url); setStatus('Selesai!');
+                        const a = document.createElement('a'); a.href = url; a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     };
 
-                    mediaRecorder.start();
-                    setStatus('Merekam Animasi...');
-
-                    // Animasi Kamera
-                    let startTime = null;
-                    const duration = Math.min(25000, Math.max(8000, totalDist * 10)); // Waktu tempuh dinamis berdasarkan jarak
+                    mediaRecorder.start(); setStatus('Merekam Animasi...');
+                    let startTime = null; const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
                     let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
                     const animate = (timestamp) => {
                         if (!startTime) startTime = timestamp;
-                        const elapsed = timestamp - startTime;
-                        let p = elapsed / duration;
-                        if (p > 1) p = 1;
-                        setProgress(Math.round(p * 100));
+                        let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
+                        if (isMounted) setProgress(Math.round(p * 100));
 
                         const targetDist = p * totalDist;
                         let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                        
-                        const p1 = points[i];
-                        const p2 = points[Math.min(i + 1, points.length - 1)];
+                        const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
                         const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
                         const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-
-                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress;
-                        const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
                         
                         if (i < points.length - 1) {
-                            let targetBearing = getBearing(p1.lat, p1.lng, p2.lat, p2.lng);
-                            let diff = targetBearing - currentSmoothBearing;
+                            let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
                             if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                            currentSmoothBearing += diff * 0.08; // Smooth camera rotation
+                            currentSmoothBearing += diff * 0.08; 
                         }
 
                         mapInstance.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
-
-                        // -- GABUNGKAN PETA + WATERMARK KE CANVAS RENDER --
                         ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-                        
-                        // Dark Gradient Overlay bawah
-                        const grad = ctx.createLinearGradient(0, 500, 0, 720);
-                        grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)');
-                        ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
-
-                        // Teks Info Rute
-                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
-                        ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
-                        
-                        ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1';
-                        ctx.fillText(`Kondisi Dominan: `, 50, 675);
+                        const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
+                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
+                        ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi Dominan: `, 50, 675);
                         ctx.fillStyle = getConditionColor(road.condition); ctx.fillText(`${road.condition}`, 240, 675);
                         ctx.fillStyle = '#cbd5e1'; ctx.fillText(` • Panjang: ${(totalDist/1000).toFixed(2)} km • Wilayah: ${formatKel(road.kelurahan)}`, 240 + ctx.measureText(road.condition).width, 675);
-                        
-                        // Progress Bar
-                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10);
-                        ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
 
                         if (p < 1) { animationFrameId = requestAnimationFrame(animate); } 
-                        else { setTimeout(() => { if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); }
+                        else { setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); }
                     };
-
-                    // Beri jeda 1 detik agar peta maplibre memuat gambar pertama, lalu mulai rekam
-                    setTimeout(() => { animationFrameId = requestAnimationFrame(animate); }, 1000);
+                    setTimeout(() => { if(isMounted) animationFrameId = requestAnimationFrame(animate); }, 1000);
                 });
             } catch (err) {
+                if (!isMounted) return;
                 console.error(err);
-                setStatus('Error menyiapkan engine 3D.');
-            }
-        };
-
-        // --- SISTEM FALLBACK CDN MAPLIBRE ---
-        // Jika salah satu CDN diblokir adblock/firewall, akan otomatis mencoba CDN lain.
-        const loadMapLibre = () => {
-            if (window.maplibregl) {
-                initRenderer();
-                return;
-            }
-
-            const cssUrls = [
-                'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css',
-                'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css',
-                'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.css'
-            ];
-            
-            const jsUrls = [
-                'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js',
-                'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js'
-            ];
-
-            if (!document.getElementById('maplibre-css')) {
-                const link = document.createElement('link');
-                link.id = 'maplibre-css';
-                link.rel = 'stylesheet';
-                link.href = cssUrls[0];
-                document.head.appendChild(link);
-            }
-
-            const loadScript = (index) => {
-                if (index >= jsUrls.length) {
-                    setStatus('Gagal memuat modul MapLibre. Matikan Adblock / VPN Anda.');
-                    return;
+                if (err.name === 'SecurityError' || (err.message && err.message.includes('cross-origin'))) {
+                     setStatus('Browser memblokir Engine 3D. Silakan akses website via link Vercel langsung (bukan preview/iframe).');
+                } else {
+                     setStatus('Error internal menyiapkan engine 3D.');
                 }
-                
-                const script = document.createElement('script');
-                script.src = jsUrls[index];
-                script.crossOrigin = 'anonymous';
-                
-                script.onload = () => {
-                    if (window.maplibregl) initRenderer();
-                    else loadScript(index + 1); // Coba index berikutnya jika objek tidak terdeteksi
-                };
-                
-                script.onerror = () => {
-                    console.warn(`Gagal memuat MapLibre dari CDN ${index + 1}, mencoba alternatif...`);
-                    loadScript(index + 1); // Coba CDN alternatif
-                };
-                
-                document.head.appendChild(script);
-            };
-
-            loadScript(0);
+            }
         };
 
-        loadMapLibre();
+        if (window.maplibregl) {
+            initRenderer();
+        } else {
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+                if (!isMounted) { clearInterval(checkInterval); return; }
+                attempts++;
+                if (window.maplibregl) {
+                    clearInterval(checkInterval);
+                    initRenderer();
+                } else if (attempts >= 30) { // Timeout setelah 15 detik
+                    clearInterval(checkInterval);
+                    setStatus('Gagal memuat modul MapLibre. Cek koneksi Anda.');
+                }
+            }, 500);
+        }
 
         return () => {
+            isMounted = false;
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
             if (mapInstance) mapInstance.remove();
@@ -631,9 +546,36 @@ export default function App() {
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
   useEffect(() => {
-    if (window.L) { setIsLeafletLoaded(true); return; }
-    const script = document.createElement('script'); script.id = 'leaflet-js-script'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => setIsLeafletLoaded(true); document.head.appendChild(script);
+    if (window.L) { setIsLeafletLoaded(true); } 
+    else if (!document.getElementById('leaflet-js-script')) {
+      const script = document.createElement('script'); script.id = 'leaflet-js-script'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => setIsLeafletLoaded(true); document.head.appendChild(script);
+    }
+
+    if (!window.maplibregl && !document.getElementById('maplibre-core-script')) {
+      const loadMapLibreGlobal = async () => {
+        const cdns = [
+          'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js',
+          'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js',
+          'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js'
+        ];
+        for (let i = 0; i < cdns.length; i++) {
+          try {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.id = i === 0 ? 'maplibre-core-script' : 'maplibre-fallback-' + i;
+              script.src = cdns[i];
+              script.onload = () => { if (window.maplibregl) resolve(); else reject(); };
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+            const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = cdns[i].replace('.js', '.css'); document.head.appendChild(link);
+            break; 
+          } catch (err) { console.warn(`Gagal memuat MapLibre dari CDN ${i+1}`); }
+        }
+      };
+      loadMapLibreGlobal();
+    }
   }, []);
 
   const formatRoadData = (road) => {
