@@ -330,12 +330,29 @@ const DroneVideoExporter = ({ road, onClose }) => {
             }
         };
 
-        // Inject MapLibre Script jika belum ada
+        // Inject MapLibre Script jika belum ada (Menggunakan cdnjs karena jauh lebih stabil)
         if (!window.maplibregl) {
-            if (!document.getElementById('maplibre-css')) { const link = document.createElement('link'); link.id = 'maplibre-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css'; document.head.appendChild(link); }
-            const script = document.createElement('script'); script.src = 'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js';
-            script.onload = initRenderer; script.onerror = () => setStatus('Gagal memuat modul MapLibre.'); document.head.appendChild(script);
-        } else { initRenderer(); }
+            if (!document.getElementById('maplibre-css')) { 
+                const link = document.createElement('link'); 
+                link.id = 'maplibre-css'; 
+                link.rel = 'stylesheet'; 
+                link.href = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css'; 
+                document.head.appendChild(link); 
+            }
+            const script = document.createElement('script'); 
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js';
+            script.crossOrigin = 'anonymous'; // Menghindari isu Strict CORS di beberapa hosting
+            
+            script.onload = () => {
+                if(window.maplibregl) initRenderer();
+                else setStatus('Modul MapLibre gagal diinisialisasi.');
+            }; 
+            
+            script.onerror = () => setStatus('Gagal memuat modul MapLibre. Matikan Adblock / cek koneksi Anda.'); 
+            document.head.appendChild(script);
+        } else { 
+            initRenderer(); 
+        }
 
         return () => {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
