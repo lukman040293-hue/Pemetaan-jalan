@@ -12,42 +12,70 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR';
 const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; 
 const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; 
 
-// --- FUNGSI PEMUAT LIBRARY SUPER AMAN (ANTI-CANVAS HIJACK & CSP SAFE) ---
-// Mematikan AMD loader sementara agar library UMD terpasang kuat ke Global Window
-// Menggunakan injeksi script standar agar lolos dari blokir CSP (Content Security Policy)
+// --- FUNGSI PEMUAT LIBRARY SUPER AMAN (ANTI UMD TRAP & CSP SAFE) ---
 const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
   if (window[globalVarName]) return true;
 
-  if (cssUrl && !document.querySelector(`link[href="${cssUrl}"]`)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = cssUrl;
-    document.head.appendChild(link);
+  // Kunci unduhan untuk mencegah duplikasi jika React Strict Mode berjalan 2x
+  window.__lib_locks = window.__lib_locks || {};
+  if (window.__lib_locks[globalVarName]) {
+      for (let i = 0; i < 50; i++) {
+          if (window[globalVarName]) return true;
+          await new Promise(r => setTimeout(r, 100));
+      }
+      return !!window[globalVarName];
   }
+  window.__lib_locks[globalVarName] = true;
 
-  // Simpan dan matikan sementara AMD (Jebakan dari environment preview)
-  const tempDefine = window.define;
-  if (typeof window.define === 'function' && window.define.amd) {
-      window.define = undefined;
+  if (cssUrl && !document.querySelector(`link[href="${cssUrl}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = cssUrl;
+      document.head.appendChild(link);
   }
 
   let success = false;
   for (const url of jsUrls) {
-      success = await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = url;
-          script.crossOrigin = 'anonymous';
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.head.appendChild(script);
-      });
-      
-      if (success && window[globalVarName]) break;
+      try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const code = await res.text();
+
+          // Eksekusi kode melalui Blob dengan menonaktifkan AMD/CommonJS secara lokal
+          // Ini mencegah sistem internal (Vite/Canvas) mencegat atau membajak library
+          const safeCode = `
+            (function() {
+              var define = false;
+              var module = false;
+              var exports = false;
+              ${code}
+            })();
+          `;
+
+          const blob = new Blob([safeCode], { type: 'application/javascript' });
+          const blobUrl = URL.createObjectURL(blob);
+
+          await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = blobUrl;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+          });
+
+          // Beri jeda sangat singkat agar browser memori selesai memproses
+          await new Promise(r => setTimeout(r, 50));
+          if (window[globalVarName]) {
+              success = true;
+              break;
+          }
+      } catch (e) {
+          console.warn("Mencoba fallback CDN...", e);
+      }
   }
 
-  // Kembalikan konfigurasi AMD sistem seperti semula
-  if (tempDefine) window.define = tempDefine;
-  return !!window[globalVarName];
+  window.__lib_locks[globalVarName] = false;
+  return success;
 };
 
 // --- DATA RUJUKAN ---
@@ -199,85 +227,212 @@ const LayerToggle = ({ active, color, onClick }) => (
   </div>
 );
 
-// --- KOMPONEN EXPORT VIDEO 3D DRONE ---
+// --- KOMPONEN EXPORT VIDEO DRONE (SOLUSI FINAL - BEBAS DRAMA) ---
 const DroneVideoExporter = ({ road, onClose }) => {
     const mapContainerRef = useRef(null);
     const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState('Memuat Engine 3D...');
+    const [status, setStatus] = useState('menu'); 
+    const [errorMessage, setErrorMessage] = useState('');
     const [downloadUrl, setDownloadUrl] = useState(null);
+    const [is2DMode, setIs2DMode] = useState(false);
+    
+    const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null });
 
     useEffect(() => {
-        let isMounted = true;
-        if (!road || !road.realGps || road.realGps.length < 2) { setStatus('Data rute tidak valid untuk dirender.'); return; }
+        animStateRef.current.isMounted = true;
+        return () => {
+            animStateRef.current.isMounted = false;
+            if (animStateRef.current.frameId) cancelAnimationFrame(animStateRef.current.frameId);
+            if (animStateRef.current.recorder && animStateRef.current.recorder.state === 'recording') animStateRef.current.recorder.stop();
+            if (animStateRef.current.map) animStateRef.current.map.remove();
+        };
+    }, []);
+
+    const start3DProcess = async (mode) => {
+        if (!road || !road.realGps || road.realGps.length < 2) { 
+            setStatus('error'); setErrorMessage('Data rute GPS tidak valid atau kurang dari 2 titik.'); return; 
+        }
+
+        setStatus('loading');
         
-        let mapInstance = null;
-        let animationFrameId = null;
-        let mediaRecorder = null;
-        let recordedChunks = [];
+        const points = road.realGps;
+        let cumulativeDistances = [0];
+        let totalDist = 0;
+        for (let i = 1; i < points.length; i++) {
+            totalDist += getDistanceMeters(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
+            cumulativeDistances.push(totalDist);
+        }
 
-        const initRenderer = () => {
-            if (!isMounted) return;
+        // ===================================================================================
+        // PENDEKATAN ANTI-DRAMA: Menggunakan tag <script> standar (Menghindari Blob & CSP Block)
+        // ===================================================================================
+        let isMapLibreLoaded = !!window.maplibregl;
+        if (!isMapLibreLoaded) {
             try {
-                setStatus('Menyiapkan Peta...');
-                const points = road.realGps;
-                
-                let cumulativeDistances = [0];
-                let totalDist = 0;
-                for (let i = 1; i < points.length; i++) {
-                    const dist = getDistanceMeters(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
-                    totalDist += dist;
-                    cumulativeDistances.push(totalDist);
+                if (!document.querySelector('link[href*="maplibre-gl.css"]')) {
+                    const link = document.createElement('link'); link.rel = 'stylesheet'; 
+                    link.href = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css'; 
+                    document.head.appendChild(link);
                 }
-
-                mapInstance = new window.maplibregl.Map({
-                    container: mapContainerRef.current,
-                    style: {
-                        version: 8,
-                        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-                        sources: { 'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256 } },
-                        layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 22 }]
-                    },
-                    center: [points[0].lng, points[0].lat],
-                    zoom: 18.5,
-                    pitch: 75,
-                    bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
-                    interactive: false,
-                    preserveDrawingBuffer: true 
-                });
-
-                mapInstance.on('load', () => {
-                    if (!isMounted) return;
-                    setStatus('Menyiapkan Render...');
-                    
-                    mapInstance.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
-                    mapInstance.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': 12, 'line-opacity': 0.8 } });
-
-                    const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; const ctx = outCanvas.getContext('2d');
-                    const mapCanvas = mapInstance.getCanvas();
-                    const outStream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null); 
-                    
-                    if (!outStream) { setStatus('Fitur Export tidak didukung browser ini.'); return; }
-                    if (typeof MediaRecorder === 'undefined') { setStatus('MediaRecorder tidak didukung.'); return; }
-
-                    try { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm; codecs=vp9' }); } 
-                    catch (e) { mediaRecorder = new MediaRecorder(outStream, { mimeType: 'video/webm' }); }
-
-                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                    mediaRecorder.onstop = () => {
-                        if (!isMounted) return;
-                        const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
-                        setDownloadUrl(url); setStatus('Selesai!');
-                        const a = document.createElement('a'); a.href = url; a.download = `Export_Rute_3D_${road.name.replace(/\s+/g, '_')}.webm`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                isMapLibreLoaded = await new Promise(resolve => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js';
+                    script.onload = () => resolve(true);
+                    script.onerror = () => {
+                        const script2 = document.createElement('script');
+                        script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.js';
+                        script2.onload = () => resolve(true);
+                        script2.onerror = () => resolve(false);
+                        document.head.appendChild(script2);
                     };
+                    document.head.appendChild(script);
+                });
+            } catch (e) { isMapLibreLoaded = false; }
+        }
 
-                    mediaRecorder.start(); setStatus('Merekam Animasi...');
-                    let startTime = null; const duration = Math.min(25000, Math.max(8000, totalDist * 10)); 
-                    let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+        if (!animStateRef.current.isMounted) return;
 
-                    const animate = (timestamp) => {
+        // ===================================================================================
+        // JIKA 3D TETAP DIBLOKIR -> ALIHKAN OTOMATIS KE CINEMATIC 2D (TIDAK ADA ERROR LAGI!)
+        // ===================================================================================
+        if (!isMapLibreLoaded || !window.maplibregl) {
+            if (mode === 'auto') {
+                setStatus('error'); setErrorMessage('Mode Otomatis (.webm) butuh 3D Engine. Silakan pilih Mode Sinematik untuk tampilan Darurat 2D.'); return;
+            }
+            if (!window.L) {
+                setStatus('error'); setErrorMessage('Sistem peta utama gagal dimuat. Periksa internet Anda.'); return;
+            }
+
+            setIs2DMode(true);
+            setStatus('presenting');
+            
+            const map = window.L.map(mapContainerRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([points[0].lat, points[0].lng], 18);
+            window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+            const latlngs = points.map(p => [p.lat, p.lng]);
+            window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+            animStateRef.current.map = map;
+
+            let startTime = null;
+            const duration = Math.min(30000, Math.max(10000, totalDist * 15));
+            const animateFallback = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
+                if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
+
+                const targetDist = p * totalDist;
+                let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
+                const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
+                const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+                const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
+                
+                const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
+                const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+
+                map.setView([currentLat, currentLng], 18.5, { animate: false });
+                
+                if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animateFallback); }
+                else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
+            };
+            setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animateFallback); }, 3000);
+            return;
+        }
+
+        // ===================================================================================
+        // JIKA 3D BERHASIL DIMUAT (JALANKAN MAPLIBRE SEPERTI BIASA)
+        // ===================================================================================
+        try {
+            const map = new window.maplibregl.Map({
+                container: mapContainerRef.current,
+                style: {
+                    version: 8,
+                    sources: { 'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, crossOrigin: 'anonymous' } },
+                    layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 22 }]
+                },
+                center: [points[0].lng, points[0].lat],
+                zoom: 18.5, pitch: 75,
+                bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
+                interactive: false,
+                preserveDrawingBuffer: mode === 'auto'
+            });
+
+            animStateRef.current.map = map;
+
+            map.on('load', () => {
+                if (!animStateRef.current.isMounted) return;
+                
+                map.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
+                map.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': mode === 'presenting' ? 16 : 12, 'line-opacity': 0.8 } });
+
+                let recordedChunks = [];
+                let startTime = null; 
+                const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
+                let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+
+                if (mode === 'auto') {
+                    try {
+                        const outCanvas = document.createElement('canvas'); 
+                        outCanvas.width = 1280; outCanvas.height = 720; 
+                        const ctx = outCanvas.getContext('2d');
+                        const mapCanvas = map.getCanvas();
+                        
+                        const stream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null);
+                        if (!stream) throw new Error("Browser tidak mendukung tangkapan layar internal.");
+
+                        const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm; codecs=vp9') ? 'video/webm; codecs=vp9' : 'video/webm' });
+                        animStateRef.current.recorder = recorder;
+
+                        recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                        recorder.onstop = () => {
+                            if (!animStateRef.current.isMounted) return;
+                            if (recordedChunks.length === 0) { setStatus('error'); setErrorMessage('Video kosong (0 bytes). Browser memblokir penyimpanan.'); return; }
+                            const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
+                            setDownloadUrl(url); setStatus('finished');
+                            const a = document.createElement('a'); a.href = url; a.download = `DroneView_${road.name.replace(/\s+/g, '_')}.webm`; 
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        };
+
+                        recorder.start(); setStatus('recording');
+
+                        const animateAuto = (timestamp) => {
+                            if (!startTime) startTime = timestamp;
+                            let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
+                            if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
+
+                            const targetDist = p * totalDist;
+                            let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
+                            const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
+                            const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+                            const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
+                            const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                            
+                            if (i < points.length - 1) {
+                                let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
+                                if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+                                currentSmoothBearing += diff * 0.08; 
+                            }
+
+                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
+                            
+                            try {
+                                ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
+                                const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
+                                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
+                                ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 50, 675);
+                                ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                            } catch (err) { throw new Error("Browser memblokir render visual (Tainted Canvas)."); }
+
+                            if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animateAuto); } 
+                            else { setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 1000); }
+                        };
+                        animStateRef.current.frameId = requestAnimationFrame(animateAuto);
+
+                    } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
+                } else {
+                    setStatus('presenting');
+                    const animatePresent = (timestamp) => {
                         if (!startTime) startTime = timestamp;
                         let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
-                        if (isMounted) setProgress(Math.round(p * 100));
+                        if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
 
                         const targetDist = p * totalDist;
                         let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
@@ -292,97 +447,130 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             currentSmoothBearing += diff * 0.08; 
                         }
 
-                        mapInstance.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
-                        ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-                        const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
-                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
-                        ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi Dominan: `, 50, 675);
-                        ctx.fillStyle = getConditionColor(road.condition); ctx.fillText(`${road.condition}`, 240, 675);
-                        ctx.fillStyle = '#cbd5e1'; ctx.fillText(` • Panjang: ${(totalDist/1000).toFixed(2)} km • Wilayah: ${formatKel(road.kelurahan)}`, 240 + ctx.measureText(road.condition).width, 675);
-                        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, 710, 1280, 10); ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                        map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
 
-                        if (p < 1) { animationFrameId = requestAnimationFrame(animate); } 
-                        else { setTimeout(() => { if (isMounted && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 1000); }
+                        if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); }
+                        else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
                     };
-                    setTimeout(() => { if(isMounted) animationFrameId = requestAnimationFrame(animate); }, 1000);
-                });
-            } catch (err) {
-                if (!isMounted) return;
-                setStatus('Error internal WebGL / Keamanan Browser.');
-            }
-        };
-
-        const loadMapLibre = async () => {
-            if (window.maplibregl) { initRenderer(); return; }
-            
-            setStatus('Mendownload Modul 3D...');
-            const success = await loadLibrarySafely(
-                'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css',
-                [
-                    'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js',
-                    'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js',
-                    'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js'
-                ],
-                'maplibregl'
-            );
-
-            if (success && isMounted) {
-                initRenderer();
-            } else if (isMounted) {
-                setStatus('Gagal mengunduh modul 3D. Cek koneksi / Firewall Anda.');
-            }
-        };
-
-        loadMapLibre();
-
-        return () => {
-            isMounted = false;
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-            if (mapInstance) mapInstance.remove();
-        };
-    }, [road]);
+                    setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animatePresent); }, 3000);
+                }
+            });
+        } catch (err) { setStatus('error'); setErrorMessage('Terjadi kesalahan saat memuat peta 3D.'); }
+    };
 
     return (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
-            <div className="relative bg-black rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-700 w-full max-w-[800px] aspect-video flex items-center justify-center">
-                <div 
-                    ref={mapContainerRef} 
-                    style={{ width: '1280px', height: '720px', position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: 'scale(1)', zIndex: 1, pointerEvents: 'none', opacity: status === 'Selesai!' ? 0 : 1 }} 
-                    className="origin-top-left"
-                ></div>
+        <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
+            
+            <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div ref={mapContainerRef} className="w-full h-full bg-black"></div>
                 
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-slate-900/40 backdrop-blur-[2px]">
-                    {status !== 'Selesai!' ? (
-                       <>
-                         <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 shadow-lg"></div>
-                         <h2 className="text-2xl font-black text-white drop-shadow-md text-center px-4">{status}</h2>
-                         <p className="text-slate-300 font-bold mt-2">Merender Video 720p HD... {progress}%</p>
-                         <div className="w-64 h-3 bg-slate-800 rounded-full mt-4 overflow-hidden border border-slate-700"><div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${progress}%` }}></div></div>
-                       </>
-                    ) : (
-                       <div className="text-center animate-fade-in-up">
-                         <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(16,185,129,0.5)]">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-10 h-10"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                         </div>
-                         <h2 className="text-3xl font-black text-white mb-2">Video Selesai!</h2>
-                         <p className="text-slate-300 mb-6 font-medium">Video telah diunduh secara otomatis.</p>
-                         <div className="flex gap-4 justify-center">
-                             {downloadUrl && <a href={downloadUrl} download={`Export_Rute_3D_${road.name}.webm`} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg">Unduh Ulang</a>}
-                             <button onClick={onClose} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg">Kembali</button>
-                         </div>
-                       </div>
-                    )}
-                </div>
+                {/* UI Cinematic saat Mode Presentasi */}
+                {status === 'presenting' && (
+                    <>
+                        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10"></div>
+                        <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-col md:flex-row justify-between items-end gap-4">
+                            <div>
+                                <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mb-2 uppercase">{road.name}</h2>
+                                <div className="flex gap-4 items-center">
+                                    <span className="px-3 py-1 rounded-full text-white text-sm font-bold shadow-lg" style={{backgroundColor: getConditionColor(road.condition)}}>{road.condition}</span>
+                                    <span className="text-white text-lg font-bold drop-shadow-md">{formatKel(road.kelurahan)} • {(road.length || 0)} km</span>
+                                    {is2DMode && <span className="bg-slate-700 text-white px-2 py-0.5 rounded text-xs opacity-70">Top-Down 2D Mode</span>}
+                                </div>
+                            </div>
+                            <div className="w-full md:w-1/3 max-w-sm">
+                                <div className="flex justify-between text-xs text-slate-300 font-bold mb-1"><span>Titik Awal</span><span>Tujuan</span></div>
+                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700"><div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, backgroundColor: getConditionColor(road.condition) }}></div></div>
+                            </div>
+                        </div>
+                        {progress === 0 && (
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 bg-black/70 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/20 animate-pulse text-center">
+                                <p className="text-white font-bold text-lg">Mulai merekam layar Anda sekarang...</p>
+                                <p className="text-slate-400 text-sm">Animasi akan mulai dalam 3 detik</p>
+                            </div>
+                        )}
+                        <button onClick={onClose} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </>
+                )}
             </div>
 
-            {status !== 'Selesai!' && (
-                <button onClick={onClose} className="mt-8 bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded-full font-bold shadow-lg transition-colors border border-rose-500">Batalkan Render</button>
+            {status !== 'presenting' && (
+                <div className="relative z-50 bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-fade-in-up m-4">
+                    
+                    {status === 'menu' && (
+                        <div className="p-8">
+                            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 text-center mb-2">Pilih Mode Export</h2>
+                            <p className="text-slate-500 text-center text-sm mb-6 leading-relaxed">Sistem akan secara otomatis menjalankan Mode Animasi. Jika 3D dicegat oleh browser Anda, sistem akan memutar mode Cinematic 2D yang elegan.</p>
+                            
+                            <div className="space-y-3">
+                                <button onClick={() => start3DProcess('presenting')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl text-left flex items-start gap-4 transition-all shadow-md group">
+                                    <div className="bg-white/20 p-2 rounded-xl group-hover:scale-110 transition-transform">📺</div>
+                                    <div>
+                                        <div className="font-bold text-sm md:text-base">Mode Sinematik (Paling Aman)</div>
+                                        <div className="text-xs text-indigo-200 mt-1 font-medium">Animasi diputar otomatis layar penuh. Aktifkan Perekam Layar (Screen Record) HP/Laptop Anda.</div>
+                                    </div>
+                                </button>
+                                <button onClick={() => start3DProcess('auto')} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 p-4 rounded-2xl text-left flex items-start gap-4 border border-slate-300 transition-all group">
+                                    <div className="bg-white p-2 rounded-xl shadow-sm group-hover:scale-110 transition-transform text-slate-500">⚙️</div>
+                                    <div>
+                                        <div className="font-bold text-sm md:text-base">Coba Simpan Otomatis (.webm)</div>
+                                        <div className="text-xs text-slate-500 mt-1">Sistem mencoba membuat video internal. Terkadang gagal akibat restriksi izin perekaman browser.</div>
+                                    </div>
+                                </button>
+                            </div>
+                            <button onClick={onClose} className="w-full mt-4 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-colors">Batal</button>
+                        </div>
+                    )}
+
+                    {(status === 'loading' || status === 'recording') && (
+                        <div className="p-10 flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+                            <h2 className="text-xl font-black text-slate-900 mb-2">{status === 'loading' ? 'Menyiapkan Peta Cinematic...' : 'Merekam Video Internal...'}</h2>
+                            {status === 'recording' && (
+                                <div className="w-full max-w-xs mt-4">
+                                    <div className="flex justify-between text-xs text-slate-500 font-bold mb-1"><span>Proses Render</span><span>{progress}%</span></div>
+                                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200"><div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${progress}%` }}></div></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {status === 'finished' && (
+                        <div className="p-10 text-center">
+                            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-10 h-10"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 mb-2">Selesai!</h2>
+                            <p className="text-slate-500 mb-6 font-medium text-sm">Proses animasi telah berakhir.</p>
+                            <div className="flex gap-3 justify-center">
+                                {downloadUrl && <a href={downloadUrl} download={`DroneView_${road.name.replace(/\s+/g, '_')}.webm`} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-md">Unduh Video</a>}
+                                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition-colors">Kembali</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {status === 'error' && (
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            </div>
+                            <h2 className="text-xl font-black text-slate-900 mb-2">Gagal Merekam Internal</h2>
+                            <p className="text-slate-600 mb-6 text-sm bg-rose-50 p-3 rounded-lg border border-rose-100 inline-block">{errorMessage}</p>
+                            <div className="flex flex-col gap-3">
+                                <button onClick={() => start3DProcess('presenting')} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2">📺 Gunakan Mode Sinematik Saja</button>
+                                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition-colors">Batal</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
 };
-
 
 export default function App() {
   const [appRole, setAppRole] = useState(null); 
@@ -578,10 +766,11 @@ export default function App() {
   useEffect(() => {
     const initLeaflet = async () => {
         const success = await loadLibrarySafely(
-            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
             [
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
+                'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
             ],
             'L'
         );
