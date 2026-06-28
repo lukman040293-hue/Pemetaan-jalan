@@ -237,35 +237,74 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const [is2DMode, setIs2DMode] = useState(false);
     const [selectedMapStyle, setSelectedMapStyle] = useState('google-hybrid');
     
-    const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null });
+    // --- State Baru: Kontrol Animasi 3D ---
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [speed, setSpeed] = useState(1);
+    const [vehicleType, setVehicleType] = useState('car');
 
-    // CSS 3D Voxel Car (Mobil 3D sungguhan tanpa WebGL external)
-    const vehicle3DHtml = `
-    <div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;">
-        <!-- Bayangan di tanah (Z=0) -->
-        <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div>
-        <!-- Lapisan Voxel Chassis & Body -->
-        <div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div>
-        <div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div>
-        <div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div>
-        <div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div>
-        <!-- Lapisan Kaca (Lebih kecil) -->
-        <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div>
-        <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div>
-        <!-- Atap -->
-        <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div>
-        <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div>
-        
-        <!-- Lampu Depan (Kuning) -->
-        <div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
-        <div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
-        <!-- Lampu Belakang (Merah) -->
-        <div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
-        <div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
-    </div>
-    `;
+    const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null, isPlaying: true, speed: 1, vehicleType: 'car', status: 'menu' });
 
-    // Map URL Configurations
+    // Fungsi Dinamis Pembuat CSS 3D Voxel
+    const getVehicle3DHtml = (type) => {
+        if (type === 'drone') {
+            return `
+            <div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative; transform: translateZ(30px) rotateX(10deg);">
+                <div style="position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: rgba(0,0,0,0.5); filter: blur(5px); transform: translateZ(-30px);"></div>
+                <div style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; background: #e2e8f0; border-radius: 4px; transform: translateZ(2px); border: 1px solid #94a3b8;"></div>
+                <div style="position: absolute; left: 14px; top: 10px; width: 12px; height: 4px; background: #ef4444; border-radius: 2px; transform: translateZ(4px);"></div>
+                <div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(45deg) translateZ(1px);"></div>
+                <div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(-45deg) translateZ(1px);"></div>
+                <style>@keyframes spinFast { 100% { transform: rotate(360deg) translateZ(3px); } } .rotor { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(transparent 20%, rgba(0,0,0,0.3) 50%, transparent 80%); animation: spinFast 0.1s linear infinite; transform: translateZ(3px); border: 1px solid rgba(0,0,0,0.1); }</style>
+                <div class="rotor" style="left: -4px; top: -4px;"></div>
+                <div class="rotor" style="right: -4px; top: -4px;"></div>
+                <div class="rotor" style="left: -4px; bottom: -4px;"></div>
+                <div class="rotor" style="right: -4px; bottom: -4px;"></div>
+            </div>`;
+        } else if (type === 'motorcycle') {
+            return `
+            <div style="width: 12px; height: 32px; transform-style: preserve-3d; position: relative;">
+                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(3px); transform: translateZ(0px);"></div>
+                <div style="position: absolute; left: 4px; top: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div>
+                <div style="position: absolute; left: 4px; bottom: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div>
+                <div style="position: absolute; left: 2px; top: 6px; width: 8px; height: 20px; background: #ef4444; border-radius: 3px; transform: translateZ(4px);"></div>
+                <div style="position: absolute; left: 2px; top: 10px; width: 8px; height: 10px; background: #b91c1c; border-radius: 2px; transform: translateZ(6px);"></div>
+                <div style="position: absolute; left: 4px; top: 5px; width: 4px; height: 3px; background: #fef08a; border-radius: 1px; transform: translateZ(6px); box-shadow: 0 -4px 10px #fef08a;"></div>
+                <div style="position: absolute; left: 3px; top: 12px; width: 6px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(8px);"></div>
+                <div style="position: absolute; left: 3px; top: 14px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(12px);"></div>
+            </div>`;
+        } else if (type === 'truck') {
+            return `
+            <div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;">
+                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div>
+                <div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div>
+                <div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div>
+                <div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div>
+                <div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div>
+                <div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div>
+                <div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
+                <div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
+            </div>`;
+        } else {
+            return `
+            <div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;">
+                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div>
+                <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div>
+                <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div>
+                <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div>
+                <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div>
+                <div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
+                <div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
+                <div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
+                <div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
+            </div>`;
+        }
+    };
+
     const mapTileUrls = {
         'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
         'google-street': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -283,13 +322,39 @@ const DroneVideoExporter = ({ road, onClose }) => {
         };
     }, []);
 
+    useEffect(() => {
+        animStateRef.current.isPlaying = isPlaying;
+        animStateRef.current.speed = speed;
+        animStateRef.current.vehicleType = vehicleType;
+        animStateRef.current.status = status;
+        
+        const iconDiv = document.getElementById('maplibre-vehicle-icon') || document.getElementById('leaflet-vehicle-icon');
+        if (iconDiv) {
+            iconDiv.innerHTML = getVehicle3DHtml(vehicleType);
+        }
+    }, [isPlaying, speed, vehicleType, status]);
+
+    const stopAnimation = () => {
+        if (animStateRef.current.frameId) cancelAnimationFrame(animStateRef.current.frameId);
+        if (animStateRef.current.recorder && animStateRef.current.recorder.state === 'recording') animStateRef.current.recorder.stop();
+        if (animStateRef.current.map) {
+            animStateRef.current.map.remove();
+            animStateRef.current.map = null;
+        }
+        setStatus('menu');
+        setProgress(0);
+        setIsPlaying(true);
+    };
+
     const start3DProcess = async (mode) => {
         if (!road || !road.realGps || road.realGps.length < 2) { 
             setStatus('error'); setErrorMessage('Data rute GPS tidak valid atau kurang dari 2 titik.'); return; 
         }
 
         setStatus('loading');
-        
+        setProgress(0);
+        setIsPlaying(true);
+
         const points = road.realGps;
         let cumulativeDistances = [0];
         let totalDist = 0;
@@ -324,9 +389,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
         if (!animStateRef.current.isMounted) return;
 
-        // ===================================================================================
-        // JIKA 3D TETAP DIBLOKIR -> ALIHKAN OTOMATIS KE CINEMATIC 2D
-        // ===================================================================================
         if (!isMapLibreLoaded || !window.maplibregl) {
             if (mode === 'auto') {
                 setStatus('error'); setErrorMessage('Mode Otomatis (.webm) butuh 3D Engine. Silakan pilih Mode Sinematik untuk tampilan Darurat 2D.'); return;
@@ -339,8 +401,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
             setStatus('presenting');
             
             const map = window.L.map(mapContainerRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([points[0].lat, points[0].lng], 18);
-            
-            // Terapkan peta pilihan user
             window.L.tileLayer(mapTileUrls[selectedMapStyle], { maxZoom: 22, maxNativeZoom: 20 }).addTo(map);
             
             const latlngs = points.map(p => [p.lat, p.lng]);
@@ -351,108 +411,97 @@ const DroneVideoExporter = ({ road, onClose }) => {
             
             const fallbackIcon = window.L.divIcon({
                 className: 'fallback-vehicle',
-                html: `<div id="leaflet-vehicle-icon" style="width: 24px; height: 48px; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicle3DHtml}</div>`,
-                iconSize: [24, 48],
-                iconAnchor: [12, 24]
+                html: `<div id="leaflet-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
             });
             const fallbackMarker = window.L.marker([points[0].lat, points[0].lng], { icon: fallbackIcon, zIndexOffset: 1000 }).addTo(map);
 
-            let startTime = null;
-            const duration = Math.min(30000, Math.max(10000, totalDist * 15));
+            let lastTime = null;
+            let currentProgress = 0;
             const animateFallback = (timestamp) => {
-                if (!startTime) startTime = timestamp;
-                let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
-                if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
+                if (!lastTime) lastTime = timestamp;
+                const dt = timestamp - lastTime;
+                lastTime = timestamp;
 
-                const targetDist = p * totalDist;
-                let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
-                const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
-                const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                
-                const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
-                const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
-                
-                if (i < points.length - 1) {
-                    let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
-                    if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                    currentSmoothBearing += diff * 0.08; 
+                if (!animStateRef.current.isMounted || animStateRef.current.status !== 'presenting') return;
+
+                if (animStateRef.current.isPlaying) {
+                    const baseDuration = Math.min(30000, Math.max(10000, totalDist * 15));
+                    const actualDuration = baseDuration / animStateRef.current.speed;
+                    currentProgress += dt / actualDuration;
+                    
+                    if (currentProgress > 1) currentProgress = 1;
+                    setProgress(Math.round(currentProgress * 100));
+
+                    const targetDist = currentProgress * totalDist;
+                    let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
+                    const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
+                    const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+                    const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
+                    
+                    const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
+                    const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                    
+                    if (i < points.length - 1) {
+                        let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
+                        if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+                        currentSmoothBearing += diff * 0.08; 
+                    }
+
+                    map.setView([currentLat, currentLng], 18.5, { animate: false });
+                    fallbackMarker.setLatLng([currentLat, currentLng]);
+                    const iconDiv = document.getElementById('leaflet-vehicle-icon');
+                    if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                 }
-
-                map.setView([currentLat, currentLng], 18.5, { animate: false });
-                fallbackMarker.setLatLng([currentLat, currentLng]);
-                const iconDiv = document.getElementById('leaflet-vehicle-icon');
-                if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                 
-                if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animateFallback); }
-                else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
+                if (currentProgress < 1) { 
+                    animStateRef.current.frameId = requestAnimationFrame(animateFallback); 
+                } else { 
+                    setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); 
+                }
             };
             setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animateFallback); }, 3000);
             return;
         }
 
-        // ===================================================================================
-        // JIKA 3D BERHASIL DIMUAT (JALANKAN MAPLIBRE SEPERTI BIASA)
-        // ===================================================================================
         try {
             const map = new window.maplibregl.Map({
                 container: mapContainerRef.current,
                 style: {
                     version: 8,
-                    sources: { 
-                        'satellite': { 
-                            type: 'raster', 
-                            tiles: [mapTileUrls[selectedMapStyle]], 
-                            tileSize: 256, 
-                            maxzoom: 20 
-                        } 
-                    },
+                    sources: { 'satellite': { type: 'raster', tiles: [mapTileUrls[selectedMapStyle]], tileSize: 256, maxzoom: 20 } },
                     layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 24 }]
                 },
                 center: [points[0].lng, points[0].lat],
                 zoom: 18.5, pitch: 70, 
                 bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
-                interactive: false,
-                preserveDrawingBuffer: mode === 'auto'
+                interactive: false, preserveDrawingBuffer: mode === 'auto'
             });
 
             animStateRef.current.map = map;
 
             map.on('load', () => {
                 if (!animStateRef.current.isMounted) return;
-                
                 map.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
                 map.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': mode === 'presenting' ? 16 : 12, 'line-opacity': 0.8 } });
 
                 let recordedChunks = [];
-                let startTime = null; 
+                let lastTimeAuto = null; let currentProgressAuto = 0;
                 const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
                 let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
-                // Tambah Marker Mobil Voxel 3D
-                const el = document.createElement('div');
-                el.style.width = '24px'; el.style.height = '48px';
-                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicle3DHtml}</div>`;
+                const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
+                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
                 
-                // Menambahkan rotationAlignment dan pitchAlignment ke 'map' agar div bisa ber-ekstrusi di sumbu Z
-                const vehicleMarker = new window.maplibregl.Marker({ 
-                    element: el, 
-                    pitchAlignment: 'map',
-                    rotationAlignment: 'map'
-                })
-                .setLngLat([points[0].lng, points[0].lat])
-                .addTo(map);
+                const vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
 
                 if (mode === 'auto') {
                     try {
-                        const outCanvas = document.createElement('canvas'); 
-                        outCanvas.width = 1280; outCanvas.height = 720; 
-                        const ctx = outCanvas.getContext('2d');
-                        const mapCanvas = map.getCanvas();
-                        
+                        const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; 
+                        const ctx = outCanvas.getContext('2d'); const mapCanvas = map.getCanvas();
                         const stream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null);
                         if (!stream) throw new Error("Browser tidak mendukung tangkapan layar internal.");
-
                         const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm; codecs=vp9') ? 'video/webm; codecs=vp9' : 'video/webm' });
                         animStateRef.current.recorder = recorder;
 
@@ -469,11 +518,16 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         recorder.start(); setStatus('recording');
 
                         const animateAuto = (timestamp) => {
-                            if (!startTime) startTime = timestamp;
-                            let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
-                            if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
+                            if (!lastTimeAuto) lastTimeAuto = timestamp;
+                            const dt = timestamp - lastTimeAuto; lastTimeAuto = timestamp;
+                            if (!animStateRef.current.isMounted) return;
 
-                            const targetDist = p * totalDist;
+                            const actualDuration = duration / animStateRef.current.speed;
+                            currentProgressAuto += dt / actualDuration;
+                            if (currentProgressAuto > 1) currentProgressAuto = 1;
+                            setProgress(Math.round(currentProgressAuto * 100));
+
+                            const targetDist = currentProgressAuto * totalDist;
                             let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
                             const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
                             const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
@@ -486,7 +540,9 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 currentSmoothBearing += diff * 0.08; 
                             }
 
-                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 70, zoom: 19 });
+                            let pitch = 70; let zoom = 19;
+                            if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
+                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
                             vehicleMarker.setLngLat([currentLng, currentLat]);
                             const iconDiv = document.getElementById('maplibre-vehicle-icon');
                             if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
@@ -496,41 +552,51 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
                                 ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
                                 ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 50, 675);
-                                ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * p, 10);
+                                ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * currentProgressAuto, 10);
                             } catch (err) { throw new Error("Browser memblokir render visual (Tainted Canvas)."); }
 
-                            if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animateAuto); } 
+                            if (currentProgressAuto < 1) { animStateRef.current.frameId = requestAnimationFrame(animateAuto); } 
                             else { setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 1000); }
                         };
                         animStateRef.current.frameId = requestAnimationFrame(animateAuto);
-
                     } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
                 } else {
                     setStatus('presenting');
+                    let lastTime = null; let currentProgress = 0;
                     const animatePresent = (timestamp) => {
-                        if (!startTime) startTime = timestamp;
-                        let p = (timestamp - startTime) / duration; if (p > 1) p = 1;
-                        if (animStateRef.current.isMounted) setProgress(Math.round(p * 100));
+                        if (!lastTime) lastTime = timestamp;
+                        const dt = timestamp - lastTime; lastTime = timestamp;
+                        if (!animStateRef.current.isMounted || animStateRef.current.status !== 'presenting') return;
 
-                        const targetDist = p * totalDist;
-                        let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                        const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
-                        const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
-                        const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                        const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
-                        
-                        if (i < points.length - 1) {
-                            let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
-                            if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                            currentSmoothBearing += diff * 0.08; 
+                        if (animStateRef.current.isPlaying) {
+                            const baseDuration = Math.min(30000, Math.max(10000, totalDist * 15));
+                            const actualDuration = baseDuration / animStateRef.current.speed;
+                            currentProgress += dt / actualDuration;
+                            if (currentProgress > 1) currentProgress = 1;
+                            setProgress(Math.round(currentProgress * 100));
+
+                            const targetDist = currentProgress * totalDist;
+                            let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
+                            const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
+                            const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+                            const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
+                            const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                            
+                            if (i < points.length - 1) {
+                                let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
+                                if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+                                currentSmoothBearing += diff * 0.08; 
+                            }
+
+                            let pitch = 70; let zoom = 19;
+                            if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
+                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
+                            vehicleMarker.setLngLat([currentLng, currentLat]);
+                            const iconDiv = document.getElementById('maplibre-vehicle-icon');
+                            if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                         }
 
-                        map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 70, zoom: 19 });
-                        vehicleMarker.setLngLat([currentLng, currentLat]);
-                        const iconDiv = document.getElementById('maplibre-vehicle-icon');
-                        if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
-
-                        if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); }
+                        if (currentProgress < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); } 
                         else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
                     };
                     setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animatePresent); }, 3000);
@@ -541,15 +607,38 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-            
             <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <div ref={mapContainerRef} className="w-full h-full bg-black"></div>
-                
-                {/* UI Cinematic saat Mode Presentasi */}
                 {status === 'presenting' && (
                     <>
-                        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10"></div>
-                        <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-col md:flex-row justify-between items-end gap-4">
+                        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/80 to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-2 md:gap-4 bg-black/60 backdrop-blur-md px-4 py-2 md:px-6 md:py-3 rounded-full border border-white/20 shadow-2xl transition-opacity duration-300">
+                            <button onClick={() => setIsPlaying(!isPlaying)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white transition-colors ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
+                                {isPlaying ? (
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                ) : (
+                                    <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                )}
+                            </button>
+                            <button onClick={stopAnimation} className="w-10 h-10 flex items-center justify-center rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-sm" title="Stop & Kembali">
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                            </button>
+                            <div className="w-px h-8 bg-white/20 mx-1"></div>
+                            <select value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold outline-none cursor-pointer rounded-lg px-2 py-1.5 border border-white/10 appearance-none text-center">
+                                <option value="0.5" className="text-black">🐢 0.5x</option>
+                                <option value="1" className="text-black">▶️ 1.0x</option>
+                                <option value="2" className="text-black">🐇 2.0x</option>
+                                <option value="3" className="text-black">⚡ 3.0x</option>
+                            </select>
+                            <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className="bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold outline-none cursor-pointer rounded-lg px-2 py-1.5 border border-white/10 appearance-none text-center">
+                                <option value="car" className="text-black">🚗 Mobil 3D</option>
+                                <option value="motorcycle" className="text-black">🏍️ Motor 3D</option>
+                                <option value="truck" className="text-black">🚛 Truk 3D</option>
+                                <option value="drone" className="text-black">🚁 Drone 3D</option>
+                            </select>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none">
                             <div>
                                 <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mb-2 uppercase">{road.name}</h2>
                                 <div className="flex gap-4 items-center">
@@ -558,18 +647,18 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                     {is2DMode && <span className="bg-slate-700 text-white px-2 py-0.5 rounded text-xs opacity-70">Top-Down 2D Mode</span>}
                                 </div>
                             </div>
-                            <div className="w-full md:w-1/3 max-w-sm">
+                            <div className="w-full md:w-1/3 max-w-sm pointer-events-auto">
                                 <div className="flex justify-between text-xs text-slate-300 font-bold mb-1"><span>Titik Awal</span><span>Tujuan</span></div>
                                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700"><div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, backgroundColor: getConditionColor(road.condition) }}></div></div>
                             </div>
                         </div>
                         {progress === 0 && (
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 bg-black/70 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/20 animate-pulse text-center">
-                                <p className="text-white font-bold text-lg">Mulai merekam layar Anda sekarang...</p>
-                                <p className="text-slate-400 text-sm">Animasi akan mulai dalam 3 detik</p>
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 bg-black/70 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/20 animate-pulse text-center pointer-events-none">
+                                <p className="text-white font-bold text-lg">Mempersiapkan Rute...</p>
+                                <p className="text-slate-400 text-sm">Animasi akan mulai sebentar lagi</p>
                             </div>
                         )}
-                        <button onClick={onClose} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors">
+                        <button onClick={() => { stopAnimation(); onClose(); }} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors shadow-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </>
@@ -578,7 +667,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
             {status !== 'presenting' && (
                 <div className="relative z-50 bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-fade-in-up m-4">
-                    
                     {status === 'menu' && (
                         <div className="p-8">
                             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
