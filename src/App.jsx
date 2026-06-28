@@ -235,10 +235,43 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [downloadUrl, setDownloadUrl] = useState(null);
     const [is2DMode, setIs2DMode] = useState(false);
+    const [selectedMapStyle, setSelectedMapStyle] = useState('google-hybrid');
     
     const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null });
 
-    const vehicleSvg = `<svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6));"><rect x="8" y="35" width="16" height="30" rx="6" fill="#1e293b"/><rect x="76" y="35" width="16" height="30" rx="6" fill="#1e293b"/><rect x="8" y="105" width="16" height="30" rx="6" fill="#1e293b"/><rect x="76" y="105" width="16" height="30" rx="6" fill="#1e293b"/><rect x="14" y="12" width="72" height="135" rx="28" fill="#e2e8f0"/><rect x="20" y="18" width="60" height="123" rx="22" fill="#3b82f6"/><path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#0f172a"/><path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#0f172a"/><rect x="28" y="72" width="44" height="38" rx="12" fill="#94a3b8"/></svg>`;
+    // CSS 3D Voxel Car (Mobil 3D sungguhan tanpa WebGL external)
+    const vehicle3DHtml = `
+    <div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;">
+        <!-- Bayangan di tanah (Z=0) -->
+        <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div>
+        <!-- Lapisan Voxel Chassis & Body -->
+        <div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div>
+        <div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div>
+        <div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div>
+        <div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div>
+        <!-- Lapisan Kaca (Lebih kecil) -->
+        <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div>
+        <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div>
+        <!-- Atap -->
+        <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div>
+        <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div>
+        
+        <!-- Lampu Depan (Kuning) -->
+        <div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
+        <div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
+        <!-- Lampu Belakang (Merah) -->
+        <div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
+        <div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
+    </div>
+    `;
+
+    // Map URL Configurations
+    const mapTileUrls = {
+        'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        'google-street': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'google-hybrid': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        'carto-dark': 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+    };
 
     useEffect(() => {
         animStateRef.current.isMounted = true;
@@ -265,9 +298,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
             cumulativeDistances.push(totalDist);
         }
 
-        // ===================================================================================
-        // PENDEKATAN ANTI-DRAMA: Menggunakan tag <script> standar (Menghindari Blob & CSP Block)
-        // ===================================================================================
         let isMapLibreLoaded = !!window.maplibregl;
         if (!isMapLibreLoaded) {
             try {
@@ -295,7 +325,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
         if (!animStateRef.current.isMounted) return;
 
         // ===================================================================================
-        // JIKA 3D TETAP DIBLOKIR -> ALIHKAN OTOMATIS KE CINEMATIC 2D (TIDAK ADA ERROR LAGI!)
+        // JIKA 3D TETAP DIBLOKIR -> ALIHKAN OTOMATIS KE CINEMATIC 2D
         // ===================================================================================
         if (!isMapLibreLoaded || !window.maplibregl) {
             if (mode === 'auto') {
@@ -310,8 +340,8 @@ const DroneVideoExporter = ({ road, onClose }) => {
             
             const map = window.L.map(mapContainerRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([points[0].lat, points[0].lng], 18);
             
-            // Ganti Google Satellite agar lebih aman dari zoom kosong
-            window.L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 22, maxNativeZoom: 20 }).addTo(map);
+            // Terapkan peta pilihan user
+            window.L.tileLayer(mapTileUrls[selectedMapStyle], { maxZoom: 22, maxNativeZoom: 20 }).addTo(map);
             
             const latlngs = points.map(p => [p.lat, p.lng]);
             window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
@@ -321,9 +351,9 @@ const DroneVideoExporter = ({ road, onClose }) => {
             
             const fallbackIcon = window.L.divIcon({
                 className: 'fallback-vehicle',
-                html: `<div id="leaflet-vehicle-icon" style="width: 32px; height: 50px; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicleSvg}</div>`,
-                iconSize: [32, 50],
-                iconAnchor: [16, 25]
+                html: `<div id="leaflet-vehicle-icon" style="width: 24px; height: 48px; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicle3DHtml}</div>`,
+                iconSize: [24, 48],
+                iconAnchor: [12, 24]
             });
             const fallbackMarker = window.L.marker([points[0].lat, points[0].lng], { icon: fallbackIcon, zIndexOffset: 1000 }).addTo(map);
 
@@ -372,16 +402,15 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     sources: { 
                         'satellite': { 
                             type: 'raster', 
-                            // Menggunakan Google Satellite (Mencegah masalah "Map data not available")
-                            tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], 
+                            tiles: [mapTileUrls[selectedMapStyle]], 
                             tileSize: 256, 
-                            maxzoom: 20 // Overscales dengan aman ke zoom lebih dalam
+                            maxzoom: 20 
                         } 
                     },
                     layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 24 }]
                 },
                 center: [points[0].lng, points[0].lat],
-                zoom: 18.5, pitch: 70, // Pitch diturunkan sedikit untuk visibilitas
+                zoom: 18.5, pitch: 70, 
                 bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
                 interactive: false,
                 preserveDrawingBuffer: mode === 'auto'
@@ -400,14 +429,19 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
                 let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
-                // Tambah Marker Mobil
+                // Tambah Marker Mobil Voxel 3D
                 const el = document.createElement('div');
-                el.style.width = '32px'; el.style.height = '50px';
-                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicleSvg}</div>`;
+                el.style.width = '24px'; el.style.height = '48px';
+                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicle3DHtml}</div>`;
                 
-                const vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map' })
-                    .setLngLat([points[0].lng, points[0].lat])
-                    .addTo(map);
+                // Menambahkan rotationAlignment dan pitchAlignment ke 'map' agar div bisa ber-ekstrusi di sumbu Z
+                const vehicleMarker = new window.maplibregl.Marker({ 
+                    element: el, 
+                    pitchAlignment: 'map',
+                    rotationAlignment: 'map'
+                })
+                .setLngLat([points[0].lng, points[0].lat])
+                .addTo(map);
 
                 if (mode === 'auto') {
                     try {
@@ -550,8 +584,18 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
                             </div>
-                            <h2 className="text-2xl font-black text-slate-900 text-center mb-2">Pilih Mode Export</h2>
-                            <p className="text-slate-500 text-center text-sm mb-6 leading-relaxed">Sistem akan secara otomatis menjalankan Mode Animasi. Jika 3D dicegat oleh browser Anda, sistem akan memutar mode Cinematic 2D yang elegan.</p>
+                            
+                            <div className="mb-5">
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">Pilihan Peta Dasar</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button onClick={() => setSelectedMapStyle('google-satellite')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-satellite' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🌍 Satelit</button>
+                                    <button onClick={() => setSelectedMapStyle('google-street')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-street' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🗺️ Jalan (Map)</button>
+                                    <button onClick={() => setSelectedMapStyle('google-hybrid')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-hybrid' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🏷️ Satelit + Label</button>
+                                    <button onClick={() => setSelectedMapStyle('carto-dark')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'carto-dark' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🌙 Mode Gelap</button>
+                                </div>
+                            </div>
+
+                            <p className="text-slate-500 text-center text-[13px] mb-4 leading-relaxed">Sistem akan secara otomatis menjalankan Mode Animasi. Jika 3D dicegat oleh browser Anda, sistem akan memutar mode Cinematic 2D yang elegan.</p>
                             
                             <div className="space-y-3">
                                 <button onClick={() => start3DProcess('presenting')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl text-left flex items-start gap-4 transition-all shadow-md group">
