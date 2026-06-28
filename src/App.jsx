@@ -2066,14 +2066,14 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 100MB)</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 300MB)</label>
                     {!uploadedVideoUrl ? (
                       <div className="relative border border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50">
                         <input type="file" accept="video/*" onChange={(e) => { 
                             const f = e.target.files[0]; 
                             if(f){ 
                               const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
-                              if (f.size > 100 * 1024 * 1024) return showToast(`Gagal: Ukuran terbaca ${sizeMB}MB (Maks 100MB).`);
+                              if (f.size > 300 * 1024 * 1024) return showToast(`Gagal: Ukuran terbaca ${sizeMB}MB (Maks 300MB).`);
                               setUploadedVideoUrl(URL.createObjectURL(f)); setUploadedVideoFile(f); showToast(`Video disiapkan (${sizeMB}MB).`); 
                             } 
                           }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
