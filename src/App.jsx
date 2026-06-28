@@ -842,6 +842,7 @@ export default function App() {
   const adminLayerGroupRef = useRef(null);
   const adminHighlightLayerGroupRef = useRef(null);
   const hasFittedAdminMapRef = useRef(false);
+  const prevAdminSelectionCountRef = useRef(0);
 
   useEffect(() => {
       if (appRole === 'admin') hasFittedAdminMapRef.current = false;
@@ -1007,7 +1008,12 @@ export default function App() {
     const map = adminMapInstanceRef.current;
     layerGroup.clearLayers();
 
-    filteredRoads.forEach(road => {
+    // IMPLEMENTASI MODE FOKUS: Hanya tampilkan rute yang dicentang jika ada
+    const roadsToDisplay = selectedAdminRouteIds.length > 0 
+        ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
+        : filteredRoads;
+
+    roadsToDisplay.forEach(road => {
       const roadId = road.id || road.dbId;
       if (road.realGps && road.realGps.length > 0) {
         const latlngs = road.realGps.map(pt => [pt.lat, pt.lng]);
@@ -1054,18 +1060,27 @@ export default function App() {
       }
     });
 
-    if (filteredRoads.length > 0 && map && !hasFittedAdminMapRef.current) {
-      const allLatLngs = filteredRoads.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
+    // Deteksi jika pengguna baru saja mematikan mode fokus sepenuhnya (centang terakhir dilepas)
+    const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
+    prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
+
+    // AUTO-ZOOM (FOKUS) LOGIC:
+    if (roadsToDisplay.length > 0 && map) {
+      const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
-        hasFittedAdminMapRef.current = true;
-        setTimeout(() => {
-            if (adminMapInstanceRef.current) {
-                adminMapInstanceRef.current.invalidateSize(true);
-                adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(allLatLngs), { padding: [50, 50], maxZoom: 16 });
-            }
-        }, 350); 
+        // Selalu zoom in jika rute dicentang (mode fokus), dimuat awal, ATAU zoom out jika fokus baru saja dimatikan
+        if (selectedAdminRouteIds.length > 0 || !hasFittedAdminMapRef.current || justExitedFocusMode) {
+          hasFittedAdminMapRef.current = true;
+          setTimeout(() => {
+              if (adminMapInstanceRef.current) {
+                  adminMapInstanceRef.current.invalidateSize(true);
+                  // Menggunakan flyToBounds agar transisi kamera / auto-zoom terasa mulus
+                  adminMapInstanceRef.current.flyToBounds(window.L.latLngBounds(allLatLngs), { padding: [50, 50], maxZoom: 16, duration: 0.6 });
+              }
+          }, 350); 
+        }
       }
-    } else if (filteredRoads.length === 0 && map && !hasFittedAdminMapRef.current) {
+    } else if (roadsToDisplay.length === 0 && map && !hasFittedAdminMapRef.current) {
       hasFittedAdminMapRef.current = true;
       setTimeout(() => {
           if (adminMapInstanceRef.current) {
@@ -1074,7 +1089,7 @@ export default function App() {
           }
       }, 350);
     }
-  }, [appRole, syncedRoads, activeKelurahan, activeConditions, activeJenis, searchQuery]);
+  }, [appRole, syncedRoads, activeKelurahan, activeConditions, activeJenis, searchQuery, selectedAdminRouteIds]);
 
   useEffect(() => {
     if (appRole !== 'admin' || !adminHighlightLayerGroupRef.current) return;
@@ -2051,14 +2066,15 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 150MB)</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Video (Maks 100MB)</label>
                     {!uploadedVideoUrl ? (
                       <div className="relative border border-dashed border-slate-300 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-center bg-slate-50">
                         <input type="file" accept="video/*" onChange={(e) => { 
                             const f = e.target.files[0]; 
                             if(f){ 
-                              if (f.size > 150*1024*1024) return showToast("Ukuran video melebihi 150MB.");
-                              setUploadedVideoUrl(URL.createObjectURL(f)); setUploadedVideoFile(f); showToast("Video disiapkan."); 
+                              const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
+                              if (f.size > 100 * 1024 * 1024) return showToast(`Gagal: Ukuran terbaca ${sizeMB}MB (Maks 100MB).`);
+                              setUploadedVideoUrl(URL.createObjectURL(f)); setUploadedVideoFile(f); showToast(`Video disiapkan (${sizeMB}MB).`); 
                             } 
                           }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                         <div className="text-slate-500 text-sm font-medium flex items-center gap-2">Pilih Video</div>
@@ -2341,7 +2357,7 @@ export default function App() {
                                   <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
                                        className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
                                     
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Pilih untuk Animasi">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
                                         {isSelectedAdmin && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                                     </div>
 
