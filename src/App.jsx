@@ -1553,6 +1553,39 @@ export default function App() {
     setUploadedVideoFile(null); setUploadedVideoUrl(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/drafts'; 
   };
 
+  // --- NEW: FUNGSI UPLOAD VIDEO BERTAHAP (CHUNKED UPLOAD) ---
+  const uploadVideoInChunks = async (file) => {
+      const chunkSize = 20 * 1024 * 1024; // Pecah video per 20MB
+      const uniqueUploadId = Math.random().toString(36).substring(2) + Date.now();
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      let secureUrl = null;
+
+      for (let i = 0; i < totalChunks; i++) {
+          setSyncMessage(`Mengunggah Video... (${Math.round(((i) / totalChunks) * 100)}%)`);
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize - 1, file.size - 1);
+          const chunk = file.slice(start, end + 1);
+
+          const formData = new FormData();
+          formData.append('file', chunk);
+          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+              method: 'POST',
+              headers: {
+                  'X-Unique-Upload-Id': uniqueUploadId,
+                  'Content-Range': `bytes ${start}-${end}/${file.size}`
+              },
+              body: formData
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || 'Upload gagal');
+          if (data.secure_url) secureUrl = data.secure_url; // Akan terisi di chunk terakhir
+      }
+      return secureUrl;
+  };
+
   const syncDataToCloud = async () => {
     const draftsToUpload = drafts.filter(d => selectedDraftIds.includes(d.id));
     if (draftsToUpload.length === 0) return showToast("Pilih draft yang ingin diunggah!");
@@ -1566,13 +1599,13 @@ export default function App() {
         const draft = draftsToUpload[i]; let finalVideoUrl = null; let finalPhotoUrls = [];
 
         if (draft.videoFile) {
-          setSyncMessage(`Mengunggah Video... (Rute ${i+1}/${draftsToUpload.length})`);
-          const formData = new FormData(); formData.append('file', draft.videoFile); formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
           try {
-             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, { method: 'POST', body: formData });
-             const data = await res.json();
-             if (data.secure_url) finalVideoUrl = data.secure_url; else throw new Error(data.error?.message);
-          } catch (e) { showToast(`Video rute ${draft.name} gagal diunggah.`); }
+             // Memanggil fungsi Chunked Upload yang baru
+             finalVideoUrl = await uploadVideoInChunks(draft.videoFile);
+             setSyncMessage(`Video rute ${i+1} selesai diunggah.`);
+          } catch (e) { 
+             showToast(`Video rute ${draft.name} gagal diunggah: ${e.message}`); 
+          }
         }
 
         if (draft.photoFiles && draft.photoFiles.length > 0) {
