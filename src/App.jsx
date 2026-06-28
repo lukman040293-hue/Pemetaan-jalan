@@ -459,7 +459,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 if (currentProgress < 1) { 
                     animStateRef.current.frameId = requestAnimationFrame(animateFallback); 
                 } else { 
-                    setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); 
+                    setTimeout(() => { if(animStateRef.current.isMounted) setIsPlaying(false); }, 500); 
                 }
             };
             setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animateFallback); }, 500);
@@ -598,7 +598,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         }
 
                         if (currentProgress < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); } 
-                        else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
+                        else { setTimeout(() => { if(animStateRef.current.isMounted) setIsPlaying(false); }, 500); }
                     };
                     setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animatePresent); }, 500);
                 }
@@ -653,25 +653,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700"><div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, backgroundColor: getConditionColor(road.condition) }}></div></div>
                             </div>
                         </div>
-                        
-                        {progress === 0 && (
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 bg-black/80 backdrop-blur-md px-8 py-5 rounded-3xl border border-white/20 text-center pointer-events-none shadow-2xl">
-                                {isPlaying ? (
-                                    <div className="animate-pulse">
-                                        <p className="text-white font-bold text-xl">Mempersiapkan...</p>
-                                        <p className="text-slate-300 text-sm mt-1">Animasi berjalan...</p>
-                                    </div>
-                                ) : (
-                                    <div className="animate-bounce mt-2">
-                                        <div className="bg-emerald-500 text-white w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                                            <svg className="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                        </div>
-                                        <p className="text-white font-black text-2xl">Peta 3D Siap!</p>
-                                        <p className="text-emerald-300 text-sm mt-2 font-bold uppercase tracking-wider">👆 Tekan tombol Play di atas</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
                         <button onClick={() => { stopAnimation(); onClose(); }} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors shadow-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
