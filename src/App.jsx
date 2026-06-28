@@ -550,6 +550,48 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             
                             try {
                                 ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
+
+                                const proj = map.project([currentLng, currentLat]);
+                                const cw = mapContainerRef.current.clientWidth || mapCanvas.clientWidth || 1;
+                                const ch = mapContainerRef.current.clientHeight || mapCanvas.clientHeight || 1;
+                                const vx = proj.x * (1280 / cw);
+                                const vy = proj.y * (720 / ch);
+
+                                ctx.save();
+                                ctx.translate(vx, vy);
+                                ctx.scale(1.5, 1.5); 
+
+                                const vType = animStateRef.current.vehicleType;
+                                if (vType === 'car') {
+                                    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10;
+                                    ctx.fillStyle = '#1e293b'; ctx.fillRect(-14, -26, 28, 52); 
+                                    ctx.fillStyle = '#2563eb'; ctx.fillRect(-12, -24, 24, 48); 
+                                    ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -12, 20, 16); 
+                                    ctx.fillStyle = '#fef08a'; ctx.fillRect(-10, -24, 6, 4); ctx.fillRect(4, -24, 6, 4); 
+                                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-10, 20, 6, 4); ctx.fillRect(4, 20, 6, 4); 
+                                } else if (vType === 'motorcycle') {
+                                    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8;
+                                    ctx.fillStyle = '#1e293b'; ctx.fillRect(-6, -18, 12, 36);
+                                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-4, -10, 8, 20);
+                                    ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(0, -16, 4, 0, 2*Math.PI); ctx.fill();
+                                } else if (vType === 'truck') {
+                                    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 15;
+                                    ctx.fillStyle = '#334155'; ctx.fillRect(-20, -40, 40, 80);
+                                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-18, -15, 36, 53);
+                                    ctx.fillStyle = '#eab308'; ctx.fillRect(-18, -38, 36, 20);
+                                    ctx.fillStyle = '#0f172a'; ctx.fillRect(-14, -30, 28, 8);
+                                } else { 
+                                    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 12;
+                                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-4, -24, 8, 48); ctx.fillRect(-24, -4, 48, 8);
+                                    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill();
+                                    ctx.fillStyle = '#0f172a';
+                                    [[-24,-24], [24,-24], [-24,24], [24,24]].forEach(([dx,dy]) => {
+                                        ctx.beginPath(); ctx.arc(dx, dy, 8, 0, 2*Math.PI); ctx.fill();
+                                        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle = '#0f172a';
+                                    });
+                                }
+                                ctx.restore();
+
                                 const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
                                 ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
                                 ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 50, 675);
