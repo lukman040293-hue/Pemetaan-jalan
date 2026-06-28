@@ -12,6 +12,44 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR';
 const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; 
 const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; 
 
+// --- FUNGSI PEMUAT LIBRARY SUPER AMAN (ANTI-CANVAS HIJACK & CSP SAFE) ---
+// Mematikan AMD loader sementara agar library UMD terpasang kuat ke Global Window
+// Menggunakan injeksi script standar agar lolos dari blokir CSP (Content Security Policy)
+const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
+  if (window[globalVarName]) return true;
+
+  if (cssUrl && !document.querySelector(`link[href="${cssUrl}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = cssUrl;
+    document.head.appendChild(link);
+  }
+
+  // Simpan dan matikan sementara AMD (Jebakan dari environment preview)
+  const tempDefine = window.define;
+  if (typeof window.define === 'function' && window.define.amd) {
+      window.define = undefined;
+  }
+
+  let success = false;
+  for (const url of jsUrls) {
+      success = await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = url;
+          script.crossOrigin = 'anonymous';
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.head.appendChild(script);
+      });
+      
+      if (success && window[globalVarName]) break;
+  }
+
+  // Kembalikan konfigurasi AMD sistem seperti semula
+  if (tempDefine) window.define = tempDefine;
+  return !!window[globalVarName];
+};
+
 // --- DATA RUJUKAN ---
 const KELURAHAN_LIST = [
   "Air Hitam", "Air Putih", "Bandara", "Baqa", "Bayur", "Budaya Pampang", "Bugis", "Bukit Pinang", "Bukuan", "Dadi Mulya", 
@@ -274,31 +312,25 @@ const DroneVideoExporter = ({ road, onClose }) => {
             }
         };
 
-        const loadMapLibre = () => {
+        const loadMapLibre = async () => {
             if (window.maplibregl) { initRenderer(); return; }
-            if (document.getElementById('maplibre-js-core')) return;
-
-            if (!document.getElementById('maplibre-css-core')) {
-                const link = document.createElement('link'); link.id = 'maplibre-css-core'; link.rel = 'stylesheet';
-                link.href = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.css';
-                document.head.appendChild(link);
-            }
-
-            const script = document.createElement('script');
-            script.id = 'maplibre-js-core';
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js';
             
-            script.onload = () => {
-                let attempts = 0;
-                const checkInterval = setInterval(() => {
-                    if (!isMounted) { clearInterval(checkInterval); return; }
-                    if (window.maplibregl) { clearInterval(checkInterval); initRenderer(); } 
-                    else if (attempts > 20) { clearInterval(checkInterval); setStatus('Gagal inisialisasi MapLibre.'); }
-                    attempts++;
-                }, 200);
-            };
-            script.onerror = () => { setStatus('Gagal mengunduh modul 3D.'); };
-            document.head.appendChild(script);
+            setStatus('Mendownload Modul 3D...');
+            const success = await loadLibrarySafely(
+                'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.css',
+                [
+                    'https://unpkg.com/maplibre-gl@2.4.2/dist/maplibre-gl.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/2.4.2/maplibre-gl.js',
+                    'https://cdn.jsdelivr.net/npm/maplibre-gl@2.4.2/dist/maplibre-gl.js'
+                ],
+                'maplibregl'
+            );
+
+            if (success && isMounted) {
+                initRenderer();
+            } else if (isMounted) {
+                setStatus('Gagal mengunduh modul 3D. Cek koneksi / Firewall Anda.');
+            }
         };
 
         loadMapLibre();
@@ -542,32 +574,24 @@ export default function App() {
   // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
+  // Gunakan Fetch Loader yang aman untuk mengunduh Leaflet
   useEffect(() => {
-    if (window.L) {
-        setIsLeafletLoaded(true);
-        return;
-    }
-
-    if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
-        document.head.appendChild(link);
-    }
-
-    if (!document.getElementById('leaflet-js-script')) {
-        const script = document.createElement('script');
-        script.id = 'leaflet-js-script';
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-        script.onload = () => {
+    const initLeaflet = async () => {
+        const success = await loadLibrarySafely(
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            [
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+            ],
+            'L'
+        );
+        if (success) {
             setIsLeafletLoaded(true);
-        };
-        script.onerror = () => {
-            console.error("Gagal memuat Leaflet");
+        } else {
+            console.error("Leaflet gagal diinisialisasi");
         }
-        document.head.appendChild(script);
-    }
+    };
+    initLeaflet();
   }, []);
 
   const formatRoadData = (road) => {
@@ -1296,7 +1320,6 @@ export default function App() {
 
   return (
     <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
         
