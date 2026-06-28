@@ -238,6 +238,8 @@ const DroneVideoExporter = ({ road, onClose }) => {
     
     const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null });
 
+    const vehicleSvg = `<svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6));"><rect x="8" y="35" width="16" height="30" rx="6" fill="#1e293b"/><rect x="76" y="35" width="16" height="30" rx="6" fill="#1e293b"/><rect x="8" y="105" width="16" height="30" rx="6" fill="#1e293b"/><rect x="76" y="105" width="16" height="30" rx="6" fill="#1e293b"/><rect x="14" y="12" width="72" height="135" rx="28" fill="#e2e8f0"/><rect x="20" y="18" width="60" height="123" rx="22" fill="#3b82f6"/><path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#0f172a"/><path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#0f172a"/><rect x="28" y="72" width="44" height="38" rx="12" fill="#94a3b8"/></svg>`;
+
     useEffect(() => {
         animStateRef.current.isMounted = true;
         return () => {
@@ -307,10 +309,23 @@ const DroneVideoExporter = ({ road, onClose }) => {
             setStatus('presenting');
             
             const map = window.L.map(mapContainerRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([points[0].lat, points[0].lng], 18);
-            window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+            
+            // Ganti Google Satellite agar lebih aman dari zoom kosong
+            window.L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 22, maxNativeZoom: 20 }).addTo(map);
+            
             const latlngs = points.map(p => [p.lat, p.lng]);
             window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             animStateRef.current.map = map;
+
+            let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+            
+            const fallbackIcon = window.L.divIcon({
+                className: 'fallback-vehicle',
+                html: `<div id="leaflet-vehicle-icon" style="width: 32px; height: 50px; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicleSvg}</div>`,
+                iconSize: [32, 50],
+                iconAnchor: [16, 25]
+            });
+            const fallbackMarker = window.L.marker([points[0].lat, points[0].lng], { icon: fallbackIcon, zIndexOffset: 1000 }).addTo(map);
 
             let startTime = null;
             const duration = Math.min(30000, Math.max(10000, totalDist * 15));
@@ -327,8 +342,17 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 
                 const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
                 const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
+                
+                if (i < points.length - 1) {
+                    let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
+                    if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+                    currentSmoothBearing += diff * 0.08; 
+                }
 
                 map.setView([currentLat, currentLng], 18.5, { animate: false });
+                fallbackMarker.setLatLng([currentLat, currentLng]);
+                const iconDiv = document.getElementById('leaflet-vehicle-icon');
+                if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                 
                 if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animateFallback); }
                 else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
@@ -345,11 +369,19 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 container: mapContainerRef.current,
                 style: {
                     version: 8,
-                    sources: { 'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, crossOrigin: 'anonymous' } },
-                    layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 22 }]
+                    sources: { 
+                        'satellite': { 
+                            type: 'raster', 
+                            // Menggunakan Google Satellite (Mencegah masalah "Map data not available")
+                            tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], 
+                            tileSize: 256, 
+                            maxzoom: 20 // Overscales dengan aman ke zoom lebih dalam
+                        } 
+                    },
+                    layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 24 }]
                 },
                 center: [points[0].lng, points[0].lat],
-                zoom: 18.5, pitch: 75,
+                zoom: 18.5, pitch: 70, // Pitch diturunkan sedikit untuk visibilitas
                 bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
                 interactive: false,
                 preserveDrawingBuffer: mode === 'auto'
@@ -367,6 +399,15 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 let startTime = null; 
                 const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
                 let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+
+                // Tambah Marker Mobil
+                const el = document.createElement('div');
+                el.style.width = '32px'; el.style.height = '50px';
+                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${vehicleSvg}</div>`;
+                
+                const vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map' })
+                    .setLngLat([points[0].lng, points[0].lat])
+                    .addTo(map);
 
                 if (mode === 'auto') {
                     try {
@@ -411,7 +452,10 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 currentSmoothBearing += diff * 0.08; 
                             }
 
-                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
+                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 70, zoom: 19 });
+                            vehicleMarker.setLngLat([currentLng, currentLat]);
+                            const iconDiv = document.getElementById('maplibre-vehicle-icon');
+                            if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                             
                             try {
                                 ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
@@ -447,7 +491,10 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             currentSmoothBearing += diff * 0.08; 
                         }
 
-                        map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 75, zoom: 19 });
+                        map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: 70, zoom: 19 });
+                        vehicleMarker.setLngLat([currentLng, currentLat]);
+                        const iconDiv = document.getElementById('maplibre-vehicle-icon');
+                        if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
 
                         if (p < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); }
                         else { setTimeout(() => { if(animStateRef.current.isMounted) setStatus('finished'); }, 2000); }
