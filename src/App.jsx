@@ -497,11 +497,12 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 if (mode === 'auto') {
                     try {
                         const createVehicleImage = (type) => {
+                            const size = 80;
                             const canvas = document.createElement('canvas');
-                            canvas.width = 80;
-                            canvas.height = 80;
-                            const ctx = canvas.getContext('2d');
-                            ctx.translate(40, 40);
+                            canvas.width = size;
+                            canvas.height = size;
+                            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                            ctx.translate(size / 2, size / 2);
                             
                             if (type === 'car') {
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
@@ -531,7 +532,10 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                     ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle = '#0f172a';
                                 });
                             }
-                            return canvas;
+                            
+                            // KUNCI PERBAIKAN: Ekstrak piksel mentah ke format yang disukai MapLibre GL
+                            const imageData = ctx.getImageData(0, 0, size, size);
+                            return { width: size, height: size, data: new Uint8Array(imageData.data.buffer) };
                         };
 
                         map.addImage('vehicle-icon', createVehicleImage(animStateRef.current.vehicleType));
