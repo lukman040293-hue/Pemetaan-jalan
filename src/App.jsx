@@ -611,11 +611,29 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
                             
                             try {
-                                ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-                                const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
-                                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
-                                ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 50, 675);
-                                ctx.fillStyle = getConditionColor(road.condition); ctx.fillRect(0, 710, 1280 * currentProgressAuto, 10);
+                                // Sesuaikan target resolusi gambar map agar pas dengan kanvas 1920x1080
+                                ctx.drawImage(mapCanvas, 0, 0, 1920, 1080);
+                                
+                                // Buat gradient bayangan agar teks terbaca, mulai dari Y=750 hingga 1080
+                                const grad = ctx.createLinearGradient(0, 750, 0, 1080); 
+                                grad.addColorStop(0, 'transparent'); 
+                                grad.addColorStop(1, 'rgba(15,23,42,0.95)'); 
+                                ctx.fillStyle = grad; 
+                                ctx.fillRect(0, 750, 1920, 330);
+                                
+                                // Render Teks Judul
+                                ctx.fillStyle = '#ffffff'; 
+                                ctx.font = 'bold 64px sans-serif'; 
+                                ctx.fillText(`${road.name.toUpperCase()}`, 75, 945);
+                                
+                                // Render Teks Sub-judul (Kondisi & Panjang)
+                                ctx.font = '36px sans-serif'; 
+                                ctx.fillStyle = '#cbd5e1'; 
+                                ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 75, 1012);
+                                
+                                // Render Progress Bar
+                                ctx.fillStyle = getConditionColor(road.condition); 
+                                ctx.fillRect(0, 1065, 1920 * currentProgressAuto, 15);
                             } catch (err) { throw new Error("Browser memblokir render visual (Tainted Canvas)."); }
 
                             if (currentProgressAuto < 1) { animStateRef.current.frameId = requestAnimationFrame(animateAuto); } 
