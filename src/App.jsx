@@ -2720,35 +2720,31 @@ export default function App() {
       {appRole === 'admin' && selectedRoad && (
         <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
            <div className="text-center border-b-4 border-slate-800 pb-4 mb-6 relative">
-              {/* Menghapus Dokumen Resmi dan memindahkan tanggal ke sudut kanan */}
-              <div className="absolute right-0 bottom-4 text-xs font-bold text-slate-500">
-                Tanggal Cetak: {new Date().toLocaleDateString('id-ID')}
-              </div>
               <h1 className="text-2xl font-black uppercase tracking-wide">Laporan Survei Kondisi Jalan</h1>
            </div>
            
-           <table className="w-full mb-6 text-sm border-collapse">
+           <table className="w-full mb-6 text-[12px] border-collapse">
               <tbody>
-                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold w-1/3 text-slate-600">Nama Rute / Jalan</td><td className="py-2.5 font-black text-base">: {selectedRoad.name}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold w-1/3 text-slate-600">Nama Rute / Jalan</td><td className="py-2.5 font-black text-[12px]">: {selectedRoad.name}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kelurahan Wilayah</td><td className="py-2.5 font-bold">: {formatKel(selectedRoad.kelurahan)}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Jenis Material Jalan</td><td className="py-2.5 font-bold">: {selectedRoad.jenisJalan || '-'}</td></tr>
-                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kondisi Dominan</td><td className="py-2.5">: <span className="font-bold border border-slate-400 px-2 py-0.5 rounded text-[11px]" style={{ color: getConditionColor(selectedRoad.condition), backgroundColor: `${getConditionColor(selectedRoad.condition)}15` }}>{selectedRoad.condition}</span></td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Kondisi Dominan</td><td className="py-2.5">: <span className="font-bold border border-slate-400 px-2 py-0.5 rounded text-[12px]" style={{ color: getConditionColor(selectedRoad.condition), backgroundColor: `${getConditionColor(selectedRoad.condition)}15` }}>{selectedRoad.condition}</span></td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Panjang Rute Terecord</td><td className="py-2.5 font-bold">: {formatLength(selectedRoad.length)}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600 align-top">Catatan Lapangan</td><td className="py-2.5 italic text-slate-800">: "{selectedRoad.notes || 'Tidak ada catatan khusus.'}"</td></tr>
-                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-xs font-bold text-blue-700">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
+                <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-[12px] font-bold text-blue-700">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
                 <tr className="border-b border-slate-200"><td className="py-2.5 font-bold text-slate-600">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold">: {selectedRoad.date}</td></tr>
               </tbody>
            </table>
 
            {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
            <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
-              <h3 className="font-bold text-lg border-b-2 border-slate-800 mb-4 pb-1">Lampiran Visual Lapangan</h3>
+              <h3 className="font-bold text-[12px] border-b-2 border-slate-800 mb-4 pb-1">Lampiran Visual Lapangan</h3>
               {videoSnapshot.length > 0 ? (
                  <div className="grid grid-cols-2 gap-4">
                     {videoSnapshot.map((snap, i) => (
                        <div key={i} className="aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden border border-slate-300 relative">
                           <img src={snap} className="w-full h-full object-cover" />
-                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
+                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[12px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
                        </div>
                     ))}
                  </div>
@@ -2761,7 +2757,7 @@ export default function App() {
                     ))}
                  </div>
               ) : (
-                 <div className="text-sm text-slate-500 italic p-4 bg-slate-50 rounded-lg border border-slate-200">Tidak ada media visual yang dilampirkan pada survei ini.</div>
+                 <div className="text-[12px] text-slate-500 italic p-4 bg-slate-50 rounded-lg border border-slate-200">Tidak ada media visual yang dilampirkan pada survei ini.</div>
               )}
            </div>
         </div>
