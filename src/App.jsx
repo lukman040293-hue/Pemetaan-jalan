@@ -2725,26 +2725,26 @@ export default function App() {
            
            <table className="w-full mb-6 text-[14px] border-collapse text-black">
               <tbody>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold w-1/3 text-black">Nama Rute / Jalan</td><td className="py-2.5 font-black text-[14px] text-black">: {selectedRoad.name}</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kelurahan Wilayah</td><td className="py-2.5 font-bold text-black">: {formatKel(selectedRoad.kelurahan)}</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Jenis Material Jalan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.jenisJalan || '-'}</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kondisi Dominan</td><td className="py-2.5 text-black">: <span className="font-bold border border-black px-2 py-0.5 rounded text-[14px] text-black">{selectedRoad.condition}</span></td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Panjang Rute Terecord</td><td className="py-2.5 font-bold text-black">: {formatLength(selectedRoad.length)}</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black align-top">Catatan Lapangan</td><td className="py-2.5 italic text-slate-800">: "{selectedRoad.notes || 'Tidak ada catatan khusus.'}"</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-[14px] font-bold text-black">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
-                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.date}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold w-1/3 text-black">Nama Rute / Jalan</td><td className="py-2.5 font-black text-[14px] text-[#800000]">: {selectedRoad.name}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kelurahan Wilayah</td><td className="py-2.5 font-bold text-[#800000]">: {formatKel(selectedRoad.kelurahan)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Jenis Material Jalan</td><td className="py-2.5 font-bold text-[#800000]">: {selectedRoad.jenisJalan || '-'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kondisi Dominan</td><td className="py-2.5 text-[#800000]">: <span className="font-bold border border-[#800000] px-2 py-0.5 rounded text-[14px] text-[#800000]">{selectedRoad.condition}</span></td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Panjang Rute Terecord</td><td className="py-2.5 font-bold text-[#800000]">: {formatLength(selectedRoad.length)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black align-top">Catatan Lapangan</td><td className="py-2.5 italic text-[#800000]">: "{selectedRoad.notes || 'Tidak ada catatan khusus.'}"</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-[14px] font-bold text-[#800000]">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold text-[#800000]">: {selectedRoad.date}</td></tr>
               </tbody>
            </table>
 
            {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
            <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
-              <h3 className="font-bold text-[14px] border-b-2 border-black mb-4 pb-1 text-black">Lampiran Visual Lapangan</h3>
+              <h3 className="font-bold text-[16px] border-b-2 border-black mb-4 pb-1 text-black">Lampiran Visual Lapangan</h3>
               {videoSnapshot.length > 0 ? (
                  <div className="grid grid-cols-2 gap-4">
                     {videoSnapshot.map((snap, i) => (
                        <div key={i} className="aspect-[4/3] bg-white rounded-lg overflow-hidden border border-black relative">
                           <img src={snap} className="w-full h-full object-cover" />
-                          <div className="absolute bottom-2 left-2 bg-black/80 text-white text-[14px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
+                          <div className="absolute bottom-2 left-2 bg-black/80 text-white text-[16px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
                        </div>
                     ))}
                  </div>
@@ -2757,7 +2757,7 @@ export default function App() {
                     ))}
                  </div>
               ) : (
-                 <div className="text-[14px] text-black italic p-4 bg-white rounded-lg border border-black">Tidak ada media visual yang dilampirkan pada survei ini.</div>
+                 <div className="text-[16px] text-black italic p-4 bg-white rounded-lg border border-black">Tidak ada media visual yang dilampirkan pada survei ini.</div>
               )}
            </div>
         </div>
