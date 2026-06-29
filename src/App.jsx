@@ -674,7 +674,8 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-            <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {/* KUNCI PERBAIKAN: Menjaga map tetap memiliki opacity-100 saat status = 'recording' */}
+            <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' || status === 'recording' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <div ref={mapContainerRef} className="w-full h-full bg-black"></div>
                 {status === 'presenting' && (
                     <>
