@@ -492,13 +492,67 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
                 let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
 
-                const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
-                el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
-                
-                const vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
+                let vehicleMarker = null;
 
                 if (mode === 'auto') {
                     try {
+                        const createVehicleImage = (type) => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 80;
+                            canvas.height = 80;
+                            const ctx = canvas.getContext('2d');
+                            ctx.translate(40, 40);
+                            
+                            if (type === 'car') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
+                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-10, -18, 20, 36); 
+                                ctx.fillStyle = '#2563eb'; ctx.fillRect(-8, -16, 16, 32); 
+                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-6, -8, 12, 16); 
+                                ctx.fillStyle = '#fef08a'; ctx.fillRect(-8, -17, 4, 3); ctx.fillRect(4, -17, 4, 3); 
+                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-8, 14, 4, 3); ctx.fillRect(4, 14, 4, 3); 
+                            } else if (type === 'motorcycle') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-4, -12, 8, 24);
+                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-2, -6, 4, 12);
+                                ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(0, -10, 3, 0, 2*Math.PI); ctx.fill();
+                            } else if (type === 'truck') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
+                                ctx.fillStyle = '#334155'; ctx.fillRect(-14, -28, 28, 56);
+                                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
+                                ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
+                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
+                            } else { // drone
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
+                                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
+                                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2*Math.PI); ctx.fill();
+                                ctx.fillStyle = '#0f172a';
+                                [[-16,-16], [16,-16], [-16,16], [16,16]].forEach(([dx,dy]) => {
+                                    ctx.beginPath(); ctx.arc(dx, dy, 7, 0, 2*Math.PI); ctx.fill();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle = '#0f172a';
+                                });
+                            }
+                            return canvas;
+                        };
+
+                        map.addImage('vehicle-icon', createVehicleImage(animStateRef.current.vehicleType));
+                        map.addSource('vehicle', {
+                            type: 'geojson',
+                            data: { type: 'Feature', properties: { bearing: currentSmoothBearing }, geometry: { type: 'Point', coordinates: [points[0].lng, points[0].lat] } }
+                        });
+                        map.addLayer({
+                            id: 'vehicle-layer',
+                            type: 'symbol',
+                            source: 'vehicle',
+                            layout: {
+                                'icon-image': 'vehicle-icon',
+                                'icon-size': 1.5,
+                                'icon-rotation-alignment': 'map',
+                                'icon-rotate': ['get', 'bearing'],
+                                'icon-allow-overlap': true,
+                                'icon-ignore-placement': true
+                            }
+                        });
+
                         const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; 
                         const ctx = outCanvas.getContext('2d'); const mapCanvas = map.getCanvas();
                         const stream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null);
@@ -543,65 +597,17 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
                             let pitch = 70; let zoom = 19;
                             if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
+                            
+                            map.getSource('vehicle').setData({
+                                type: 'Feature',
+                                properties: { bearing: currentSmoothBearing },
+                                geometry: { type: 'Point', coordinates: [currentLng, currentLat] }
+                            });
+                            
                             map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
-                            vehicleMarker.setLngLat([currentLng, currentLat]);
-                            const iconDiv = document.getElementById('maplibre-vehicle-icon');
-                            if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
                             
                             try {
                                 ctx.drawImage(mapCanvas, 0, 0, 1280, 720);
-
-                                // 1. Cari posisi piksel kendaraan di layar map
-                                const proj = map.project([currentLng, currentLat]);
-                                const cw = mapContainerRef.current.clientWidth || mapCanvas.clientWidth || 1;
-                                const ch = mapContainerRef.current.clientHeight || mapCanvas.clientHeight || 1;
-                                
-                                // 2. Konversi posisi layar map ke skala video 1280x720
-                                const vx = proj.x * (1280 / cw);
-                                const vy = proj.y * (720 / ch);
-
-                                ctx.save();
-                                ctx.translate(vx, vy);
-                                ctx.scale(2.0, 2.0); // Perbesar agar jelas di video HD
-
-                                const vType = animStateRef.current.vehicleType;
-                                
-                                // 3. GAMBAR KENDARAAN MANUAL KE CANVAS VIDEO
-                                if (vType === 'car') {
-                                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
-                                    ctx.fillStyle = '#1e293b'; ctx.fillRect(-14, -26, 28, 52); // Bodi bawah
-                                    ctx.fillStyle = '#2563eb'; ctx.fillRect(-12, -24, 24, 48); // Warna utama
-                                    ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -14, 20, 22); // Atap/Kaca
-                                    // Lampu depan
-                                    ctx.shadowBlur = 15; ctx.shadowColor = '#fef08a';
-                                    ctx.fillStyle = '#fef08a'; ctx.fillRect(-10, -25, 6, 4); ctx.fillRect(4, -25, 6, 4); 
-                                    // Lampu belakang
-                                    ctx.shadowColor = '#ef4444';
-                                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-10, 21, 6, 4); ctx.fillRect(4, 21, 6, 4); 
-                                } else if (vType === 'motorcycle') {
-                                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
-                                    ctx.fillStyle = '#1e293b'; ctx.fillRect(-6, -18, 12, 36);
-                                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-4, -10, 8, 20);
-                                    ctx.shadowBlur = 15; ctx.shadowColor = '#fef08a';
-                                    ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(0, -16, 4, 0, 2*Math.PI); ctx.fill();
-                                } else if (vType === 'truck') {
-                                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 8;
-                                    ctx.fillStyle = '#334155'; ctx.fillRect(-20, -40, 40, 80);
-                                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-18, -15, 36, 53);
-                                    ctx.fillStyle = '#eab308'; ctx.fillRect(-18, -38, 36, 20);
-                                    ctx.fillStyle = '#0f172a'; ctx.fillRect(-14, -30, 28, 8);
-                                } else { 
-                                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 10;
-                                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-4, -24, 8, 48); ctx.fillRect(-24, -4, 48, 8);
-                                    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill();
-                                    ctx.fillStyle = '#0f172a';
-                                    [[-24,-24], [24,-24], [-24,24], [24,24]].forEach(([dx,dy]) => {
-                                        ctx.beginPath(); ctx.arc(dx, dy, 10, 0, 2*Math.PI); ctx.fill();
-                                        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(dx, dy, 6, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle = '#0f172a';
-                                    });
-                                }
-                                ctx.restore();
-
                                 const grad = ctx.createLinearGradient(0, 500, 0, 720); grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(15,23,42,0.95)'); ctx.fillStyle = grad; ctx.fillRect(0, 500, 1280, 220);
                                 ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.fillText(`${road.name.toUpperCase()}`, 50, 630);
                                 ctx.font = '24px sans-serif'; ctx.fillStyle = '#cbd5e1'; ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 50, 675);
@@ -614,6 +620,10 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         animStateRef.current.frameId = requestAnimationFrame(animateAuto);
                     } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
                 } else {
+                    const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
+                    el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
+                    vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
+
                     setStatus('presenting');
                     let lastTime = null; let currentProgress = 0;
                     const animatePresent = (timestamp) => {
