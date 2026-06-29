@@ -1784,8 +1784,12 @@ export default function App() {
   const handlePrint = async () => {
     if (!selectedRoad) return;
 
+    const originalTitle = document.title;
+    document.title = "Laporan_Survei_Jalan"; // Menimpa "Vite App" jika browser masih memaksa menampilkan title
+
     if (!selectedRoad.videoUrl || videoSnapshot.length > 0) {
        window.print();
+       document.title = originalTitle;
        return;
     }
 
@@ -1815,7 +1819,10 @@ export default function App() {
     } catch (err) {}
     
     setVideoSnapshot(snapshots); 
-    setTimeout(() => { window.print(); }, 400); 
+    setTimeout(() => { 
+        window.print(); 
+        document.title = originalTitle;
+    }, 400); 
   };
 
   return (
@@ -1861,11 +1868,11 @@ export default function App() {
         }
 
         @media print {
-          @page { size: A4; margin: 10mm; } 
-          html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @page { size: A4; margin: 0mm; } /* margin 0mm mematikan header (Vite app, Jam) & footer (URL web) browser */
+          html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
           .print-hidden { display: none !important; } 
           .print-static-root { position: static !important; height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; background: white !important; }
-          .print-show { display: block !important; position: static !important; width: 100% !important; margin: 0; padding: 0; }
+          .print-show { display: block !important; position: static !important; width: 100% !important; margin: 0; padding: 15mm !important; box-sizing: border-box; }
         }
       `}} />
 
@@ -2712,9 +2719,12 @@ export default function App() {
       {/* --- AREA CETAK PDF --- */}
       {appRole === 'admin' && selectedRoad && (
         <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
-           <div className="text-center border-b-4 border-slate-800 pb-4 mb-6">
+           <div className="text-center border-b-4 border-slate-800 pb-4 mb-6 relative">
+              {/* Menghapus Dokumen Resmi dan memindahkan tanggal ke sudut kanan */}
+              <div className="absolute right-0 bottom-4 text-xs font-bold text-slate-500">
+                Tanggal Cetak: {new Date().toLocaleDateString('id-ID')}
+              </div>
               <h1 className="text-2xl font-black uppercase tracking-wide">Laporan Survei Kondisi Jalan</h1>
-              <p className="text-slate-500 mt-1 text-sm font-semibold">Dokumen Resmi Sistem WebGIS R-Map</p>
            </div>
            
            <table className="w-full mb-6 text-sm border-collapse">
