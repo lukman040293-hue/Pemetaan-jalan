@@ -557,7 +557,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             }
                         });
 
-                        const outCanvas = document.createElement('canvas'); outCanvas.width = 1280; outCanvas.height = 720; 
+                        const outCanvas = document.createElement('canvas'); outCanvas.width = 1920; outCanvas.height = 1080; 
                         const ctx = outCanvas.getContext('2d'); const mapCanvas = map.getCanvas();
                         const stream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null);
                         if (!stream) throw new Error("Browser tidak mendukung tangkapan layar internal.");
