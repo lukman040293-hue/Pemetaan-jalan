@@ -1638,7 +1638,8 @@ export default function App() {
 
   // --- NEW: FUNGSI UPLOAD VIDEO BERTAHAP (CHUNKED UPLOAD) ---
   const uploadVideoInChunks = async (file) => {
-      const chunkSize = 20 * 1024 * 1024; // Pecah video per 20MB
+      // Ubah ukuran potongan menjadi 5MB (sebelumnya 20MB) agar lebih kebal putus sinyal di HP
+      const chunkSize = 5 * 1024 * 1024; 
       const uniqueUploadId = Math.random().toString(36).substring(2) + Date.now();
       const totalChunks = Math.ceil(file.size / chunkSize);
       let secureUrl = null;
@@ -1649,22 +1650,50 @@ export default function App() {
           const end = Math.min(start + chunkSize - 1, file.size - 1);
           const chunk = file.slice(start, end + 1);
 
-          const formData = new FormData();
-          formData.append('file', chunk);
-          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+          let chunkSuccess = false;
+          let lastError = null;
 
-          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
-              method: 'POST',
-              headers: {
-                  'X-Unique-Upload-Id': uniqueUploadId,
-                  'Content-Range': `bytes ${start}-${end}/${file.size}`
-              },
-              body: formData
-          });
+          // Auto-Retry: Coba maksimal 3 kali per potongan jika koneksi goyah
+          for (let retry = 0; retry < 3; retry++) {
+              try {
+                  const formData = new FormData();
+                  formData.append('file', chunk);
+                  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error?.message || 'Upload gagal');
-          if (data.secure_url) secureUrl = data.secure_url; // Akan terisi di chunk terakhir
+                  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+                      method: 'POST',
+                      headers: {
+                          'X-Unique-Upload-Id': uniqueUploadId,
+                          'Content-Range': `bytes ${start}-${end}/${file.size}`
+                      },
+                      body: formData
+                  });
+
+                  if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      throw new Error(data.error?.message || `Gagal dari server (Kode: ${res.status})`);
+                  }
+
+                  const data = await res.json();
+                  if (data.secure_url) secureUrl = data.secure_url; 
+                  
+                  chunkSuccess = true;
+                  break; // Sukses, keluar dari loop retry
+              } catch (err) {
+                  lastError = err;
+                  console.warn(`Chunk ${i} gagal (Percobaan ${retry + 1}/3):`, err);
+                  if (retry < 2) {
+                      setSyncMessage(`Koneksi goyah. Mencoba ulang (${retry + 1}/3)...`);
+                      await new Promise(r => setTimeout(r, 2500)); // Tunggu 2.5 detik sebelum coba lagi
+                  }
+              }
+          }
+
+          if (!chunkSuccess) {
+              throw new Error(lastError.message === 'Failed to fetch' 
+                  ? 'Koneksi internet terputus permanen oleh browser HP. Silakan coba lagi.' 
+                  : lastError.message);
+          }
       }
       return secureUrl;
   };
