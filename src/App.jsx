@@ -1866,14 +1866,9 @@ export default function App() {
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
         
         body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
-        
-        /* Memperjelas CSS Scrollbar */
-        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #94a3b8 #f8fafc; }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 4px; border: 2px solid #f8fafc; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
-        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -2590,7 +2585,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'h-[200px] md:h-[240px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'h-[220px] md:h-[280px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
                   {videoSnapshot.length > 0 ? (
                       <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
                           {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
@@ -2621,27 +2616,26 @@ export default function App() {
                 </div>
                 
                 {!isVideoFullscreen && (
-                  <div className="w-full p-4 md:p-6 overflow-y-auto h-0 flex-1 custom-scrollbar block">
+                  <div className="w-full p-4 pb-6 flex flex-col overflow-y-auto overscroll-contain flex-1 custom-scrollbar min-h-0">
                     <div className="flex flex-wrap gap-2 justify-end mb-4 shrink-0">
                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { setIsExportingDroneVideo(true); setAnimatingRoadsList([selectedRoad]); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 5.81c.75.378.75 1.47 0 1.848l-11.54 5.81c-.75.412-1.667-.13-1.667-.986V5.653z" /></svg>Play Animasi</button>
-                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Share Lokasi</button>
-                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Export KML</button>
-                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Print</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
+                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
+                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
                     </div>
-
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1 leading-tight">{selectedRoad.name}</h2>
-                    {selectedRoad.notes && <p className="text-sm text-slate-500 italic mb-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">"{selectedRoad.notes}"</p>}
-                    {!selectedRoad.notes && <p className="text-sm text-slate-400 italic mb-4">"Tidak ada catatan."</p>}
-
-                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                      <table className="w-full text-left text-xs md:text-sm">
-                        <tbody>
-                          <tr className="border-b border-slate-100"><th className="px-3 py-2.5 md:px-4 md:py-3 bg-slate-50 text-slate-600 font-bold w-[35%]">Kelurahan</th><td className="px-3 py-2.5 md:px-4 md:py-3 font-bold text-slate-800">{formatKel(selectedRoad.kelurahan)}</td></tr>
-                          <tr className="border-b border-slate-100"><th className="px-3 py-2.5 md:px-4 md:py-3 bg-slate-50 text-slate-600 font-bold">Jenis/Kondisi</th><td className="px-3 py-2.5 md:px-4 md:py-3"><span className="font-bold text-slate-800">{selectedRoad.jenisJalan || 'Aspal'}</span> <span className="text-slate-400 mx-1">/</span> <span className="font-bold" style={{ color: getConditionColor(selectedRoad.condition) }}>{selectedRoad.condition}</span></td></tr>
-                          <tr className="border-b border-slate-100"><th className="px-3 py-2.5 md:px-4 md:py-3 bg-slate-50 text-slate-600 font-bold">Panjang Rute</th><td className="px-3 py-2.5 md:px-4 md:py-3 font-bold text-slate-800">{formatLength(selectedRoad.length)}</td></tr>
-                          <tr className="border-b border-slate-100"><th className="px-3 py-2.5 md:px-4 md:py-3 bg-slate-50 text-slate-600 font-bold align-top">Titik Lokasi</th><td className="px-3 py-2.5 md:px-4 md:py-3 font-bold text-blue-600">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
-                          <tr><th className="px-3 py-2.5 md:px-4 md:py-3 bg-slate-50 text-slate-600 font-bold">Tanggal</th><td className="px-3 py-2.5 md:px-4 md:py-3 font-bold text-slate-800">{selectedRoad.date || '-'}</td></tr>
+                    
+                    <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                    <p className="text-xs md:text-sm text-slate-600 italic mb-4">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                    
+                    <div className="border border-slate-200 rounded-lg overflow-hidden mb-2">
+                      <table className="w-full text-left text-[10px] md:text-xs border-collapse">
+                        <tbody className="divide-y divide-slate-200">
+                          <tr><th className="py-2.5 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-2.5 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
+                          <tr><th className="py-2.5 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-2.5 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
+                          <tr><th className="py-2.5 px-3 bg-slate-50">Panjang Rute</th><td className="py-2.5 px-3">{formatLength(selectedRoad.length)}</td></tr>
+                          <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-2.5 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
+                          <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-2.5 px-3">{selectedRoad.date || '-'}</td></tr>
                         </tbody>
                       </table>
                     </div>
@@ -2651,7 +2645,151 @@ export default function App() {
             </div>
           </>
         )}
-      </div>
+
+        {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
+        {isAnimatingMap && animatingRoadsList.length > 0 && (
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
+                 
+                 {isAnimControlMinimized ? (
+                     <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
+                         Buka Kontrol Animasi
+                     </button>
+                 ) : (
+                     <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-3">
+                         
+                         {/* --- HEADER KONTROL --- */}
+                         <div className="flex justify-between items-center w-full">
+                             <div className="flex gap-2 items-center">
+                                 {isAnimFinished ? (
+                                     <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors" title="Ulang">
+                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                     </button>
+                                 ) : (
+                                     <>
+                                         <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white shadow-sm transition-colors ${isAnimPaused ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`} title={isAnimPaused ? "Play" : "Pause"}>
+                                            {isAnimPaused ? 
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5"><path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" /></svg> : 
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75V5.25z" clipRule="evenodd" /></svg>
+                                            }
+                                         </button>
+                                         <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 shadow-sm transition-colors" title="Mulai Ulang">
+                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                         </button>
+                                     </>
+                                 )}
+                                 <button onClick={() => setShowSpeedControl(!showSpeedControl)} className={`px-3 py-1 h-10 rounded-full text-[11px] md:text-xs font-bold border shadow-sm flex items-center justify-center ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700 border-slate-300'}`}>
+                                     {Number(animationSpeedMultiplier).toFixed(2)}x
+                                 </button>
+                             </div>
+
+                             <div className="flex gap-1.5 items-center">
+                                 <button onClick={() => setIsAnimControlMinimized(true)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full shrink-0 hover:bg-slate-200 transition-colors" title="Sembunyikan">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                                 </button>
+                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         {/* --- INFO KENDARAAN & JARAK --- */}
+                         <div className="flex gap-2 w-full items-stretch">
+                             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 shadow-inner">
+                                 {animatingRoadsList.length > 1 ? (
+                                     <span className="text-blue-700 text-sm font-black truncate">{animatingRoadsList.length} Rute Aktif</span>
+                                 ) : (
+                                     <span className="text-base md:text-lg font-black truncate tracking-wide">
+                                         {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                                     </span>
+                                 )}
+                             </div>
+                             
+                             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+                                 <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg ${animIconType === 'car' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚗</button>
+                                 <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg ${animIconType === 'motorcycle' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏍️</button>
+                                 <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg ${animIconType === 'runner' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏃</button>
+                                 <button onClick={() => setAnimIconType('truck')} className={`p-1.5 rounded-lg ${animIconType === 'truck' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚛</button>
+                             </div>
+                         </div>
+
+                         {/* --- KONTROL SPEED --- */}
+                         {showSpeedControl && (
+                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
+                                 <div className="flex items-center space-x-2 md:space-x-3 mb-3">
+                                     <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-6 h-6 bg-white text-slate-800 rounded-full font-black border border-slate-300">-</button>
+                                     <input type="range" min="0.25" max="3.0" step="0.25" value={animationSpeedMultiplier} onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))} className="flex-1 h-1.5 bg-slate-300 rounded-lg" style={{ accentColor: '#2563eb' }}/>
+                                     <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-6 h-6 bg-white text-slate-800 rounded-full font-black border border-slate-300">+</button>
+                                 </div>
+                                 <div className="flex justify-between gap-1 md:gap-1.5">
+                                     {[1.0, 1.5, 2.0, 2.5, 3.0].map(speed => (
+                                         <button key={speed} onClick={() => setAnimationSpeedMultiplier(speed)} className={`flex-1 py-1.5 rounded-md text-[10px] md:text-xs font-bold border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'}`}>{speed}x</button>
+                                     ))}
+                                 </div>
+                             </div>
+                         )}
+
+                         {/* --- NEW: TOMBOL 3D & RECORDING TERPISAH --- */}
+                         {animatingRoadsList.length === 1 && (
+                            <div className="flex gap-2 w-full items-stretch pt-1">
+                                <button onClick={() => setIsExportingDroneVideo(true)} className={`w-full py-3.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>
+                                    Export Video 3D (Drone View)
+                                </button>
+                            </div>
+                         )}
+
+                     </div>
+                 )}
+             </div>
+          )}
+        </div>
+      )}
+
+      {/* --- AREA CETAK PDF --- */}
+      {appRole === 'admin' && selectedRoad && (
+        <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
+           <div className="text-center border-b-4 border-black pb-4 mb-6 relative">
+              <h1 className="text-2xl font-black uppercase tracking-wide text-black">Laporan Survei Kondisi Jalan</h1>
+           </div>
+           
+           <table className="w-full mb-6 text-[14px] border-collapse text-black">
+              <tbody>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold w-1/3 text-black">Nama Rute / Jalan</td><td className="py-2.5 font-black text-[14px] text-[#800000]">: {selectedRoad.name}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kelurahan Wilayah</td><td className="py-2.5 font-bold text-black">: {formatKel(selectedRoad.kelurahan)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Jenis Material Jalan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.jenisJalan || '-'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kondisi Dominan</td><td className="py-2.5 text-[#800000]">: <span className="font-bold border border-[#800000] px-2 py-0.5 rounded text-[14px] text-[#800000]">{selectedRoad.condition}</span></td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Panjang Rute Terecord</td><td className="py-2.5 font-bold text-black">: {formatLength(selectedRoad.length)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black align-top">Catatan Lapangan</td><td className="py-2.5 italic text-[#800000]">: "{selectedRoad.notes || 'Tidak ada catatan khusus.'}"</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-[14px] font-bold text-black">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.date}</td></tr>
+              </tbody>
+           </table>
+
+           {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
+           <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
+              <h3 className="font-bold text-[16px] border-b-2 border-black mb-4 pb-1 text-black">Lampiran Visual Lapangan</h3>
+              {videoSnapshot.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {videoSnapshot.map((snap, i) => (
+                       <div key={i} className="aspect-[4/3] bg-white rounded-lg overflow-hidden border border-black relative">
+                          <img src={snap} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-2 left-2 bg-black/80 text-white text-[16px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
+                       </div>
+                    ))}
+                 </div>
+              ) : selectedRoad.photoUrls?.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {selectedRoad.photoUrls.slice(0, 4).map((url, i) => (
+                       <div key={i} className="aspect-[4/3] bg-white rounded-lg overflow-hidden border border-black">
+                          <img src={url} className="w-full h-full object-cover" />
+                       </div>
+                    ))}
+                 </div>
+              ) : (
+                 <div className="text-[16px] text-black italic p-4 bg-white rounded-lg border border-black">Tidak ada media visual yang dilampirkan pada survei ini.</div>
+              )}
+           </div>
+        </div>
       )}
     </div>
   );
