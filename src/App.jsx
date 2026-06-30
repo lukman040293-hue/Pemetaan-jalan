@@ -2616,8 +2616,8 @@ export default function App() {
                 </div>
                 
                 {!isVideoFullscreen && (
-                  <div className="w-full p-4 pb-8 flex flex-col overflow-y-auto overscroll-contain flex-1 custom-scrollbar min-h-0">
-                    <div className="flex flex-wrap gap-2 justify-end mb-4 shrink-0">
+                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
+                    <div className="flex flex-wrap gap-2 justify-end shrink-0">
                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
                        <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
@@ -2625,17 +2625,19 @@ export default function App() {
                        <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
                     </div>
                     
-                    <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
-                    <p className="text-xs md:text-sm text-slate-600 italic mb-4">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                    <div className="shrink-0">
+                        <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                        <p className="text-xs md:text-sm text-slate-600 italic mb-2">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                    </div>
                     
-                    <div className="border border-slate-200 rounded-lg overflow-hidden mb-2">
+                    <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
                       <table className="w-full text-left text-[10px] md:text-xs border-collapse">
                         <tbody className="divide-y divide-slate-200">
-                          <tr><th className="py-2.5 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-2.5 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
-                          <tr><th className="py-2.5 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-2.5 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
-                          <tr><th className="py-2.5 px-3 bg-slate-50">Panjang Rute</th><td className="py-2.5 px-3">{formatLength(selectedRoad.length)}</td></tr>
-                          <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-2.5 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
-                          <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-2.5 px-3">{selectedRoad.date || '-'}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-3 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-3 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Panjang Rute</th><td className="py-3 px-3">{formatLength(selectedRoad.length)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-3 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-3 px-3">{selectedRoad.date || '-'}</td></tr>
                         </tbody>
                       </table>
                     </div>
