@@ -2576,7 +2576,7 @@ export default function App() {
             {/* Wrapper Pemusat Modal (100% Center di Layar) */}
             <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
               
-              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'h-[85vh] md:h-[80vh] max-h-[800px] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
+              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'h-[85vh] md:h-[85vh] max-h-[850px] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
                 
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
@@ -2585,7 +2585,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'h-[250px] md:h-[320px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'h-[220px] md:h-[280px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
                   {videoSnapshot.length > 0 ? (
                       <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
                           {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
@@ -2616,8 +2616,8 @@ export default function App() {
                 </div>
                 
                 {!isVideoFullscreen && (
-                  <div className="w-full p-4 flex flex-col overflow-y-auto flex-1">
-                    <div className="flex flex-wrap gap-2 justify-end mb-4">
+                  <div className="w-full p-4 pb-6 flex flex-col overflow-y-auto flex-1 custom-scrollbar min-h-0">
+                    <div className="flex flex-wrap gap-2 justify-end mb-4 shrink-0">
                        <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
                        <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
                        <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
