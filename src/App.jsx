@@ -1670,6 +1670,103 @@ export default function App() {
      }
   }, [recordTab]);
 
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
+    const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
+    drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+    if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
+    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
+    return () => { map.remove(); drawMapInstanceRef.current = null; drawPolylineRef.current = null; drawMarkersGroupRef.current = null; drawMapCurrentLocMarkerRef.current = null; };
+  }, [appRole, mobileScreen, isLeafletLoaded]);
+
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
+    if (currentLocation) {
+        if (drawMapCurrentLocMarkerRef.current) drawMapCurrentLocMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        else {
+            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+            drawMapCurrentLocMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000, interactive: false }).addTo(drawMapInstanceRef.current);
+        }
+    }
+  }, [appRole, mobileScreen, currentLocation]);
+
+  useEffect(() => {
+      if (mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
+      const onMapClick = (e) => {
+          setManualDrawnPoints(prev => {
+              const newPt = { lat: e.latlng.lat, lng: e.latlng.lng };
+              if (prev.length > 0) setTotalDistance(d => d + getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, newPt.lat, newPt.lng));
+              return [...prev, newPt];
+          });
+      };
+      drawMapInstanceRef.current.on('click', onMapClick);
+      return () => { if(drawMapInstanceRef.current) drawMapInstanceRef.current.off('click', onMapClick); };
+  }, [mobileScreen]);
+
+  useEffect(() => {
+      if (mobileScreen !== 'draw_map' || !drawPolylineRef.current || !drawMarkersGroupRef.current) return;
+      drawPolylineRef.current.setLatLngs(manualDrawnPoints.map(p => [p.lat, p.lng]));
+      drawMarkersGroupRef.current.clearLayers();
+      manualDrawnPoints.forEach((pt, idx) => {
+          const isStart = idx === 0; const isEnd = idx === manualDrawnPoints.length - 1;
+          const color = isStart ? '#10B981' : (isEnd ? '#EF4444' : '#ffffff');
+          window.L.circleMarker([pt.lat, pt.lng], { radius: isStart||isEnd ? 5 : 3, fillColor: color, color: isStart||isEnd?'#fff':'#3B82F6', weight: isStart||isEnd ? 2 : 1.5, fillOpacity: 1 }).addTo(drawMarkersGroupRef.current);
+      });
+  }, [manualDrawnPoints, mobileScreen]);
+
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
+    const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
+
+    if (realGpsPoints.length > 0) {
+      const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
+      window.L.polyline(latlngs, { color: getConditionColor(formData.condition), weight: 6, opacity: 0.9 }).addTo(map);
+      window.L.circleMarker(latlngs[0], { radius: 3, fillColor: '#10B981', color: '#fff' }).addTo(map);
+      window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 3, fillColor: '#EF4444', color: '#fff' }).addTo(map);
+      map.fitBounds(window.L.latLngBounds(latlngs), { padding: [30, 30] });
+    } else map.setView([-0.425, 117.185], 13);
+
+    map.on('click', async (e) => {
+      setPinLocation({ lat: e.latlng.lat, lng: e.latlng.lng }); showToast("📍 Pin diletakkan! Mendeteksi...");
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=18&addressdetails=1`);
+        const data = await response.json();
+        if (data && data.address) {
+          const possibleNames = [data.address.village, data.address.suburb, data.address.neighbourhood, data.address.city_district].filter(Boolean);
+          for (let name of possibleNames) {
+            const normalized = name.toLowerCase().replace(/kelurahan|desa|kecamatan/gi, '').trim();
+            const match = KELURAHAN_LIST.find(k => k.toLowerCase() === normalized);
+            if (match) { setFormData(prev => ({ ...prev, kelurahan: match })); showToast(`✅ Kel. ${match}`); break; }
+          }
+        }
+      } catch (err) {}
+    });
+
+    return () => { map.remove(); surveyorMapInstanceRef.current = null; surveyorMarkerRef.current = null; currentLocationMarkerRef.current = null; };
+  }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
+
+  useEffect(() => {
+    if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
+    if (pinLocation) {
+      if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
+      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md');
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] });
+      surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
+    }
+    if (currentLocation) {
+        if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        else {
+            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
+        }
+    }
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
+
   const handlePhotoChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
