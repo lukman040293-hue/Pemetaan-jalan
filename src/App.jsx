@@ -16,7 +16,6 @@ const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan';
 const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
   if (window[globalVarName]) return true;
 
-  // Kunci unduhan untuk mencegah duplikasi jika React Strict Mode berjalan 2x
   window.__lib_locks = window.__lib_locks || {};
   if (window.__lib_locks[globalVarName]) {
       for (let i = 0; i < 50; i++) {
@@ -41,8 +40,6 @@ const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
           if (!res.ok) continue;
           const code = await res.text();
 
-          // Eksekusi kode melalui Blob dengan menonaktifkan AMD/CommonJS secara lokal
-          // Ini mencegah sistem internal (Vite/Canvas) mencegat atau membajak library
           const safeCode = `
             (function() {
               var define = false;
@@ -63,7 +60,6 @@ const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
               document.head.appendChild(script);
           });
 
-          // Beri jeda sangat singkat agar browser memori selesai memproses
           await new Promise(r => setTimeout(r, 50));
           if (window[globalVarName]) {
               success = true;
@@ -227,7 +223,7 @@ const LayerToggle = ({ active, color, onClick }) => (
   </div>
 );
 
-// --- KOMPONEN EXPORT VIDEO DRONE (SOLUSI FINAL - BEBAS DRAMA) ---
+// --- KOMPONEN EXPORT VIDEO DRONE ---
 const DroneVideoExporter = ({ road, onClose }) => {
     const mapContainerRef = useRef(null);
     const [progress, setProgress] = useState(0);
@@ -236,15 +232,12 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const [downloadUrl, setDownloadUrl] = useState(null);
     const [is2DMode, setIs2DMode] = useState(false);
     const [selectedMapStyle, setSelectedMapStyle] = useState('google-hybrid');
-    
-    // --- State Baru: Kontrol Animasi 3D ---
     const [isPlaying, setIsPlaying] = useState(true);
     const [speed, setSpeed] = useState(1);
     const [vehicleType, setVehicleType] = useState('car');
 
     const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null, isPlaying: true, speed: 1, vehicleType: 'car', status: 'menu' });
 
-    // Fungsi Dinamis Pembuat CSS 3D Voxel
     const getVehicle3DHtml = (type) => {
         if (type === 'drone') {
             return `
@@ -353,7 +346,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
         setStatus('loading');
         setProgress(0);
-        // Mode Auto tetap otomatis karena untuk recording, Mode Presenting akan di-jeda (false) di awal
         setIsPlaying(mode === 'auto');
 
         const points = road.realGps;
@@ -533,7 +525,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 });
                             }
                             
-                            // KUNCI PERBAIKAN: Ekstrak piksel mentah ke format yang disukai MapLibre GL
                             const imageData = ctx.getImageData(0, 0, size, size);
                             return { width: size, height: size, data: new Uint8Array(imageData.data.buffer) };
                         };
@@ -611,27 +602,21 @@ const DroneVideoExporter = ({ road, onClose }) => {
                             map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
                             
                             try {
-                                // Sesuaikan target resolusi gambar map agar pas dengan kanvas 1920x1080
                                 ctx.drawImage(mapCanvas, 0, 0, 1920, 1080);
-                                
-                                // Buat gradient bayangan agar teks terbaca, mulai dari Y=750 hingga 1080
                                 const grad = ctx.createLinearGradient(0, 750, 0, 1080); 
                                 grad.addColorStop(0, 'transparent'); 
                                 grad.addColorStop(1, 'rgba(15,23,42,0.95)'); 
                                 ctx.fillStyle = grad; 
                                 ctx.fillRect(0, 750, 1920, 330);
                                 
-                                // Render Teks Judul
                                 ctx.fillStyle = '#ffffff'; 
                                 ctx.font = 'bold 64px sans-serif'; 
                                 ctx.fillText(`${road.name.toUpperCase()}`, 75, 945);
                                 
-                                // Render Teks Sub-judul (Kondisi & Panjang)
                                 ctx.font = '36px sans-serif'; 
                                 ctx.fillStyle = '#cbd5e1'; 
                                 ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 75, 1012);
                                 
-                                // Render Progress Bar
                                 ctx.fillStyle = getConditionColor(road.condition); 
                                 ctx.fillRect(0, 1065, 1920 * currentProgressAuto, 15);
                             } catch (err) { throw new Error("Browser memblokir render visual (Tainted Canvas)."); }
@@ -692,7 +677,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-            {/* KUNCI PERBAIKAN: Menjaga map tetap memiliki opacity-100 saat status = 'recording' */}
             <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' || status === 'recording' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <div ref={mapContainerRef} className="w-full h-full bg-black"></div>
                 {status === 'presenting' && (
@@ -912,7 +896,7 @@ export default function App() {
   const [animIconType, setAnimIconType] = useState('car'); 
 
   const [isExportingDroneVideo, setIsExportingDroneVideo] = useState(false);
-  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false); // State baru untuk Mode Bioskop Video
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false); 
 
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
@@ -933,7 +917,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedRoad) {
       setHighlightedRoadId(null); 
-      setIsVideoFullscreen(false); // Reset fullscreen jika modal ditutup
+      setIsVideoFullscreen(false); 
       if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
     } else {
       setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId); 
@@ -1587,6 +1571,58 @@ export default function App() {
     }
   };
 
+  // --- NEW: FUNGSI EXPORT DRAFT KE FILE JSON ---
+  const handleExportDraftJSON = (draft) => {
+    const exportData = {
+      app: "WebGIS_Surveyor",
+      version: "1.0",
+      draft: {
+        ...draft,
+        videoFile: undefined, // File blob tidak bisa diekspor dalam format JSON standar
+        photoFiles: undefined,
+        localVideoUrl: undefined,
+        localPhotoUrls: undefined
+      }
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `Draft_${draft.name.replace(/\s+/g, '_')}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    
+    showToast("File JSON diunduh. Kirim file ini ke teman Anda.");
+  };
+
+  // --- NEW: FUNGSI IMPORT DRAFT DARI FILE JSON ---
+  const handleImportDraftJSON = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        if (importedData.app === "WebGIS_Surveyor" && importedData.draft) {
+          const newDraft = importedData.draft;
+          // Generate ID baru agar tidak menimpa draft yang sudah ada
+          newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
+          newDraft.isUploaded = false; // Reset status unggah
+          setDrafts(prev => [...prev, newDraft]);
+          showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
+        } else {
+          showToast("❌ Format file JSON tidak dikenali.");
+        }
+      } catch (err) {
+        showToast("❌ Gagal membaca file JSON.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input agar file yang sama bisa diimpor lagi jika perlu
+  };
+
   const executeDeleteDraft = (id) => {
       setDrafts(prev => prev.filter(d => d.id !== id));
       setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); 
@@ -1647,9 +1683,7 @@ export default function App() {
     setUploadedVideoFile(null); setUploadedVideoUrl(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/drafts'; 
   };
 
-  // --- NEW: FUNGSI UPLOAD VIDEO BERTAHAP (CHUNKED UPLOAD) ---
   const uploadVideoInChunks = async (file) => {
-      // Ubah ukuran potongan menjadi 5MB (sebelumnya 20MB) agar lebih kebal putus sinyal di HP
       const chunkSize = 5 * 1024 * 1024; 
       const uniqueUploadId = Math.random().toString(36).substring(2) + Date.now();
       const totalChunks = Math.ceil(file.size / chunkSize);
@@ -1664,7 +1698,6 @@ export default function App() {
           let chunkSuccess = false;
           let lastError = null;
 
-          // Auto-Retry: Coba maksimal 3 kali per potongan jika koneksi goyah
           for (let retry = 0; retry < 3; retry++) {
               try {
                   const formData = new FormData();
@@ -1689,13 +1722,13 @@ export default function App() {
                   if (data.secure_url) secureUrl = data.secure_url; 
                   
                   chunkSuccess = true;
-                  break; // Sukses, keluar dari loop retry
+                  break; 
               } catch (err) {
                   lastError = err;
                   console.warn(`Chunk ${i} gagal (Percobaan ${retry + 1}/3):`, err);
                   if (retry < 2) {
                       setSyncMessage(`Koneksi goyah. Mencoba ulang (${retry + 1}/3)...`);
-                      await new Promise(r => setTimeout(r, 2500)); // Tunggu 2.5 detik sebelum coba lagi
+                      await new Promise(r => setTimeout(r, 2500)); 
                   }
               }
           }
@@ -1723,11 +1756,9 @@ export default function App() {
 
         if (draft.videoFile) {
           try {
-             // Memanggil fungsi Chunked Upload yang baru
              finalVideoUrl = await uploadVideoInChunks(draft.videoFile);
              setSyncMessage(`Video rute ${i+1} selesai diunggah.`);
           } catch (e) { 
-             // FIX: Jika video gagal, hentikan proses sinkronisasi agar draft tidak hilang dari HP
              throw new Error(`Upload video "${draft.name}" gagal: ${e.message}. Silakan coba lagi nanti.`); 
           }
         }
@@ -1825,7 +1856,7 @@ export default function App() {
     if (!selectedRoad) return;
 
     const originalTitle = document.title;
-    document.title = "Laporan_Survei_Jalan"; // Menimpa "Vite App" jika browser masih memaksa menampilkan title
+    document.title = "Laporan_Survei_Jalan"; 
 
     if (!selectedRoad.videoUrl || videoSnapshot.length > 0) {
        window.print();
@@ -1901,14 +1932,14 @@ export default function App() {
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         
-        video::-webkit-media-controls-fullscreen-button { display: none !important; } /* Sembunyikan Fullscreen Bawaan Browser */
+        video::-webkit-media-controls-fullscreen-button { display: none !important; } 
 
         @media (min-width: 768px) {
             .modal-offset-sidebar { padding-left: 356px !important; }
         }
 
         @media print {
-          @page { size: A4; margin: 0mm; } /* margin 0mm mematikan header (Vite app, Jam) & footer (URL web) browser */
+          @page { size: A4; margin: 0mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
           .print-hidden { display: none !important; } 
           .print-static-root { position: static !important; height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; background: white !important; }
@@ -1916,19 +1947,16 @@ export default function App() {
         }
       `}} />
 
-      {/* --- RENDER OVERLAY EXPORT DRONE VIDEO --- */}
       {isExportingDroneVideo && animatingRoadsList.length === 1 && (
           <DroneVideoExporter road={animatingRoadsList[0]} onClose={() => setIsExportingDroneVideo(false)} />
       )}
 
-      {/* --- TOAST ALERTS --- */}
       {toastMessage && (
         <div className="fixed top-14 md:top-6 left-1/2 transform -translate-x-1/2 z-[9999] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all animate-bounce border border-slate-700 print-hidden">
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* --- CUSTOM MODAL POP-UP --- */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print-hidden animate-fade-in" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center animate-fade-in-up" onClick={e => e.stopPropagation()}>
@@ -1951,7 +1979,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- HALAMAN LANDING PAGE --- */}
       {!appRole && (
         <div className="h-full flex items-center justify-center p-4 bg-slate-900 print-hidden overflow-y-auto">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-4 border-slate-800">
@@ -1992,7 +2019,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- APLIKASI SURVEYOR MOBILE --- */}
       {appRole === 'surveyor' && (
         <div className="h-full bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
           
@@ -2275,7 +2301,15 @@ export default function App() {
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
                 <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
-                  <div className="flex justify-end mb-3"><button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-sm">Tutup</button></div>
+                  <div className="flex justify-between items-center mb-3">
+                    <button onClick={() => document.getElementById('import-draft-input').click()} className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-emerald-100 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        Import (.json)
+                    </button>
+                    <input type="file" accept=".json" id="import-draft-input" className="hidden" onChange={handleImportDraftJSON} />
+                    
+                    <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-xs">Tutup</button>
+                  </div>
                   {drafts.length > 0 && (
                      <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
                        <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
@@ -2295,8 +2329,11 @@ export default function App() {
                           <div className="flex justify-between items-center">
                              <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
                              <div className="flex space-x-1.5">
-                               <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan">
+                               <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan Info (Teks)">
                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg>
+                               </button>
+                               <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(d); }} className="bg-amber-50 text-amber-600 p-1.5 rounded-xl transition-colors hover:bg-amber-100" title="Download File (.json)">
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                                </button>
                                <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
                              </div>
