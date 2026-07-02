@@ -206,11 +206,18 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
 };
 
 const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
+  // Custom Layer Group untuk Google Satelit + Garis/Nama Jalan (Tanpa Toko/POI)
+  const satBase = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 });
+  // lyrs=h = overlay jalan. apistyle menyembunyikan s.t:2 (Point of Interest/Toko) & s.t:3 (Transit)
+  const cleanRoadsOverlay = L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}&apistyle=s.t:2|p.v:off,s.t:3|p.v:off', { maxZoom: 20 });
+  const satRoadsClean = L.layerGroup([satBase, cleanRoadsOverlay]);
+
   const baseMaps = {
+    "Google Satelit + Jalan (Bersih)": satRoadsClean,
+    "Google Satelit (Polos)": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }),
     "Google Maps (Jalan)": L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20 }),
-    "Google Hybrid (Satelit)": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+    "Google Hybrid (Semua Label)": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
     "OSM Default": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
-    "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
   };
   if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map); else baseMaps["OSM Default"].addTo(map);
   L.control.layers(baseMaps, null, { position }).addTo(map);
@@ -1194,7 +1201,7 @@ export default function App() {
     const map = window.L.map(adminMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 13);
     window.L.control.zoom({ position: 'topright' }).addTo(map);
 
-    initBaseMaps(map, window.L, "OSM Default", 'topright');
+    initBaseMaps(map, window.L, "Google Satelit + Jalan (Bersih)", 'topright');
     
     adminMapInstanceRef.current = map;
     adminLayerGroupRef.current = window.L.layerGroup().addTo(map);
