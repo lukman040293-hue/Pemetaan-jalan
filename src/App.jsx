@@ -156,6 +156,40 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+const getVideoThumbnail = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    // Trik Cloudinary: ambil screenshot detik ke-0 (so_0) dan ubah ekstensi ke .jpg
+    if (url.includes('cloudinary.com/video/upload/')) {
+        return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
+    }
+    return url.replace(/\.[^/.]+$/, ".jpg"); 
+};
+
+const getThumbnailUrl = (road) => {
+    if (road.photoUrls && road.photoUrls.length > 0) return road.photoUrls[0];
+    if (road.videoUrl) return getVideoThumbnail(road.videoUrl);
+    return null;
+};
+
+const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => { // Default diubah ke 'sm' (kecil)
+    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); // Ukuran lingkaran diperkecil: lg=36, md=28, sm=24
+    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); // Tinggi tiang disesuaikan
+    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); // Padding disesuaikan
+    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); // Margin top disesuaikan
+    
+    return `
+    <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+        <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
+            <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: ${conditionColor}; position: relative; border: 1px solid rgba(0,0,0,0.2);">
+                ${thumbnailUrl ? `<img src="${thumbnailUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+                <div style="position: absolute; top: 10%; left: 15%; width: 25%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; filter: blur(1px);"></div>
+            </div>
+        </div>
+        <div style="width: ${size === 'sm' ? 3 : 4}px; height: ${poleH}px; background-color: #334155; border-radius: 2px; margin-top: ${mt}px; z-index: 1; box-shadow: inset 1px 0 2px rgba(255,255,255,0.3);"></div>
+    </div>
+    `;
+};
+
 const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader(); reader.readAsDataURL(file);
@@ -1091,10 +1125,11 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
+          const thumbUrl = getThumbnailUrl(road);
           const pinIcon = window.L.divIcon({
-            className: 'custom-pin-svg', 
-            html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="14" height="24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" /><circle cx="12" cy="12" r="12" fill="${getConditionColor(road.condition)}" /><circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" /></svg>`,
-            iconSize: [14, 24], iconAnchor: [7, 24], popupAnchor: [0, -24] 
+            className: 'custom-pin-html', 
+            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'), // Ubah ukuran ke 'sm' (kecil)
+            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37] // Sesuaikan ukuran iconSize dan anchor
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1393,7 +1428,9 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-mobile-svg', html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="18" height="30" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));"><rect x="10.5" y="12" width="3" height="28" rx="1.5" fill="#475569" /><circle cx="12" cy="12" r="12" fill="${getConditionColor(formData.condition)}" /><circle cx="7.5" cy="7.5" r="3.5" fill="rgba(255,255,255,0.35)" /></svg>`, iconSize: [18, 30], iconAnchor: [9, 30] });
+      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); // Ubah ukuran ke 'md' (sedang)
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); // Sesuaikan ukuran iconSize dan anchor
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
