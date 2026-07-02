@@ -206,11 +206,9 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
 };
 
 const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
-  // Custom Layer Group untuk Google Satelit + Garis/Nama Jalan (Tanpa Toko/POI)
-  const satBase = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 });
-  // lyrs=h = overlay jalan. apistyle menyembunyikan s.t:2 (Point of Interest/Toko) & s.t:3 (Transit)
-  const cleanRoadsOverlay = L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}&apistyle=s.t:2|p.v:off,s.t:3|p.v:off', { maxZoom: 20 });
-  const satRoadsClean = L.layerGroup([satBase, cleanRoadsOverlay]);
+  // Menggunakan mode Hybrid (lyrs=y) untuk memastikan SEMUA tingkat jalan (utama, gang, blok) ter-render.
+  // Lalu kita suntikkan apistyle untuk mematikan POI (s.t:2) seperti toko/restoran dan Transit (s.t:3)
+  const satRoadsClean = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&apistyle=s.t:2|p.v:off,s.t:3|p.v:off', { maxZoom: 20 });
 
   const baseMaps = {
     "Google Satelit + Jalan (Bersih)": satRoadsClean,
