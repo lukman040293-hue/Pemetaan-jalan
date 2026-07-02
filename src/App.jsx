@@ -313,17 +313,74 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 <div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
             </div>`;
         } else if (type === 'runner') {
+            // MODEL PELARI 3D BARU DENGAN ARTIKULASI LENGKAP
+            const skinColor = '#fcd34d';
+            const shirtColor = '#3b82f6';
+            const shortsColor = '#1e293b';
             return `
-            <div style="width: 14px; height: 14px; transform-style: preserve-3d; position: relative;">
-                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.6); filter: blur(3px); transform: translateZ(0px);"></div>
-                <style>@keyframes runLegL { 0% { transform: translateZ(2px) translateY(-3px); } 50% { transform: translateZ(2px) translateY(3px); } 100% { transform: translateZ(2px) translateY(-3px); } } @keyframes runLegR { 0% { transform: translateZ(2px) translateY(3px); } 50% { transform: translateZ(2px) translateY(-3px); } 100% { transform: translateZ(2px) translateY(3px); } } @keyframes runArms { 0% { transform: translateZ(14px) rotate(15deg); } 50% { transform: translateZ(14px) rotate(-15deg); } 100% { transform: translateZ(14px) rotate(15deg); } }</style>
-                <div style="position: absolute; left: 2px; top: 4px; width: 4px; height: 6px; background: #1e293b; border-radius: 2px; animation: runLegL 0.4s infinite linear;"></div>
-                <div style="position: absolute; right: 2px; top: 4px; width: 4px; height: 6px; background: #1e293b; border-radius: 2px; animation: runLegR 0.4s infinite linear;"></div>
-                <div style="position: absolute; left: 2px; top: 4px; width: 10px; height: 6px; background: #3b82f6; border-radius: 3px; transform: translateZ(8px);"></div>
-                <div style="position: absolute; left: 2px; top: 4px; width: 10px; height: 6px; background: #ef4444; border-radius: 3px; transform: translateZ(14px);"></div>
-                <div style="position: absolute; left: -1px; top: 5px; width: 16px; height: 4px; background: #fcd34d; border-radius: 2px; animation: runArms 0.4s infinite linear; transform-origin: center;"></div>
-                <div style="position: absolute; left: 3px; top: 3px; width: 8px; height: 8px; background: #fcd34d; border-radius: 50%; transform: translateZ(20px);"></div>
-                <div style="position: absolute; left: 4px; top: 4px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(21px);"></div>
+            <div style="width: 10px; height: 30px; transform-style: preserve-3d; position: relative;">
+                <style>
+                    /* Siklus Lari: Ayunan Kaki Utama (Pinggul) */
+                    @keyframes runThighL { 0% { transform: rotateX(-40deg); } 50% { transform: rotateX(30deg); } 100% { transform: rotateX(-40deg); } }
+                    @keyframes runThighR { 0% { transform: rotateX(30deg); } 50% { transform: rotateX(-40deg); } 100% { transform: rotateX(30deg); } }
+                    /* Siklus Lari: Tekukan Lutut (Betis) */
+                    @keyframes runCalfL { 0% { transform: rotateX(10deg); } 25% { transform: rotateX(45deg); } 50% { transform: rotateX(90deg); } 75% { transform: rotateX(45deg); } 100% { transform: rotateX(10deg); } }
+                    @keyframes runCalfR { 0% { transform: rotateX(90deg); } 25% { transform: rotateX(45deg); } 50% { transform: rotateX(10deg); } 75% { transform: rotateX(45deg); } 100% { transform: rotateX(90deg); } }
+                    /* Siklus Lari: Ayunan Lengan (Bahu) - Berlawanan dengan kaki */
+                    @keyframes runArmUpL { 0% { transform: rotateX(30deg); } 50% { transform: rotateX(-30deg); } 100% { transform: rotateX(30deg); } }
+                    @keyframes runArmUpR { 0% { transform: rotateX(-30deg); } 50% { transform: rotateX(30deg); } 100% { transform: rotateX(-30deg); } }
+                    /* Siklus Lari: Tekukan Siku */
+                    @keyframes runForearm { 0%, 100% { transform: rotateX(30deg); } 50% { transform: rotateX(60deg); } }
+                    /* Gerakan Badan Naik Turun (Bobbing) */
+                    @keyframes runBob { 0%, 100% { transform: translateZ(0px); } 50% { transform: translateZ(2px); } }
+                </style>
+
+                <!-- Wadah Utama yang Bergerak Naik Turun -->
+                <div style="position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; animation: runBob 0.6s infinite ease-in-out;">
+                    <!-- KEPALA -->
+                    <div style="position: absolute; top: 0; left: 1px; width: 8px; height: 8px; background: ${skinColor}; border-radius: 4px; transform: translateZ(26px);"></div>
+                    
+                    <!-- BADAN (TORSO) -->
+                    <div style="position: absolute; top: 8px; left: 0; width: 10px; height: 12px; background: ${shirtColor}; border-radius: 2px; transform: translateZ(20px);"></div>
+
+                    <!-- LENGAN KIRI (Grup) -->
+                    <div style="position: absolute; top: 9px; left: -3px; transform-origin: top center; transform-style: preserve-3d; animation: runArmUpL 0.6s infinite linear; translateZ(24px);">
+                        <!-- Lengan Atas -->
+                        <div style="width: 3px; height: 7px; background: ${shirtColor}; border-radius: 2px;"></div>
+                        <!-- Lengan Bawah (Siku) -->
+                        <div style="position: absolute; top: 6px; transform-origin: top center; animation: runForearm 0.6s infinite linear;">
+                            <div style="width: 3px; height: 7px; background: ${skinColor}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- LENGAN KANAN (Grup) -->
+                    <div style="position: absolute; top: 9px; right: -3px; transform-origin: top center; transform-style: preserve-3d; animation: runArmUpR 0.6s infinite linear; translateZ(24px);">
+                        <div style="width: 3px; height: 7px; background: ${shirtColor}; border-radius: 2px;"></div>
+                        <div style="position: absolute; top: 6px; transform-origin: top center; animation: runForearm 0.6s infinite linear; animation-delay: -0.3s;">
+                            <div style="width: 3px; height: 7px; background: ${skinColor}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- KAKI KIRI (Grup Pinggul) -->
+                    <div style="position: absolute; top: 18px; left: 1px; transform-origin: top center; transform-style: preserve-3d; animation: runThighL 0.6s infinite linear; translateZ(18px);">
+                        <!-- Paha -->
+                        <div style="width: 4px; height: 9px; background: ${shortsColor}; border-radius: 2px;"></div>
+                        <!-- Betis (Lutut) -->
+                        <div style="position: absolute; top: 8px; transform-origin: top center; animation: runCalfL 0.6s infinite linear;">
+                            <div style="width: 4px; height: 9px; background: ${skinColor}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- KAKI KANAN (Grup Pinggul) -->
+                    <div style="position: absolute; top: 18px; right: 1px; transform-origin: top center; transform-style: preserve-3d; animation: runThighR 0.6s infinite linear; translateZ(18px);">
+                        <div style="width: 4px; height: 9px; background: ${shortsColor}; border-radius: 2px;"></div>
+                        <div style="position: absolute; top: 8px; transform-origin: top center; animation: runCalfR 0.6s infinite linear;">
+                            <div style="width: 4px; height: 9px; background: ${skinColor}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Bayangan -->
+                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); filter: blur(4px); transform: translateZ(0px) scale(1.2, 0.8);"></div>
             </div>`;
         } else {
             return `
@@ -570,12 +627,20 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
                             } else if (type === 'runner') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 4;
-                                ctx.translate(0, -2); ctx.fillStyle = '#fcd34d'; ctx.rotate(15 * Math.PI / 180); ctx.fillRect(-12, -2, 24, 4); ctx.rotate(-15 * Math.PI / 180); ctx.translate(0, 2);
-                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-5, -5, 4, 7); ctx.fillRect(1, 1, 4, 7);
-                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-6, -4, 12, 8);
-                                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(0, -2, 5, 0, 2*Math.PI); ctx.fill();
-                                ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(0, -3, 4, 0, 2*Math.PI); ctx.fill();
+                                // Update Gambar Canvas 2D (Fallback) agar lebih mirip orang lari
+                                ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
+                                // Kepala
+                                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(0, -12, 4, 0, 2*Math.PI); ctx.fill();
+                                // Badan
+                                ctx.fillStyle = '#3b82f6'; ctx.fillRect(-3, -8, 6, 10);
+                                // Kaki (Pose lari sederhana samping)
+                                ctx.fillStyle = '#1e293b';
+                                ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(-6, 10); ctx.lineTo(-2, 14); ctx.fill(); // Kaki belakang
+                                ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(6, 8); ctx.lineTo(6, 14); ctx.fill(); // Kaki depan
+                                // Tangan
+                                ctx.fillStyle = '#fcd34d';
+                                ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 0); ctx.lineWidth = 2; ctx.strokeStyle='#fcd34d'; ctx.stroke(); // Tangan depan
+                                ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(-5, -2); ctx.stroke(); // Tangan belakang
                             } else { // drone
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
