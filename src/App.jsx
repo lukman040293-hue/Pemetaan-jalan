@@ -434,6 +434,14 @@ const DroneVideoExporter = ({ road, onClose }) => {
             window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             animStateRef.current.map = map;
 
+            const midPoint = points[Math.floor(points.length / 2)];
+            const staticLabelIcon = window.L.divIcon({
+                className: 'static-route-label',
+                html: `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="40" y2="-45" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(40px + 3px), calc(-45px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`,
+                iconSize: [0, 0], iconAnchor: [0, 0]
+            });
+            window.L.marker([midPoint.lat, midPoint.lng], { icon: staticLabelIcon, interactive: false }).addTo(map);
+
             let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
             
             const fallbackIcon = window.L.divIcon({
@@ -661,6 +669,11 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         animStateRef.current.frameId = requestAnimationFrame(animateAuto);
                     } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
                 } else {
+                    const midPoint = points[Math.floor(points.length / 2)];
+                    const labelEl = document.createElement('div');
+                    labelEl.innerHTML = `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="40" y2="-45" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(40px + 3px), calc(-45px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`;
+                    new window.maplibregl.Marker({ element: labelEl }).setLngLat([midPoint.lng, midPoint.lat]).addTo(map);
+
                     const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
                     el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
                     vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
