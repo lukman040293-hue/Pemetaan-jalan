@@ -312,6 +312,19 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 <div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
                 <div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
             </div>`;
+        } else if (type === 'runner') {
+            return `
+            <div style="width: 14px; height: 14px; transform-style: preserve-3d; position: relative;">
+                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.6); filter: blur(3px); transform: translateZ(0px);"></div>
+                <style>@keyframes runLegL { 0% { transform: translateZ(2px) translateY(-3px); } 50% { transform: translateZ(2px) translateY(3px); } 100% { transform: translateZ(2px) translateY(-3px); } } @keyframes runLegR { 0% { transform: translateZ(2px) translateY(3px); } 50% { transform: translateZ(2px) translateY(-3px); } 100% { transform: translateZ(2px) translateY(3px); } } @keyframes runArms { 0% { transform: translateZ(14px) rotate(15deg); } 50% { transform: translateZ(14px) rotate(-15deg); } 100% { transform: translateZ(14px) rotate(15deg); } }</style>
+                <div style="position: absolute; left: 2px; top: 4px; width: 4px; height: 6px; background: #1e293b; border-radius: 2px; animation: runLegL 0.4s infinite linear;"></div>
+                <div style="position: absolute; right: 2px; top: 4px; width: 4px; height: 6px; background: #1e293b; border-radius: 2px; animation: runLegR 0.4s infinite linear;"></div>
+                <div style="position: absolute; left: 2px; top: 4px; width: 10px; height: 6px; background: #3b82f6; border-radius: 3px; transform: translateZ(8px);"></div>
+                <div style="position: absolute; left: 2px; top: 4px; width: 10px; height: 6px; background: #ef4444; border-radius: 3px; transform: translateZ(14px);"></div>
+                <div style="position: absolute; left: -1px; top: 5px; width: 16px; height: 4px; background: #fcd34d; border-radius: 2px; animation: runArms 0.4s infinite linear; transform-origin: center;"></div>
+                <div style="position: absolute; left: 3px; top: 3px; width: 8px; height: 8px; background: #fcd34d; border-radius: 50%; transform: translateZ(20px);"></div>
+                <div style="position: absolute; left: 4px; top: 4px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(21px);"></div>
+            </div>`;
         } else {
             return `
             <div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;">
@@ -556,6 +569,13 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
                                 ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
+                            } else if (type === 'runner') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 4;
+                                ctx.translate(0, -2); ctx.fillStyle = '#fcd34d'; ctx.rotate(15 * Math.PI / 180); ctx.fillRect(-12, -2, 24, 4); ctx.rotate(-15 * Math.PI / 180); ctx.translate(0, 2);
+                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-5, -5, 4, 7); ctx.fillRect(1, 1, 4, 7);
+                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-6, -4, 12, 8);
+                                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(0, -2, 5, 0, 2*Math.PI); ctx.fill();
+                                ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(0, -3, 4, 0, 2*Math.PI); ctx.fill();
                             } else { // drone
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
@@ -634,6 +654,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
                             let pitch = 70; let zoom = 19;
                             if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
+                            else if (animStateRef.current.vehicleType === 'runner') { pitch = 65; zoom = 19.5; }
                             
                             map.getSource('vehicle').setData({
                                 type: 'Feature',
@@ -707,6 +728,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
                             let pitch = 70; let zoom = 19;
                             if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
+                            else if (animStateRef.current.vehicleType === 'runner') { pitch = 65; zoom = 19.5; }
                             map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
                             vehicleMarker.setLngLat([currentLng, currentLat]);
                             const iconDiv = document.getElementById('maplibre-vehicle-icon');
@@ -752,6 +774,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 <option value="motorcycle" className="text-black">🏍️ Motor 3D</option>
                                 <option value="truck" className="text-black">🚛 Truk 3D</option>
                                 <option value="drone" className="text-black">🚁 Drone 3D</option>
+                                <option value="runner" className="text-black">🏃 Orang Lari 3D</option>
                             </select>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10 pointer-events-none"></div>
