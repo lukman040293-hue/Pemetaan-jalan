@@ -1576,6 +1576,17 @@ export default function App() {
     setEditingDraftId(draft.id); window.location.hash = '#/surveyor/form';     
   };
 
+  const handleShareDraft = (draft) => {
+    const shareText = `📍 Draft Survei: ${draft.name}\nKelurahan: ${formatKel(draft.kelurahan)}\nKondisi: ${draft.condition}\nPanjang: ${draft.length || 0} km\nCatatan: ${draft.notes || '-'}${draft.pinLocation ? `\nMap: https://www.google.com/maps?q=${draft.pinLocation.lat},${draft.pinLocation.lng}` : ''}`;
+    
+    if (navigator.share) {
+      navigator.share({ title: `Draft: ${draft.name}`, text: shareText }).catch(()=>{});
+    } else {
+      const textArea = document.createElement("textarea"); textArea.value = shareText; document.body.appendChild(textArea); textArea.select();
+      try { document.execCommand('copy'); showToast("Detail draft disalin ke clipboard!"); } catch (err) { showToast("Gagal menyalin."); } document.body.removeChild(textArea);
+    }
+  };
+
   const executeDeleteDraft = (id) => {
       setDrafts(prev => prev.filter(d => d.id !== id));
       setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); 
@@ -2283,7 +2294,12 @@ export default function App() {
                         <div className="flex-1">
                           <div className="flex justify-between items-center">
                              <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
-                             <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold">Edit</button>
+                             <div className="flex space-x-1.5">
+                               <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan">
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg>
+                               </button>
+                               <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
+                             </div>
                           </div>
                           <div className="text-[10px] text-slate-500 mt-1">{d.isUploaded ? '✅ Terunggah' : 'Menunggu Unggah'}</div>
                         </div>
