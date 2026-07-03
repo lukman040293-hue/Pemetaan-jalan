@@ -173,44 +173,29 @@ const formatDuration = (seconds) => {
 };
 
 const createPinIconHtml = (conditionColor, size = 'sm') => {
-    // Ukuran dasar untuk pin push-pin diperkecil lagi
-    const w = size === 'lg' ? 32 : (size === 'md' ? 24 : 18);
-    const h = Math.round(w * 1.8); // Proporsi tinggi ke lebar
+    // Ukuran dasar untuk pin push-pin 3D yang proporsional
+    const w = size === 'lg' ? 32 : (size === 'md' ? 28 : 22);
+    const h = Math.round(w * 1.8); 
     const headRadius = w / 2;
     const gradId = `grad-${Math.random().toString(36).substr(2, 5)}`;
-    const needleGradId = `needleGrad-${Math.random().toString(36).substr(2, 5)}`;
-
-    // Efek kilau 3D pada kepala pin
-    const shineEffect = `
-        <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
-            <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:0.6" />
-            <stop offset="40%" style="stop-color:rgb(255,255,255);stop-opacity:0.2" />
-            <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.2" />
-        </radialGradient>
-        <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="url(#${gradId})" style="pointer-events: none;"/>
-    `;
-        
+    
     return `
-    <div style="width: ${w}px; height: ${h}px; position: relative; background: transparent;">
-        <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); overflow: visible;">
-            <!-- Jarum Pin -->
-            <rect x="${w/2 - 2}" y="${w/2 + 2}" width="4" height="${h - w/2 - 4}" rx="1" fill="url(#${needleGradId})" />
-            <defs>
-                <linearGradient id="${needleGradId}" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style="stop-color:#64748b;stop-opacity:1" />
-                    <stop offset="50%" style="stop-color:#cbd5e1;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#64748b;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-
-            <!-- Bayangan Jarum -->
-            <ellipse cx="${w/2}" cy="${h-2}" rx="${w/4}" ry="2" fill="rgba(0,0,0,0.3)" filter="blur(1px)"/>
-
-            <!-- Kepala Pin -->
-            <g>
-                <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="${conditionColor}"/>
-                ${shineEffect} 
-            </g>
+    <div style="width: ${w}px; height: ${h}px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: transparent; border: none;">
+        <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="overflow: visible; filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.4));">
+            <!-- Jarum Besi Pin -->
+            <path d="M${w/2 - 1.5} ${headRadius + 1} L${w/2 - 0.5} ${h} L${w/2 + 0.5} ${h} L${w/2 + 1.5} ${headRadius + 1} Z" fill="#94a3b8" />
+            <path d="M${w/2} ${headRadius + 1} L${w/2} ${h}" stroke="#f8fafc" stroke-width="0.5" />
+            
+            <!-- Kepala Bola Pin -->
+            <circle cx="${w/2}" cy="${headRadius}" r="${headRadius}" fill="${conditionColor}" />
+            
+            <!-- Efek Kilau Refleksi Cahaya 3D -->
+            <radialGradient id="${gradId}" cx="35%" cy="30%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8" />
+                <stop offset="30%" stop-color="#ffffff" stop-opacity="0.2" />
+                <stop offset="100%" stop-color="#000000" stop-opacity="0.2" />
+            </radialGradient>
+            <circle cx="${w/2}" cy="${headRadius}" r="${headRadius}" fill="url(#${gradId})" />
         </svg>
     </div>
     `;
@@ -1109,11 +1094,10 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
-          // Ukuran icon disesuaikan untuk pin baru yang lebih kecil (18x32 px)
           const pinIcon = window.L.divIcon({
-            className: 'custom-pin-html', 
+            className: '', // Mencegah kotak putih bawaan leaflet
             html: createPinIconHtml(getConditionColor(road.condition), 'sm'),
-            iconSize: [18, 32], iconAnchor: [9, 32], popupAnchor: [0, -32]
+            iconSize: [22, 40], iconAnchor: [11, 40], popupAnchor: [0, -40]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1408,9 +1392,8 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      // Ukuran icon disesuaikan untuk surveyor (24x43 px)
       const htmlPin = createPinIconHtml(getConditionColor(formData.condition), 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [24, 43], iconAnchor: [12, 43] }); 
+      const pinIcon = window.L.divIcon({ className: '', html: htmlPin, iconSize: [28, 50], iconAnchor: [14, 50] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -2396,21 +2379,21 @@ export default function App() {
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
             
             {/* Overlay Layar Gelap Mobile */}
-            {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
+            {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
             {/* --- SIDEBAR KIRI --- */}
-            <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
-              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
+            <aside className={`bg-white bg-opacity-95 backdrop-blur-md flex flex-col shadow-2xl transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-slate-200 md:top-4 md:bottom-4 md:border md:rounded-3xl ${isSidebarOpen ? 'w-10/12 md:w-80 md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`} style={{ height: window.innerWidth >= 768 ? 'calc(100% - 2rem)' : '100%' }}>
+              <div className="flex flex-col h-full flex-shrink-0 text-slate-900" style={{ width: window.innerWidth >= 768 ? '20rem' : '83vw' }}>
                 
-                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
-                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
-                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
+                <div className="p-4 flex justify-between items-center border-b border-slate-200">
+                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-wider uppercase drop-shadow-sm">Daftar Layer</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-200 hover:bg-slate-100 bg-slate-50 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
-                  <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
+                <div className="px-4 py-4 border-b border-slate-200 bg-transparent">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner">
                     <Search className="w-4 h-4 text-slate-800" />
                     <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
                   </div>
@@ -2607,11 +2590,11 @@ export default function App() {
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
           <>
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
+            <div className="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
             
             <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
               
-              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
+              <div className={`relative w-full max-w-2xl mx-auto bg-white flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 shadow-2xl ${isVideoFullscreen ? 'h-screen rounded-none' : 'rounded-t-3xl md:rounded-3xl animate-fade-in-up md:animate-fade-in'}`} style={{ maxHeight: isVideoFullscreen ? '100vh' : '92vh' }}>
                 
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
@@ -2620,7 +2603,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full max-h-[35vh] md:max-h-[300px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black bg-opacity-95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'w-full bg-slate-900 relative'} shrink-0 transition-all duration-300`} style={{ height: isVideoFullscreen ? '100%' : 'auto', maxHeight: isVideoFullscreen ? '100%' : '35vh', minHeight: isVideoFullscreen ? '100%' : '200px' }}>
                   {videoSnapshot.length > 0 ? (
                       <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
                           {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
@@ -2628,7 +2611,7 @@ export default function App() {
                     ) : selectedRoad.videoUrl ? (
                       <>
                         <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
-                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-12 right-4 md:bottom-4 md:right-4'}`} title="Toggle Fullscreen">
+                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black bg-opacity-50 hover:bg-opacity-80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white border-opacity-20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-4 right-4'}`} title="Toggle Fullscreen">
                             {isVideoFullscreen ? (
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
                             ) : (
@@ -2638,12 +2621,14 @@ export default function App() {
                       </>
                     ) : selectedRoad.photoUrls?.length > 0 ? (
                       <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-slate-400 text-sm font-bold">Media Tidak Dilampirkan</div>
+                    )}
                   
                   {/* --- WATERMARK OVERLAY --- */}
                   {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
-                       <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
+                       <div className={`font-black text-white opacity-40 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-4xl md:text-5xl' : 'text-xl md:text-2xl'}`}>
                           {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
                        </div>
                     </div>
@@ -2651,13 +2636,13 @@ export default function App() {
                 </div>
                 
                 {!isVideoFullscreen && (
-                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
+                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3 overflow-y-auto">
                     <div className="flex flex-wrap gap-2 justify-end shrink-0">
-                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
-                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
-                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
-                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[10px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Play Animasi</button>
+                       <button onClick={handleShareLocation} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Share Lokasi</button>
+                       <button onClick={handleExportKML} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Export KML</button>
+                       <button onClick={handlePrint} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Print</button>
                     </div>
                     
                     <div className="shrink-0">
