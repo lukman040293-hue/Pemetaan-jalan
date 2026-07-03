@@ -2349,19 +2349,19 @@ export default function App() {
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10B981' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FBBF24' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF9800' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#EF4444' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
@@ -2382,8 +2382,8 @@ export default function App() {
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
             {/* --- SIDEBAR KIRI --- */}
-            <aside className={`bg-white bg-opacity-95 backdrop-blur-md flex flex-col shadow-2xl transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-slate-200 md:top-4 md:bottom-4 md:border md:rounded-3xl ${isSidebarOpen ? 'w-10/12 md:w-80 md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`} style={{ height: window.innerWidth >= 768 ? 'calc(100% - 2rem)' : '100%' }}>
-              <div className="flex flex-col h-full flex-shrink-0 text-slate-900" style={{ width: window.innerWidth >= 768 ? '20rem' : '83vw' }}>
+            <aside className={`bg-white bg-opacity-95 backdrop-blur-md flex flex-col shadow-2xl transition-transform duration-300 ease-in-out z-[1000] absolute top-0 left-0 h-full border-r border-slate-200 md:top-4 md:bottom-4 md:border md:rounded-3xl w-[85vw] md:w-80 ${isSidebarOpen ? 'translate-x-0 md:translate-x-4' : '-translate-x-full md:-translate-x-[150%]'}`} style={{ height: window.innerWidth >= 768 ? 'calc(100% - 2rem)' : '100%' }}>
+              <div className="flex flex-col h-full flex-shrink-0 text-slate-900 w-full">
                 
                 <div className="p-4 flex justify-between items-center border-b border-slate-200">
                   <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-wider uppercase drop-shadow-sm">Daftar Layer</h3>
