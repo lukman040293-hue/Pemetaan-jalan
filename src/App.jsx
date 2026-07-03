@@ -96,7 +96,7 @@ const getConditionColor = (condition) => {
   switch (condition) {
     case 'Baik': return '#10B981';         
     case 'Rusak Ringan': return '#FBBF24'; 
-    case 'Rusak Sedang': return '#F97316'; 
+    case 'Rusak Sedang': return '#FF9800'; 
     case 'Rusak Parah': return '#EF4444';  
     default: return '#6B7280';
   }
@@ -172,32 +172,13 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const getVideoThumbnail = (url) => {
-    if (!url || typeof url !== 'string') return null;
-    if (url.includes('cloudinary.com/video/upload/')) {
-        return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
-    }
-    return url.replace(/\.[^/.]+$/, ".jpg"); 
-};
-
-const getThumbnailUrl = (road) => {
-    if (road.photoUrls && road.photoUrls.length > 0) return road.photoUrls[0];
-    if (road.videoUrl) return getVideoThumbnail(road.videoUrl);
-    return null;
-};
-
-const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
-    // Ukuran dasar untuk pin push-pin (lebih tinggi dari sebelumnya)
-    const w = size === 'lg' ? 48 : (size === 'md' ? 40 : 32);
+const createPinIconHtml = (conditionColor, size = 'sm') => {
+    // Ukuran dasar untuk pin push-pin diperkecil lagi
+    const w = size === 'lg' ? 32 : (size === 'md' ? 24 : 18);
     const h = Math.round(w * 1.8); // Proporsi tinggi ke lebar
     const headRadius = w / 2;
-    const clipId = `clip-${Math.random().toString(36).substr(2, 5)}`;
     const gradId = `grad-${Math.random().toString(36).substr(2, 5)}`;
-    
-    // Konten di dalam kepala pin: gambar atau warna solid dengan efek kilau
-    const innerContent = thumbnailUrl
-        ? `<image href="${thumbnailUrl}" x="0" y="0" width="${w}" height="${w}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice" />`
-        : `<circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="${conditionColor}"/>`;
+    const needleGradId = `needleGrad-${Math.random().toString(36).substr(2, 5)}`;
 
     // Efek kilau 3D pada kepala pin
     const shineEffect = `
@@ -212,16 +193,10 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
     return `
     <div style="width: ${w}px; height: ${h}px; position: relative; background: transparent;">
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); overflow: visible;">
-            <defs>
-                <clipPath id="${clipId}">
-                    <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" />
-                </clipPath>
-            </defs>
-            
             <!-- Jarum Pin -->
-            <rect x="${w/2 - 2}" y="${w/2 + 2}" width="4" height="${h - w/2 - 4}" rx="1" fill="url(#needleGrad)" />
+            <rect x="${w/2 - 2}" y="${w/2 + 2}" width="4" height="${h - w/2 - 4}" rx="1" fill="url(#${needleGradId})" />
             <defs>
-                <linearGradient id="needleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient id="${needleGradId}" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" style="stop-color:#64748b;stop-opacity:1" />
                     <stop offset="50%" style="stop-color:#cbd5e1;stop-opacity:1" />
                     <stop offset="100%" style="stop-color:#64748b;stop-opacity:1" />
@@ -233,9 +208,8 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
 
             <!-- Kepala Pin -->
             <g>
-                ${innerContent}
-                ${!thumbnailUrl ? shineEffect : ''} <!-- Hanya beri efek kilau kuat jika tidak ada gambar -->
-                ${thumbnailUrl ? `<circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="none" stroke="${conditionColor}" stroke-width="2" style="filter: brightness(1.2);"/>` : ''} <!-- Border warna kondisi jika ada gambar -->
+                <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="${conditionColor}"/>
+                ${shineEffect} 
             </g>
         </svg>
     </div>
@@ -1135,12 +1109,11 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
-          const thumbUrl = getThumbnailUrl(road);
-          // Ukuran icon disesuaikan untuk pin baru (32x58 px), anchor di ujung bawah jarum (16, 58)
+          // Ukuran icon disesuaikan untuk pin baru yang lebih kecil (18x32 px)
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
-            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
-            iconSize: [32, 58], iconAnchor: [16, 58], popupAnchor: [0, -58]
+            html: createPinIconHtml(getConditionColor(road.condition), 'sm'),
+            iconSize: [18, 32], iconAnchor: [9, 32], popupAnchor: [0, -32]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1435,10 +1408,9 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null;
-      // Ukuran icon disesuaikan untuk surveyor (40x72 px), anchor di ujung bawah jarum (20, 72)
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [40, 72], iconAnchor: [20, 72] }); 
+      // Ukuran icon disesuaikan untuk surveyor (24x43 px)
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), 'md'); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [24, 43], iconAnchor: [12, 43] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
