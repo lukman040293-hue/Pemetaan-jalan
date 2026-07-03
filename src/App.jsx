@@ -192,6 +192,7 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
     const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); 
     const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); 
     
+    // Thumbnail img tag telah dihapus di sini agar pin bersih
     return `
     <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
         <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
@@ -859,6 +860,10 @@ export default function App() {
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
+    }
+
     if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
 
     const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
@@ -1016,10 +1021,8 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
 
-  // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
-  // Gunakan Fetch Loader yang aman untuk mengunduh Leaflet
   useEffect(() => {
     const initLeaflet = async () => {
         const success = await loadLibrarySafely(
@@ -1081,7 +1084,6 @@ export default function App() {
     const map = adminMapInstanceRef.current;
     layerGroup.clearLayers();
 
-    // IMPLEMENTASI MODE FOKUS: Hanya tampilkan rute yang dicentang jika ada
     const roadsToDisplay = selectedAdminRouteIds.length > 0 
         ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
         : filteredRoads;
@@ -1136,7 +1138,6 @@ export default function App() {
     const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
     prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
 
-    // AUTO-ZOOM (FOKUS) LOGIC:
     if (roadsToDisplay.length > 0 && map) {
       const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
