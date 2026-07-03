@@ -96,7 +96,7 @@ const getConditionColor = (condition) => {
   switch (condition) {
     case 'Baik': return '#10B981';         
     case 'Rusak Ringan': return '#FBBF24'; 
-    case 'Rusak Sedang': return '#FF9800'; 
+    case 'Rusak Sedang': return '#F97316'; 
     case 'Rusak Parah': return '#EF4444';  
     default: return '#6B7280';
   }
@@ -172,31 +172,35 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const createPinIconHtml = (conditionColor, size = 'sm') => {
-    // Ukuran dasar untuk pin push-pin 3D yang proporsional
-    const w = size === 'lg' ? 32 : (size === 'md' ? 28 : 22);
-    const h = Math.round(w * 1.8); 
-    const headRadius = w / 2;
-    const gradId = `grad-${Math.random().toString(36).substr(2, 5)}`;
+const getVideoThumbnail = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    if (url.includes('cloudinary.com/video/upload/')) {
+        return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
+    }
+    return url.replace(/\.[^/.]+$/, ".jpg"); 
+};
+
+const getThumbnailUrl = (road) => {
+    if (road.photoUrls && road.photoUrls.length > 0) return road.photoUrls[0];
+    if (road.videoUrl) return getVideoThumbnail(road.videoUrl);
+    return null;
+};
+
+const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
+    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); 
+    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); 
+    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); 
+    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); 
     
+    // Thumbnail img tag telah dihapus di sini agar pin bersih
     return `
-    <div style="width: ${w}px; height: ${h}px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: transparent; border: none;">
-        <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="overflow: visible; filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.4));">
-            <!-- Jarum Besi Pin -->
-            <path d="M${w/2 - 1.5} ${headRadius + 1} L${w/2 - 0.5} ${h} L${w/2 + 0.5} ${h} L${w/2 + 1.5} ${headRadius + 1} Z" fill="#94a3b8" />
-            <path d="M${w/2} ${headRadius + 1} L${w/2} ${h}" stroke="#f8fafc" stroke-width="0.5" />
-            
-            <!-- Kepala Bola Pin -->
-            <circle cx="${w/2}" cy="${headRadius}" r="${headRadius}" fill="${conditionColor}" />
-            
-            <!-- Efek Kilau Refleksi Cahaya 3D -->
-            <radialGradient id="${gradId}" cx="35%" cy="30%" r="50%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8" />
-                <stop offset="30%" stop-color="#ffffff" stop-opacity="0.2" />
-                <stop offset="100%" stop-color="#000000" stop-opacity="0.2" />
-            </radialGradient>
-            <circle cx="${w/2}" cy="${headRadius}" r="${headRadius}" fill="url(#${gradId})" />
-        </svg>
+    <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+        <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
+            <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: ${conditionColor}; position: relative; border: 1px solid rgba(0,0,0,0.2);">
+                <div style="position: absolute; top: 10%; left: 15%; width: 25%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; filter: blur(1px);"></div>
+            </div>
+        </div>
+        <div style="width: ${size === 'sm' ? 3 : 4}px; height: ${poleH}px; background-color: #334155; border-radius: 2px; margin-top: ${mt}px; z-index: 1; box-shadow: inset 1px 0 2px rgba(255,255,255,0.3);"></div>
     </div>
     `;
 };
@@ -856,6 +860,10 @@ export default function App() {
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
+    }
+
     if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
 
     const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
@@ -1013,10 +1021,8 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
 
-  // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
-  // Gunakan Fetch Loader yang aman untuk mengunduh Leaflet
   useEffect(() => {
     const initLeaflet = async () => {
         const success = await loadLibrarySafely(
@@ -1078,7 +1084,6 @@ export default function App() {
     const map = adminMapInstanceRef.current;
     layerGroup.clearLayers();
 
-    // IMPLEMENTASI MODE FOKUS: Hanya tampilkan rute yang dicentang jika ada
     const roadsToDisplay = selectedAdminRouteIds.length > 0 
         ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
         : filteredRoads;
@@ -1094,10 +1099,11 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
+          const thumbUrl = getThumbnailUrl(road);
           const pinIcon = window.L.divIcon({
-            className: '', // Mencegah kotak putih bawaan leaflet
-            html: createPinIconHtml(getConditionColor(road.condition), 'sm'),
-            iconSize: [22, 40], iconAnchor: [11, 40], popupAnchor: [0, -40]
+            className: 'custom-pin-html', 
+            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
+            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1132,7 +1138,6 @@ export default function App() {
     const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
     prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
 
-    // AUTO-ZOOM (FOKUS) LOGIC:
     if (roadsToDisplay.length > 0 && map) {
       const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
@@ -1392,8 +1397,9 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), 'md'); 
-      const pinIcon = window.L.divIcon({ className: '', html: htmlPin, iconSize: [28, 50], iconAnchor: [14, 50] }); 
+      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -1403,7 +1409,7 @@ export default function App() {
             currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
         }
     }
-  }, [appRole, mobileScreen, pinLocation, currentLocation, formData, uploadedPhotoUrls]);
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
 
   const startRealHardware = async () => {
     setMobileScreen('record'); 
@@ -2349,19 +2355,19 @@ export default function App() {
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10B981' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FBBF24' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF9800' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#EF4444' }}></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
@@ -2379,21 +2385,21 @@ export default function App() {
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
             
             {/* Overlay Layar Gelap Mobile */}
-            {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
+            {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
             {/* --- SIDEBAR KIRI --- */}
-            <aside className={`bg-white bg-opacity-95 backdrop-blur-md flex flex-col shadow-2xl transition-transform duration-300 ease-in-out z-[1000] absolute top-0 left-0 h-full border-r border-slate-200 md:top-4 md:bottom-4 md:border md:rounded-3xl w-[85vw] md:w-80 ${isSidebarOpen ? 'translate-x-0 md:translate-x-4' : '-translate-x-full md:-translate-x-[150%]'}`} style={{ height: window.innerWidth >= 768 ? 'calc(100% - 2rem)' : '100%' }}>
-              <div className="flex flex-col h-full flex-shrink-0 text-slate-900 w-full">
+            <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
+              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
                 
-                <div className="p-4 flex justify-between items-center border-b border-slate-200">
-                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-wider uppercase drop-shadow-sm">Daftar Layer</h3>
-                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-200 hover:bg-slate-100 bg-slate-50 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
+                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
+                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                <div className="px-4 py-4 border-b border-slate-200 bg-transparent">
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner">
+                <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
+                  <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
                     <Search className="w-4 h-4 text-slate-800" />
                     <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
                   </div>
@@ -2590,11 +2596,11 @@ export default function App() {
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
           <>
-            <div className="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
             
             <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
               
-              <div className={`relative w-full max-w-2xl mx-auto bg-white flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 shadow-2xl ${isVideoFullscreen ? 'h-screen rounded-none' : 'rounded-t-3xl md:rounded-3xl animate-fade-in-up md:animate-fade-in'}`} style={{ maxHeight: isVideoFullscreen ? '100vh' : '92vh' }}>
+              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
                 
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
@@ -2603,7 +2609,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black bg-opacity-95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'w-full bg-slate-900 relative'} shrink-0 transition-all duration-300`} style={{ height: isVideoFullscreen ? '100%' : 'auto', maxHeight: isVideoFullscreen ? '100%' : '35vh', minHeight: isVideoFullscreen ? '100%' : '200px' }}>
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full max-h-[35vh] md:max-h-[300px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
                   {videoSnapshot.length > 0 ? (
                       <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
                           {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
@@ -2611,7 +2617,7 @@ export default function App() {
                     ) : selectedRoad.videoUrl ? (
                       <>
                         <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
-                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black bg-opacity-50 hover:bg-opacity-80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white border-opacity-20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-4 right-4'}`} title="Toggle Fullscreen">
+                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-12 right-4 md:bottom-4 md:right-4'}`} title="Toggle Fullscreen">
                             {isVideoFullscreen ? (
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
                             ) : (
@@ -2621,14 +2627,12 @@ export default function App() {
                       </>
                     ) : selectedRoad.photoUrls?.length > 0 ? (
                       <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-slate-400 text-sm font-bold">Media Tidak Dilampirkan</div>
-                    )}
+                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
                   
                   {/* --- WATERMARK OVERLAY --- */}
                   {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
-                       <div className={`font-black text-white opacity-40 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-4xl md:text-5xl' : 'text-xl md:text-2xl'}`}>
+                       <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
                           {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
                        </div>
                     </div>
@@ -2636,13 +2640,13 @@ export default function App() {
                 </div>
                 
                 {!isVideoFullscreen && (
-                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3 overflow-y-auto">
+                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
                     <div className="flex flex-wrap gap-2 justify-end shrink-0">
-                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[10px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Play Animasi</button>
-                       <button onClick={handleShareLocation} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Share Lokasi</button>
-                       <button onClick={handleExportKML} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Export KML</button>
-                       <button onClick={handlePrint} className="text-[10px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Print</button>
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
+                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
+                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
                     </div>
                     
                     <div className="shrink-0">
