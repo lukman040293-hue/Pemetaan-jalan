@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Menu, RefreshCw, LogOut, X, Search, ChevronDown, 
+  Trash2, Play, Share2, Download, Printer, Map as MapIcon, 
+  PenTool, FileText, Undo2, Crosshair, Camera, MapPin, 
+  Pause, Square, Info, Edit, Check
+} from 'lucide-react';
 
 // =========================================================================
 // 🔴 KONFIGURASI SUPABASE ANDA 
@@ -125,17 +131,27 @@ const simplifyGpsData = (points, tolerance = 0.00003) => {
   if (points.length <= 2) return points;
   const sqTolerance = tolerance * tolerance;
   const simplified = [points[0]];
+  
   const simplifyStep = (pts, first, last) => {
       let maxSqDist = sqTolerance, index;
       for (let i = first + 1; i < last; i++) {
           let x = pts[first].lat, y = pts[first].lng, dx = pts[last].lat - x, dy = pts[last].lng - y;
-          if (dx !== 0 || dy !== 0) { const t = ((pts[i].lat - x) * dx + (pts[i].lng - y) * dy) / (dx * dx + dy * dy); if (t > 1) { x = pts[last].lat; y = pts[last].lng; } else if (t > 0) { x += dx * t; y += dy * t; } }
+          if (dx !== 0 || dy !== 0) { 
+              const t = ((pts[i].lat - x) * dx + (pts[i].lng - y) * dy) / (dx * dx + dy * dy); 
+              if (t > 1) { x = pts[last].lat; y = pts[last].lng; } 
+              else if (t > 0) { x += dx * t; y += dy * t; } 
+          }
           dx = pts[i].lat - x; dy = pts[i].lng - y;
           const sqDist = dx * dx + dy * dy;
           if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
       }
-      if (maxSqDist > sqTolerance) { if (index - first > 1) simplifyStep(pts, first, index); simplified.push(pts[index]); if (last - index > 1) simplifyStep(pts, index, last); }
+      if (maxSqDist > sqTolerance) { 
+          if (index - first > 1) simplifyStep(pts, first, index); 
+          simplified.push(pts[index]); 
+          if (last - index > 1) simplifyStep(pts, index, last); 
+      }
   };
+  
   simplifyStep(points, 0, points.length - 1);
   simplified.push(points[points.length - 1]);
   return simplified;
@@ -158,7 +174,6 @@ const formatDuration = (seconds) => {
 
 const getVideoThumbnail = (url) => {
     if (!url || typeof url !== 'string') return null;
-    // Trik Cloudinary: ambil screenshot detik ke-0 (so_0) dan ubah ekstensi ke .jpg
     if (url.includes('cloudinary.com/video/upload/')) {
         return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
     }
@@ -171,11 +186,11 @@ const getThumbnailUrl = (road) => {
     return null;
 };
 
-const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => { // Default diubah ke 'sm' (kecil)
-    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); // Ukuran lingkaran diperkecil: lg=36, md=28, sm=24
-    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); // Tinggi tiang disesuaikan
-    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); // Padding disesuaikan
-    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); // Margin top disesuaikan
+const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
+    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); 
+    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); 
+    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); 
+    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); 
     
     return `
     <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
@@ -192,33 +207,81 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => { // De
 
 const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader(); reader.readAsDataURL(file);
+    const reader = new FileReader(); 
+    reader.readAsDataURL(file);
     reader.onload = (event) => {
-      const img = new Image(); img.src = event.target.result;
+      const img = new Image(); 
+      img.src = event.target.result;
       img.onload = () => {
         let width = img.width, height = img.height;
-        if (width > height) { if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; } } else { if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; } }
-        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => { if (!blob) return reject(new Error('Gagal')); resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg", { type: 'image/jpeg', lastModified: Date.now() })); }, 'image/jpeg', quality);
-      }; img.onerror = (error) => reject(error);
-    }; reader.onerror = (error) => reject(error);
+        if (width > height) { 
+            if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; } 
+        } else { 
+            if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; } 
+        }
+        const canvas = document.createElement('canvas'); 
+        canvas.width = width; 
+        canvas.height = height; 
+        const ctx = canvas.getContext('2d'); 
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => { 
+            if (!blob) return reject(new Error('Gagal')); 
+            resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg", { type: 'image/jpeg', lastModified: Date.now() })); 
+        }, 'image/jpeg', quality);
+      }; 
+      img.onerror = (error) => reject(error);
+    }; 
+    reader.onerror = (error) => reject(error);
   });
 };
 
 const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
-  // Menggunakan mode Hybrid (lyrs=y) untuk memastikan SEMUA tingkat jalan (utama, gang, blok) ter-render.
-  // Lalu kita suntikkan apistyle untuk mematikan POI (s.t:2) seperti toko/restoran dan Transit (s.t:3)
-  const satRoadsClean = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&apistyle=s.t:2|p.v:off,s.t:3|p.v:off', { maxZoom: 20 });
-
   const baseMaps = {
-    "Google Satelit + Jalan (Bersih)": satRoadsClean,
-    "Google Satelit (Polos)": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }),
     "Google Maps (Jalan)": L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20 }),
-    "Google Hybrid (Semua Label)": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+    "Google Hybrid (Satelit)": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
     "OSM Default": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
+    "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
   };
-  if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map); else baseMaps["OSM Default"].addTo(map);
+  if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map); 
+  else baseMaps["OSM Default"].addTo(map);
   L.control.layers(baseMaps, null, { position }).addTo(map);
+};
+
+// --- KOMPONEN KECIL ---
+const LockCylinder = ({ digit, idx }) => {
+  const stripRef = useRef(null);
+  const numbers = Array.from({ length: 40 }, (_, i) => i % 10);
+  const targetNum = parseInt(digit, 10);
+  const targetIndex = 30 + targetNum;
+
+  useEffect(() => {
+    if (stripRef.current) {
+      stripRef.current.style.transition = 'none';
+      stripRef.current.style.transform = `translateY(0em)`;
+      void stripRef.current.offsetHeight; 
+      const duration = 2.0 + (idx * 0.4); 
+      stripRef.current.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.2, 1)`;
+      stripRef.current.style.transform = `translateY(-${targetIndex * 1.1}em)`;
+    }
+  }, [digit, idx]);
+
+  return (
+    <span style={{ display: 'inline-block', height: '1.1em', lineHeight: '1.1em', overflow: 'hidden', position: 'relative', background: 'transparent', margin: '0 1px', color: '#0f172a' }}>
+      <span ref={stripRef} style={{ display: 'flex', flexDirection: 'column', willChange: 'transform' }}>
+        {numbers.map((num, i) => <span key={i} style={{ height: '1.1em', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>{num}</span>)}
+      </span>
+    </span>
+  );
+};
+
+const AnimatedNumber = ({ value }) => {
+  const valStr = String(value); 
+  const digits = valStr.split('');
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', margin: '0 -2px' }}>
+      {digits.map((digit, idx) => <LockCylinder key={`${digits.length}-${idx}`} digit={digit} idx={idx} />)}
+    </span>
+  );
 };
 
 const LayerToggle = ({ active, color, onClick }) => (
@@ -244,131 +307,13 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
     const getVehicle3DHtml = (type) => {
         if (type === 'drone') {
-            return `
-            <div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative; transform: translateZ(30px) rotateX(10deg);">
-                <div style="position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: rgba(0,0,0,0.5); filter: blur(5px); transform: translateZ(-30px);"></div>
-                <div style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; background: #e2e8f0; border-radius: 4px; transform: translateZ(2px); border: 1px solid #94a3b8;"></div>
-                <div style="position: absolute; left: 14px; top: 10px; width: 12px; height: 4px; background: #ef4444; border-radius: 2px; transform: translateZ(4px);"></div>
-                <div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(45deg) translateZ(1px);"></div>
-                <div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(-45deg) translateZ(1px);"></div>
-                <style>@keyframes spinFast { 100% { transform: rotate(360deg) translateZ(3px); } } .rotor { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(transparent 20%, rgba(0,0,0,0.3) 50%, transparent 80%); animation: spinFast 0.1s linear infinite; transform: translateZ(3px); border: 1px solid rgba(0,0,0,0.1); }</style>
-                <div class="rotor" style="left: -4px; top: -4px;"></div>
-                <div class="rotor" style="right: -4px; top: -4px;"></div>
-                <div class="rotor" style="left: -4px; bottom: -4px;"></div>
-                <div class="rotor" style="right: -4px; bottom: -4px;"></div>
-            </div>`;
+            return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative; transform: translateZ(30px) rotateX(10deg);"><div style="position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: rgba(0,0,0,0.5); filter: blur(5px); transform: translateZ(-30px);"></div><div style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; background: #e2e8f0; border-radius: 4px; transform: translateZ(2px); border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 14px; top: 10px; width: 12px; height: 4px; background: #ef4444; border-radius: 2px; transform: translateZ(4px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(45deg) translateZ(1px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(-45deg) translateZ(1px);"></div><style>@keyframes spinFast { 100% { transform: rotate(360deg) translateZ(3px); } } .rotor { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(transparent 20%, rgba(0,0,0,0.3) 50%, transparent 80%); animation: spinFast 0.1s linear infinite; transform: translateZ(3px); border: 1px solid rgba(0,0,0,0.1); }</style><div class="rotor" style="left: -4px; top: -4px;"></div><div class="rotor" style="right: -4px; top: -4px;"></div><div class="rotor" style="left: -4px; bottom: -4px;"></div><div class="rotor" style="right: -4px; bottom: -4px;"></div></div>`;
         } else if (type === 'motorcycle') {
-            return `
-            <div style="width: 12px; height: 32px; transform-style: preserve-3d; position: relative;">
-                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(3px); transform: translateZ(0px);"></div>
-                <div style="position: absolute; left: 4px; top: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div>
-                <div style="position: absolute; left: 4px; bottom: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div>
-                <div style="position: absolute; left: 2px; top: 6px; width: 8px; height: 20px; background: #ef4444; border-radius: 3px; transform: translateZ(4px);"></div>
-                <div style="position: absolute; left: 2px; top: 10px; width: 8px; height: 10px; background: #b91c1c; border-radius: 2px; transform: translateZ(6px);"></div>
-                <div style="position: absolute; left: 4px; top: 5px; width: 4px; height: 3px; background: #fef08a; border-radius: 1px; transform: translateZ(6px); box-shadow: 0 -4px 10px #fef08a;"></div>
-                <div style="position: absolute; left: 3px; top: 12px; width: 6px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(8px);"></div>
-                <div style="position: absolute; left: 3px; top: 14px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(12px);"></div>
-            </div>`;
+            return `<div style="width: 12px; height: 32px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(3px); transform: translateZ(0px);"></div><div style="position: absolute; left: 4px; top: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div><div style="position: absolute; left: 4px; bottom: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div><div style="position: absolute; left: 2px; top: 6px; width: 8px; height: 20px; background: #ef4444; border-radius: 3px; transform: translateZ(4px);"></div><div style="position: absolute; left: 2px; top: 10px; width: 8px; height: 10px; background: #b91c1c; border-radius: 2px; transform: translateZ(6px);"></div><div style="position: absolute; left: 4px; top: 5px; width: 4px; height: 3px; background: #fef08a; border-radius: 1px; transform: translateZ(6px); box-shadow: 0 -4px 10px #fef08a;"></div><div style="position: absolute; left: 3px; top: 12px; width: 6px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(8px);"></div><div style="position: absolute; left: 3px; top: 14px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(12px);"></div></div>`;
         } else if (type === 'truck') {
-            return `
-            <div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;">
-                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div>
-                <div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div>
-                <div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div>
-                <div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div>
-                <div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div>
-                <div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div>
-                <div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
-                <div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div>
-            </div>`;
-        } else if (type === 'runner') {
-            // MODEL PELARI 3D BARU DENGAN ARTIKULASI LENGKAP (DIBESARKAN 2X LIPAT)
-            const skinColor = '#fcd34d';
-            const shirtColor = '#3b82f6';
-            const shortsColor = '#1e293b';
-            return `
-            <div style="width: 20px; height: 60px; transform-style: preserve-3d; position: relative;">
-                <style>
-                    /* Siklus Lari: Ayunan Kaki Utama (Pinggul) */
-                    @keyframes runThighL { 0% { transform: rotateX(-40deg); } 50% { transform: rotateX(30deg); } 100% { transform: rotateX(-40deg); } }
-                    @keyframes runThighR { 0% { transform: rotateX(30deg); } 50% { transform: rotateX(-40deg); } 100% { transform: rotateX(30deg); } }
-                    /* Siklus Lari: Tekukan Lutut (Betis) */
-                    @keyframes runCalfL { 0% { transform: rotateX(10deg); } 25% { transform: rotateX(45deg); } 50% { transform: rotateX(90deg); } 75% { transform: rotateX(45deg); } 100% { transform: rotateX(10deg); } }
-                    @keyframes runCalfR { 0% { transform: rotateX(90deg); } 25% { transform: rotateX(45deg); } 50% { transform: rotateX(10deg); } 75% { transform: rotateX(45deg); } 100% { transform: rotateX(90deg); } }
-                    /* Siklus Lari: Ayunan Lengan (Bahu) - Berlawanan dengan kaki */
-                    @keyframes runArmUpL { 0% { transform: rotateX(30deg); } 50% { transform: rotateX(-30deg); } 100% { transform: rotateX(30deg); } }
-                    @keyframes runArmUpR { 0% { transform: rotateX(-30deg); } 50% { transform: rotateX(30deg); } 100% { transform: rotateX(-30deg); } }
-                    /* Siklus Lari: Tekukan Siku */
-                    @keyframes runForearm { 0%, 100% { transform: rotateX(30deg); } 50% { transform: rotateX(60deg); } }
-                    /* Gerakan Badan Naik Turun (Bobbing) */
-                    @keyframes runBob { 0%, 100% { transform: translateZ(0px); } 50% { transform: translateZ(4px); } }
-                </style>
-
-                <!-- Wadah Utama yang Bergerak Naik Turun -->
-                <div style="position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; animation: runBob 0.6s infinite ease-in-out;">
-                    <!-- KEPALA -->
-                    <div style="position: absolute; top: 0; left: 2px; width: 16px; height: 16px; background: ${skinColor}; border-radius: 8px; transform: translateZ(52px);"></div>
-                    
-                    <!-- BADAN (TORSO) -->
-                    <div style="position: absolute; top: 16px; left: 0; width: 20px; height: 24px; background: ${shirtColor}; border-radius: 4px; transform: translateZ(40px);"></div>
-
-                    <!-- LENGAN KIRI (Grup) -->
-                    <div style="position: absolute; top: 18px; left: -6px; transform-origin: top center; transform-style: preserve-3d; animation: runArmUpL 0.6s infinite linear; translateZ(48px);">
-                        <!-- Lengan Atas -->
-                        <div style="width: 6px; height: 14px; background: ${shirtColor}; border-radius: 3px;"></div>
-                        <!-- Lengan Bawah (Siku) -->
-                        <div style="position: absolute; top: 12px; transform-origin: top center; animation: runForearm 0.6s infinite linear;">
-                            <div style="width: 6px; height: 14px; background: ${skinColor}; border-radius: 3px;"></div>
-                        </div>
-                    </div>
-
-                    <!-- LENGAN KANAN (Grup) -->
-                    <div style="position: absolute; top: 18px; right: -6px; transform-origin: top center; transform-style: preserve-3d; animation: runArmUpR 0.6s infinite linear; translateZ(48px);">
-                        <div style="width: 6px; height: 14px; background: ${shirtColor}; border-radius: 3px;"></div>
-                        <div style="position: absolute; top: 12px; transform-origin: top center; animation: runForearm 0.6s infinite linear; animation-delay: -0.3s;">
-                            <div style="width: 6px; height: 14px; background: ${skinColor}; border-radius: 3px;"></div>
-                        </div>
-                    </div>
-
-                    <!-- KAKI KIRI (Grup Pinggul) -->
-                    <div style="position: absolute; top: 36px; left: 2px; transform-origin: top center; transform-style: preserve-3d; animation: runThighL 0.6s infinite linear; translateZ(36px);">
-                        <!-- Paha -->
-                        <div style="width: 8px; height: 18px; background: ${shortsColor}; border-radius: 4px;"></div>
-                        <!-- Betis (Lutut) -->
-                        <div style="position: absolute; top: 16px; transform-origin: top center; animation: runCalfL 0.6s infinite linear;">
-                            <div style="width: 8px; height: 18px; background: ${skinColor}; border-radius: 4px;"></div>
-                        </div>
-                    </div>
-
-                    <!-- KAKI KANAN (Grup Pinggul) -->
-                    <div style="position: absolute; top: 36px; right: 2px; transform-origin: top center; transform-style: preserve-3d; animation: runThighR 0.6s infinite linear; translateZ(36px);">
-                        <div style="width: 8px; height: 18px; background: ${shortsColor}; border-radius: 4px;"></div>
-                        <div style="position: absolute; top: 16px; transform-origin: top center; animation: runCalfR 0.6s infinite linear;">
-                            <div style="width: 8px; height: 18px; background: ${skinColor}; border-radius: 4px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Bayangan -->
-                <div style="position: absolute; bottom: -5px; left: -5px; width: 30px; height: 30px; background: rgba(0,0,0,0.5); filter: blur(6px); transform: translateZ(0px) scale(1.5, 1.0);"></div>
-            </div>`;
+            return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
         } else {
-            return `
-            <div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;">
-                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div>
-                <div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div>
-                <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div>
-                <div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div>
-                <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div>
-                <div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div>
-                <div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
-                <div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div>
-                <div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
-                <div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div>
-            </div>`;
+            return `<div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div><div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div><div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div></div>`;
         }
     };
 
@@ -474,14 +419,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
             window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             animStateRef.current.map = map;
 
-            const midPoint = points[Math.floor(points.length / 2)];
-            const staticLabelIcon = window.L.divIcon({
-                className: 'static-route-label',
-                html: `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="40" y2="-45" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(40px + 3px), calc(-45px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`,
-                iconSize: [0, 0], iconAnchor: [0, 0]
-            });
-            window.L.marker([midPoint.lat, midPoint.lng], { icon: staticLabelIcon, interactive: false }).addTo(map);
-
             let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
             
             const fallbackIcon = window.L.divIcon({
@@ -565,7 +502,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 let lastTimeAuto = null; let currentProgressAuto = 0;
                 const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
                 let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-
                 let vehicleMarker = null;
 
                 if (mode === 'auto') {
@@ -596,23 +532,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
                                 ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
-                            } else if (type === 'runner') {
-                                // Update Gambar Canvas 2D (Fallback) agar lebih mirip orang lari & dibesarkan
-                                ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 4;
-                                // Kepala
-                                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(0, -24, 8, 0, 2*Math.PI); ctx.fill();
-                                // Badan
-                                ctx.fillStyle = '#3b82f6'; ctx.fillRect(-6, -16, 12, 20);
-                                // Kaki (Pose lari sederhana samping)
-                                ctx.fillStyle = '#1e293b';
-                                ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(-12, 20); ctx.lineTo(-4, 28); ctx.fill(); // Kaki belakang
-                                ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(12, 16); ctx.lineTo(12, 28); ctx.fill(); // Kaki depan
-                                // Tangan
-                                ctx.lineCap = 'round';
-                                ctx.fillStyle = '#fcd34d';
-                                ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(12, 0); ctx.lineWidth = 4; ctx.strokeStyle='#fcd34d'; ctx.stroke(); // Tangan depan
-                                ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(-10, -4); ctx.stroke(); // Tangan belakang
-                            } else { // drone
+                            } else { 
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
                                 ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2*Math.PI); ctx.fill();
@@ -690,7 +610,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
                             let pitch = 70; let zoom = 19;
                             if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
-                            else if (animStateRef.current.vehicleType === 'runner') { pitch = 65; zoom = 19.5; }
                             
                             map.getSource('vehicle').setData({
                                 type: 'Feature',
@@ -726,11 +645,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         animStateRef.current.frameId = requestAnimationFrame(animateAuto);
                     } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
                 } else {
-                    const midPoint = points[Math.floor(points.length / 2)];
-                    const labelEl = document.createElement('div');
-                    labelEl.innerHTML = `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="40" y2="-45" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(40px + 3px), calc(-45px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`;
-                    new window.maplibregl.Marker({ element: labelEl }).setLngLat([midPoint.lng, midPoint.lat]).addTo(map);
-
                     const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
                     el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
                     vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
@@ -764,7 +678,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
 
                             let pitch = 70; let zoom = 19;
                             if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
-                            else if (animStateRef.current.vehicleType === 'runner') { pitch = 65; zoom = 19.5; }
                             map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
                             vehicleMarker.setLngLat([currentLng, currentLat]);
                             const iconDiv = document.getElementById('maplibre-vehicle-icon');
@@ -789,14 +702,10 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/80 to-transparent z-10 pointer-events-none"></div>
                         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-2 md:gap-4 bg-black/60 backdrop-blur-md px-4 py-2 md:px-6 md:py-3 rounded-full border border-white/20 shadow-2xl transition-opacity duration-300">
                             <button onClick={() => setIsPlaying(!isPlaying)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white transition-colors ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
-                                {isPlaying ? (
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                ) : (
-                                    <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                )}
+                                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
                             </button>
                             <button onClick={stopAnimation} className="w-10 h-10 flex items-center justify-center rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-sm" title="Stop & Kembali">
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                                <Square className="w-5 h-5" fill="currentColor" />
                             </button>
                             <div className="w-px h-8 bg-white/20 mx-1"></div>
                             <select value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold outline-none cursor-pointer rounded-lg px-2 py-1.5 border border-white/10 appearance-none text-center">
@@ -810,7 +719,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 <option value="motorcycle" className="text-black">🏍️ Motor 3D</option>
                                 <option value="truck" className="text-black">🚛 Truk 3D</option>
                                 <option value="drone" className="text-black">🚁 Drone 3D</option>
-                                <option value="runner" className="text-black">🏃 Orang Lari 3D</option>
                             </select>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10 pointer-events-none"></div>
@@ -830,7 +738,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                         </div>
 
                         <button onClick={() => { stopAnimation(); onClose(); }} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            <X className="w-6 h-6" strokeWidth={2.5}/>
                         </button>
                     </>
                 )}
@@ -841,7 +749,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     {status === 'menu' && (
                         <div className="p-8">
                             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
+                                <Camera className="w-8 h-8" strokeWidth={2} />
                             </div>
                             
                             <div className="mb-5">
@@ -892,7 +800,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     {status === 'finished' && (
                         <div className="p-10 text-center">
                             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-10 h-10"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <Check className="w-10 h-10" strokeWidth={3} />
                             </div>
                             <h2 className="text-2xl font-black text-slate-900 mb-2">Selesai!</h2>
                             <p className="text-slate-500 mb-6 font-medium text-sm">Proses animasi telah berakhir.</p>
@@ -906,7 +814,7 @@ const DroneVideoExporter = ({ road, onClose }) => {
                     {status === 'error' && (
                         <div className="p-8 text-center">
                             <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                <Info className="w-8 h-8" strokeWidth={2.5} />
                             </div>
                             <h2 className="text-xl font-black text-slate-900 mb-2">Gagal Merekam Internal</h2>
                             <p className="text-slate-600 mb-6 text-sm bg-rose-50 p-3 rounded-lg border border-rose-100 inline-block">{errorMessage}</p>
@@ -929,6 +837,9 @@ export default function App() {
   const [supabase, setSupabase] = useState(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', actionLabel: '', onConfirm: null, isDanger: true });
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (message) => { setToastMessage(String(message)); setTimeout(() => setToastMessage(null), 4000); };
 
   useEffect(() => {
       const handleHashChange = () => {
@@ -944,17 +855,11 @@ export default function App() {
       return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const [toastMessage, setToastMessage] = useState(null);
-  const showToast = (message) => { setToastMessage(String(message)); setTimeout(() => setToastMessage(null), 4000); };
-
   useEffect(() => {
     let metaViewport = document.querySelector('meta[name="viewport"]');
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
-    if (!document.getElementById('tailwind-cdn')) {
-      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
-    }
     if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
 
     const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
@@ -1127,11 +1032,8 @@ export default function App() {
             ],
             'L'
         );
-        if (success) {
-            setIsLeafletLoaded(true);
-        } else {
-            console.error("Leaflet gagal diinisialisasi");
-        }
+        if (success) setIsLeafletLoaded(true);
+        else console.error("Leaflet gagal diinisialisasi");
     };
     initLeaflet();
   }, []);
@@ -1161,28 +1063,16 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
     
-    if (adminMapInstanceRef.current) {
-        adminMapInstanceRef.current.remove();
-        adminMapInstanceRef.current = null;
-    }
-
     const map = window.L.map(adminMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 13);
     window.L.control.zoom({ position: 'topright' }).addTo(map);
-
-    initBaseMaps(map, window.L, "Google Hybrid (Semua Label)", 'topright');
+    initBaseMaps(map, window.L, "OSM Default", 'topright');
     
     adminMapInstanceRef.current = map;
     adminLayerGroupRef.current = window.L.layerGroup().addTo(map);
     adminHighlightLayerGroupRef.current = window.L.layerGroup().addTo(map);
 
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
-    return () => { 
-        if (adminMapInstanceRef.current) {
-            adminMapInstanceRef.current.remove();
-            adminMapInstanceRef.current = null;
-        }
-        adminLayerGroupRef.current = null; 
-    };
+    return () => { map.remove(); adminMapInstanceRef.current = null; adminLayerGroupRef.current = null; };
   }, [appRole, isLeafletLoaded]);
 
   useEffect(() => {
@@ -1211,12 +1101,11 @@ export default function App() {
           const thumbUrl = getThumbnailUrl(road);
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
-            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'), // Ubah ukuran ke 'sm' (kecil)
-            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37] // Sesuaikan ukuran iconSize dan anchor
+            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
+            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
-          
           const popupContent = `
             <div style="font-family: ui-sans-serif, system-ui, sans-serif;">
               <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; padding-right: 14px; display: flex; align-items: center; gap: 4px;">
@@ -1245,7 +1134,6 @@ export default function App() {
       }
     });
 
-    // Deteksi jika pengguna baru saja mematikan mode fokus sepenuhnya (centang terakhir dilepas)
     const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
     prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
 
@@ -1253,13 +1141,11 @@ export default function App() {
     if (roadsToDisplay.length > 0 && map) {
       const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
-        // Selalu zoom in jika rute dicentang (mode fokus), dimuat awal, ATAU zoom out jika fokus baru saja dimatikan
         if (selectedAdminRouteIds.length > 0 || !hasFittedAdminMapRef.current || justExitedFocusMode) {
           hasFittedAdminMapRef.current = true;
           setTimeout(() => {
               if (adminMapInstanceRef.current) {
                   adminMapInstanceRef.current.invalidateSize(true);
-                  // Menggunakan flyToBounds agar transisi kamera / auto-zoom terasa mulus
                   adminMapInstanceRef.current.flyToBounds(window.L.latLngBounds(allLatLngs), { padding: [50, 50], maxZoom: 16, duration: 0.6 });
               }
           }, 350); 
@@ -1277,74 +1163,166 @@ export default function App() {
   }, [appRole, syncedRoads, activeKelurahan, activeConditions, activeJenis, searchQuery, selectedAdminRouteIds]);
 
   useEffect(() => {
-    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded) return;
-    
-    if (liveMapInstanceRef.current) {
-        liveMapInstanceRef.current.remove();
-        liveMapInstanceRef.current = null;
-    }
+    if (appRole !== 'admin' || !adminHighlightLayerGroupRef.current) return;
+    const highlightGroup = adminHighlightLayerGroupRef.current;
+    highlightGroup.clearLayers();
 
-    const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
-    liveMapInstanceRef.current = map;
-    liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
-    setTimeout(() => map.invalidateSize(), 300);
-    return () => { 
-        if (liveMapInstanceRef.current) {
-            liveMapInstanceRef.current.remove();
-            liveMapInstanceRef.current = null;
-        }
-        liveMapPolylineRef.current = null; 
-        liveMapMarkerRef.current = null; 
-    };
-  }, [mobileScreen, isLeafletLoaded]);
+    if (highlightedRoadId) {
+      const activeRoad = syncedRoads.find(r => (r.id || r.dbId) === highlightedRoadId);
+      if (activeRoad && activeRoad.realGps && activeRoad.realGps.length > 0) {
+        const latlngs = activeRoad.realGps.map(pt => [pt.lat, pt.lng]);
+        window.L.polyline(latlngs, { color: '#3B82F6', weight: 16, opacity: 0.5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
+        window.L.polyline(latlngs, { color: '#ffffff', weight: 10, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
+        window.L.polyline(latlngs, { color: getConditionColor(activeRoad.condition), weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
+      }
+    }
+  }, [highlightedRoadId, syncedRoads, appRole]);
 
   useEffect(() => {
-    if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
-    const map = liveMapInstanceRef.current;
-    if (currentLocation) {
-       if (liveMapMarkerRef.current) liveMapMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-       else {
-          const icon = window.L.divIcon({ className: 'live-location-dot', html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-          liveMapMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
-          map.setView([currentLocation.lat, currentLocation.lng], 17);
+    if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
+  }, [isSidebarOpen, appRole]);
+
+  useEffect(() => {
+    let onInteractionStart = null; let onInteractionEnd = null;
+    let activeTimeouts = []; let activeMarkers = [];
+
+    if (isAnimatingMap && animatingRoadsList.length > 0 && adminMapInstanceRef.current) {
+       const map = adminMapInstanceRef.current;
+       let isInteracting = false;
+
+       onInteractionStart = () => { isInteracting = true; activeMarkers.forEach(m => { if(m && m.getElement()) m.getElement().style.transition = 'none'; }); };
+       onInteractionEnd = () => { isInteracting = false; };
+       
+       map.on('zoomstart', onInteractionStart); map.on('zoomend', onInteractionEnd); map.on('dragstart', onInteractionStart); map.on('dragend', onInteractionEnd);
+
+       let finishedCount = 0; const totalVehicles = animatingRoadsList.length;
+
+       animatingRoadsList.forEach((road, vIndex) => {
+           const points = road.realGps;
+           if (!points || points.length < 2) { finishedCount++; return; }
+
+           const individualSpeedFactor = 0.7 + (Math.random() * 0.7);
+           let currentIndex = 0; let accumulatedDistance = 0;
+           let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+           
+           let vehicleSvg = ''; let iconSize = [32, 50]; let iconAnchor = [16, 25];
+
+           if (animIconType === 'motorcycle') {
+               iconSize = [26, 42]; iconAnchor = [13, 21];
+               vehicleSvg = `<svg viewBox="0 0 40 95" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));"><rect x="17" y="72" width="6" height="20" rx="3" fill="#0f172a"/><rect x="27" y="58" width="4" height="24" rx="2" fill="#94a3b8"/><path d="M 15 55 L 25 55 L 23 82 L 17 82 Z" fill="#334155"/><rect x="16" y="81" width="8" height="3" rx="1" fill="#ef4444"/><rect x="17" y="3" width="6" height="18" rx="3" fill="#0f172a"/><path d="M 15 13 L 25 13 L 26 23 L 14 23 Z" fill="#334155"/><circle cx="20" cy="12" r="3" fill="#fef08a" /><path d="M 6 28 Q 20 22 34 28" stroke="#475569" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="4" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(15, 6, 30)"/><rect x="31" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(-15, 34, 30)"/><path d="M 13 26 Q 20 18 27 26 L 29 45 Q 20 49 11 45 Z" fill="#dc2626"/><path d="M 15 28 Q 20 22 25 28 L 26 40 Q 20 42 14 40 Z" fill="rgba(255,255,255,0.2)"/><path d="M 13 45 Q 20 42 27 45 L 25 65 Q 20 70 15 65 Z" fill="#1e293b"/><path d="M 9 48 Q 20 40 31 48 L 28 55 Q 20 59 12 55 Z" fill="#334155"/><circle cx="20" cy="46" r="8" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/><path d="M 14 43.5 Q 20 38 26 43.5 Q 20 47 14 43.5 Z" fill="#0f172a"/></svg>`;
+           } else if (animIconType === 'runner') {
+               iconSize = [28, 28]; iconAnchor = [14, 14];
+               vehicleSvg = `<svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));"><style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style><g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;"><rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" /><rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" /><path d="M 14 25 Q 6 36 12 44" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="12" cy="44" r="3" fill="#fcd34d" /><path d="M 36 25 Q 44 14 38 6" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="38" cy="6" r="3" fill="#fcd34d" /><rect x="13" y="20" width="24" height="10" rx="5" fill="#3b82f6" /></g><circle cx="25" cy="25" r="7" fill="#fcd34d" /><path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" /></svg>`;
+           } else if (animIconType === 'truck') {
+               iconSize = [24, 60]; iconAnchor = [12, 30];
+               vehicleSvg = `<svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.5));"><rect x="4" y="25" width="32" height="70" rx="4" fill="#64748b"/><rect x="6" y="27" width="28" height="66" rx="2" fill="#94a3b8"/><rect x="6" y="4" width="28" height="20" rx="4" fill="#eab308"/><rect x="8" y="14" width="24" height="6" rx="2" fill="#1e293b"/><rect x="8" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="26" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="2" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="35" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="2" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="2" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="16" y="22" width="8" height="6" fill="#334155"/></svg>`;
+           } else {
+               iconSize = [24, 38]; iconAnchor = [12, 19];
+               vehicleSvg = `<svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));"><rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/><rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/><rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/><rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/><rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/><rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/><rect x="14" y="12" width="72" height="135" rx="28" fill="#94a3b8"/><rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/><rect x="20" y="18" width="60" height="123" rx="22" fill="#cbd5e1"/><circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/><circle cx="26" cy="18" r="4" fill="#fef08a"/><circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/><circle cx="74" cy="18" r="4" fill="#fef08a"/><path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/><path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/><path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/><path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/><rect x="28" y="72" width="44" height="38" rx="12" fill="#cbd5e1"/><rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/><rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/><rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/></svg>`;
+           }
+           
+           const iconHtml = `<div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">${vehicleSvg}</div>`;
+           const customVehicleIcon = window.L.divIcon({ className: 'moving-vehicle-icon', html: iconHtml, iconSize: iconSize, iconAnchor: iconAnchor });
+           const marker = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
+           activeMarkers.push(marker);
+
+           const midPoint = points[Math.floor(points.length / 2)];
+           const dirX = vIndex % 2 === 0 ? 40 : -40; const dirY = vIndex % 3 === 0 ? -45 : (vIndex % 3 === 1 ? -25 : -65);
+           const staticLabelIcon = window.L.divIcon({
+               className: 'static-route-label',
+               html: `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="${dirX}" y2="${dirY}" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(${dirX}px ${dirX > 0 ? '+ 3px' : '- 100% - 3px'}), calc(${dirY}px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`,
+               iconSize: [0, 0], iconAnchor: [0, 0]
+           });
+           const staticLabelMarker = window.L.marker([midPoint.lat, midPoint.lng], { icon: staticLabelIcon, interactive: false }).addTo(map);
+           activeMarkers.push(staticLabelMarker); 
+
+           const animate = () => {
+              if (currentIndex >= points.length) {
+                 finishedCount++;
+                 if (finishedCount >= totalVehicles) { setIsAnimPaused(true); setIsAnimFinished(true); }
+                 return;
+              }
+              if (isAnimPausedRef.current) { activeTimeouts.push(setTimeout(animate, 100)); return; }
+              
+              const pt = points[currentIndex];
+              let segmentDelay = 600 / animationSpeedRef.current; 
+
+              if (currentIndex > 0) {
+                  const prevPt = points[currentIndex - 1];
+                  const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+                  accumulatedDistance += dist;
+                  if (totalVehicles === 1) setCurrentAnimDistance(accumulatedDistance);
+                  const baseVisualSpeedMps = 75; 
+                  let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / (animationSpeedRef.current * individualSpeedFactor);
+                  segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
+              }
+
+              if (marker) {
+                  const el = marker.getElement();
+                  if (el && currentIndex > 0) el.style.transition = isInteracting ? 'none' : `transform ${segmentDelay}ms linear`;
+                  marker.setLatLng([pt.lat, pt.lng]);
+              }
+              
+              if (currentIndex > 0) {
+                  const prevPt = points[currentIndex - 1];
+                  if (prevPt.lat !== pt.lat || prevPt.lng !== pt.lng) {
+                      const targetBearing = getBearing(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
+                      let diff = targetBearing - (currentAngle % 360);
+                      if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+                      currentAngle += diff;
+                      const carWrapper = document.getElementById(`anim-car-wrapper-${vIndex}`);
+                      if (carWrapper) { carWrapper.style.transition = `transform ${Math.min(segmentDelay * 0.5, 400)}ms ease-in-out`; carWrapper.style.transform = `rotate(${currentAngle}deg)`; }
+                  }
+              }
+
+              currentIndex++;
+              activeTimeouts.push(setTimeout(animate, segmentDelay)); 
+           };
+
+           activeTimeouts.push(setTimeout(animate, 800 + (vIndex * 60))); 
+       });
+
+       const allRouteBounds = animatingRoadsList.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
+       if (allRouteBounds.length > 0) {
+           const isMobile = window.innerWidth < 768;
+           map.fitBounds(window.L.latLngBounds(allRouteBounds), { 
+               paddingTopLeft: isMobile ? [20, 40] : [80, 80], paddingBottomRight: isMobile ? [20, 240] : [80, 180], maxZoom: 18
+           });
        }
-       if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
     }
-    if (liveMapPolylineRef.current) liveMapPolylineRef.current.setLatLngs(realGpsPoints.map(pt => [pt.lat, pt.lng]));
-  }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
+
+    return () => {
+       activeTimeouts.forEach(clearTimeout);
+       activeMarkers.forEach(m => { if(m && adminMapInstanceRef.current) adminMapInstanceRef.current.removeLayer(m); });
+       if (adminMapInstanceRef.current && onInteractionStart && onInteractionEnd) {
+           adminMapInstanceRef.current.off('zoomstart', onInteractionStart); adminMapInstanceRef.current.off('zoomend', onInteractionEnd);
+           adminMapInstanceRef.current.off('dragstart', onInteractionStart); adminMapInstanceRef.current.off('dragend', onInteractionEnd);
+       }
+    };
+  }, [isAnimatingMap, animatingRoadsList, animIconType]);
 
   useEffect(() => {
-     if (recordTab === 'map' && liveMapInstanceRef.current) {
-        liveMapInstanceRef.current.invalidateSize();
-        const timers = [100, 300].map(time => setTimeout(() => { if (liveMapInstanceRef.current) liveMapInstanceRef.current.invalidateSize(true); }, time));
-        return () => timers.forEach(clearTimeout);
-     }
-  }, [recordTab]);
+      if (appRole !== 'surveyor') return;
+      let watchId;
+      if ('geolocation' in navigator) {
+          watchId = navigator.geolocation.watchPosition(
+              (position) => setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
+              () => console.warn("GPS belum stabil atau izin ditolak."),
+              { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+          );
+      }
+      return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
+  }, [appRole]);
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
-    
-    if (drawMapInstanceRef.current) {
-        drawMapInstanceRef.current.remove();
-        drawMapInstanceRef.current = null;
-    }
-
     const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
     initBaseMaps(map, window.L, "OSM Default", 'topleft');
     drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
     drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
     if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
-    return () => { 
-        if (drawMapInstanceRef.current) {
-            drawMapInstanceRef.current.remove();
-            drawMapInstanceRef.current = null;
-        }
-        drawPolylineRef.current = null; 
-        drawMarkersGroupRef.current = null; 
-        drawMapCurrentLocMarkerRef.current = null; 
-    };
+    return () => { map.remove(); drawMapInstanceRef.current = null; drawPolylineRef.current = null; drawMarkersGroupRef.current = null; drawMapCurrentLocMarkerRef.current = null; };
   }, [appRole, mobileScreen, isLeafletLoaded]);
 
   useEffect(() => {
@@ -1384,12 +1362,6 @@ export default function App() {
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
-    
-    if (surveyorMapInstanceRef.current) {
-        surveyorMapInstanceRef.current.remove();
-        surveyorMapInstanceRef.current = null;
-    }
-
     const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
     initBaseMaps(map, window.L, "OSM Default", 'topleft');
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
@@ -1418,14 +1390,7 @@ export default function App() {
       } catch (err) {}
     });
 
-    return () => { 
-        if (surveyorMapInstanceRef.current) {
-            surveyorMapInstanceRef.current.remove();
-            surveyorMapInstanceRef.current = null;
-        }
-        surveyorMarkerRef.current = null; 
-        currentLocationMarkerRef.current = null; 
-    };
+    return () => { map.remove(); surveyorMapInstanceRef.current = null; surveyorMarkerRef.current = null; currentLocationMarkerRef.current = null; };
   }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
 
   useEffect(() => {
@@ -1433,86 +1398,135 @@ export default function App() {
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
       const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md');
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] });
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
-        if (currentLocationMarkerRef.current) {
-            currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-        } else {
-            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000, interactive: false }).addTo(surveyorMapInstanceRef.current);
+        if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        else {
+            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
         }
     }
-  }, [appRole, mobileScreen, pinLocation, currentLocation, formData.condition, uploadedPhotoUrls]);
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
 
-  const startRealHardware = () => {
-      setRealGpsPoints([]); setTotalDistance(0); setCurrentSpeed(0); setRecordingDuration(0);
-      setMobileScreen('record'); setRecordingStatus('locating');
-      
-      if (navigator.geolocation) {
-          watchIdRef.current = navigator.geolocation.watchPosition((pos) => {
-              const { latitude: lat, longitude: lng, accuracy: acc, speed } = pos.coords;
-              const spd = speed ? (speed * 3.6).toFixed(1) : 0;
-              setCurrentLocation({lat, lng}); setGpsAccuracy(Math.round(acc)); setCurrentSpeed(spd);
-              
-              if (recordingStatusRef.current === 'locating' && acc <= 20) setRecordingStatus('ready');
-              
-              if (recordingStatusRef.current === 'recording') {
-                  setRealGpsPoints(prev => {
-                      const newPt = { lat, lng };
-                      if (prev.length > 0) {
-                          const dist = getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, lat, lng);
-                          if (dist > 2) { setTotalDistance(d => d + dist); return [...prev, newPt]; }
-                          return prev;
-                      }
-                      return [newPt];
-                  });
+  const startRealHardware = async () => {
+    setMobileScreen('record'); 
+    window.location.hash = '#/surveyor/record'; 
+    setRealGpsPoints([]); setIsRecording(true); 
+    setRecordingStatus('locating'); setRecordTab('map'); 
+    setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0); setRecordingDuration(0);
+    setUploadedVideoUrl(null); setUploadedVideoFile(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
+    setPinLocation(null); setEditingDraftId(null); isGpsForcedRef.current = false;
+
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+    locatingTimeoutRef.current = setTimeout(() => {
+      if (recordingStatusRef.current === 'locating') { showToast("⏳ Sinyal GPS sulit didapat. Diaktifkan paksa."); isGpsForcedRef.current = true; setRecordingStatus('ready'); }
+    }, 15000);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (err) { showToast("Kamera tidak diizinkan."); }
+
+    if ('geolocation' in navigator) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy, speed } = position.coords;
+          setGpsAccuracy(Math.round(accuracy)); setCurrentSpeed(speed ? Math.round(speed * 3.6) : 0);
+          setCurrentLocation({ lat: latitude, lng: longitude });
+          
+          if (recordingStatusRef.current === 'locating' && accuracy <= 25) {
+             if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+             setRecordingStatus('ready'); showToast("Sinyal GPS Bagus!");
+          } else if (recordingStatusRef.current === 'ready' && accuracy > 40 && !isGpsForcedRef.current) setRecordingStatus('locating'); 
+
+          if (recordingStatusRef.current === 'recording' || recordingStatusRef.current === 'auto_paused') {
+            if (accuracy > 40 && !isGpsForcedRef.current) return; 
+            setRealGpsPoints(prev => {
+              if (prev.length === 0) { lastMoveTimeRef.current = Date.now(); return [{ lat: latitude, lng: longitude }]; }
+              const dist = getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, latitude, longitude);
+              if (dist < 3.5) {
+                 if (Date.now() - lastMoveTimeRef.current > 10000 && recordingStatusRef.current === 'recording') { setRecordingStatus('auto_paused'); showToast("Auto-Pause aktif."); }
+                 return prev;
               }
-          }, (err) => console.warn(err), { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
-      } else {
-          showToast("GPS tidak didukung perangkat ini.");
-      }
-      
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-              .then(stream => { streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream; })
-              .catch(err => console.warn("Kamera error:", err));
-      }
-  };
-
-  const stopRealHardware = () => {
-      if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-      if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-      setRecordingStatus('idle'); setMobileScreen('form');
-      setPinLocation(realGpsPoints.length > 0 ? realGpsPoints[Math.floor(realGpsPoints.length/2)] : null);
-  };
-
-  const cancelRecording = () => {
-      if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-      if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-      setRecordingStatus('idle'); setMobileScreen('home');
+              if (dist > 100) return prev; 
+              if (recordingStatusRef.current === 'auto_paused') { setRecordingStatus('recording'); showToast("Melanjutkan rekaman."); }
+              lastMoveTimeRef.current = Date.now(); setTotalDistance(d => d + dist);
+              return [...prev, { lat: latitude, lng: longitude }];
+            });
+          }
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      );
+    }
   };
 
   const startManualDrawing = () => {
-      setManualDrawnPoints([]); setTotalDistance(0); setMobileScreen('draw_map');
-      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => setCurrentLocation({lat: pos.coords.latitude, lng: pos.coords.longitude}));
-  };
-
-  const finishManualDrawing = () => {
-      setRealGpsPoints(manualDrawnPoints); setMobileScreen('form');
-      setPinLocation(manualDrawnPoints.length > 0 ? manualDrawnPoints[Math.floor(manualDrawnPoints.length/2)] : null);
+    setMobileScreen('draw_map');
+    window.location.hash = '#/surveyor/draw_map';
+    setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
+    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); 
   };
 
   const undoLastDrawnPoint = () => {
-      setManualDrawnPoints(prev => {
-          if (prev.length === 0) return prev;
-          const newPts = prev.slice(0, -1);
-          let dist = 0; for(let i=1; i<newPts.length; i++) dist += getDistanceMeters(newPts[i-1].lat, newPts[i-1].lng, newPts[i].lat, newPts[i].lng);
-          setTotalDistance(dist); return newPts;
-      });
+    setManualDrawnPoints(prev => {
+        if (prev.length <= 1) { setTotalDistance(0); return []; }
+        const newPoints = prev.slice(0, -1);
+        let newDist = 0; for (let i = 1; i < newPoints.length; i++) newDist += getDistanceMeters(newPoints[i-1].lat, newPoints[i-1].lng, newPoints[i].lat, newPoints[i].lng);
+        setTotalDistance(newDist); return newPoints;
+    });
   };
+
+  const finishManualDrawing = () => {
+    if (manualDrawnPoints.length < 2) return showToast("Gambarkan minimal 2 titik!");
+    setRealGpsPoints(manualDrawnPoints); 
+    setMobileScreen('form');
+    window.location.hash = '#/surveyor/form';
+  };
+
+  const stopRealHardware = () => {
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+    if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+    setIsRecording(false); setRecordingStatus('idle'); 
+    setMobileScreen('form');
+    window.location.hash = '#/surveyor/form';
+  };
+
+  const cancelRecording = () => {
+    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
+    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+    if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+    setIsRecording(false); setRecordingStatus('idle'); 
+    setMobileScreen('home');
+    window.location.hash = '#/surveyor/home';
+  };
+
+  useEffect(() => {
+    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
+    const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
+    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    liveMapInstanceRef.current = map;
+    liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 300);
+    return () => { map.remove(); liveMapInstanceRef.current = null; liveMapPolylineRef.current = null; liveMapMarkerRef.current = null; };
+  }, [mobileScreen, isLeafletLoaded]);
+
+  useEffect(() => {
+    if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
+    const map = liveMapInstanceRef.current;
+    if (currentLocation) {
+       if (liveMapMarkerRef.current) liveMapMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+       else {
+          const icon = window.L.divIcon({ className: 'live-location-dot', html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+          liveMapMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+          map.setView([currentLocation.lat, currentLocation.lng], 17);
+       }
+       if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
+    }
+    if (liveMapPolylineRef.current) liveMapPolylineRef.current.setLatLngs(realGpsPoints.map(pt => [pt.lat, pt.lng]));
+  }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
 
   useEffect(() => {
      if (recordTab === 'map' && liveMapInstanceRef.current) {
@@ -1562,14 +1576,13 @@ export default function App() {
     }
   };
 
-  // --- NEW: FUNGSI EXPORT DRAFT KE FILE JSON ---
   const handleExportDraftJSON = (draft) => {
     const exportData = {
       app: "WebGIS_Surveyor",
       version: "1.0",
       draft: {
         ...draft,
-        videoFile: undefined, // File blob tidak bisa diekspor dalam format JSON standar
+        videoFile: undefined, 
         photoFiles: undefined,
         localVideoUrl: undefined,
         localPhotoUrls: undefined
@@ -1587,7 +1600,6 @@ export default function App() {
     showToast("File JSON diunduh. Kirim file ini ke teman Anda.");
   };
 
-  // --- NEW: FUNGSI IMPORT DRAFT DARI FILE JSON ---
   const handleImportDraftJSON = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1598,9 +1610,8 @@ export default function App() {
         const importedData = JSON.parse(event.target.result);
         if (importedData.app === "WebGIS_Surveyor" && importedData.draft) {
           const newDraft = importedData.draft;
-          // Generate ID baru agar tidak menimpa draft yang sudah ada
           newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
-          newDraft.isUploaded = false; // Reset status unggah
+          newDraft.isUploaded = false; 
           setDrafts(prev => [...prev, newDraft]);
           showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
         } else {
@@ -1611,7 +1622,7 @@ export default function App() {
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input agar file yang sama bisa diimpor lagi jika perlu
+    e.target.value = ''; 
   };
 
   const executeDeleteDraft = (id) => {
@@ -1891,44 +1902,27 @@ export default function App() {
     <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
-        
         .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-        
         .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-        
         body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background-color: #0f172a; overscroll-behavior: none; overflow: hidden; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .custom-scrollbar-dark::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar-dark::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar-dark::-webkit-scrollbar-thumb { background-color: #4a5568; border-radius: 10px; }
-        .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover { background-color: #718096; }
-
         @media screen and (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
         .leaflet-left { transition: left 0.3s ease-in-out; }
-        
         .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
         .leaflet-touch .leaflet-control-layers-toggle { width: 34px !important; height: 34px !important; background-size: 18px !important; }
-        
         .leaflet-popup-content-wrapper { border-radius: 12px !important; padding: 0 !important; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; }
         .leaflet-popup-content { margin: 14px 16px !important; width: 260px !important; line-height: 1.4 !important; }
         .leaflet-popup-close-button { top: 8px !important; right: 8px !important; color: #ef4444 !important; font-weight: bold !important; font-size: 16px !important; }
         .leaflet-popup-close-button:hover { color: #dc2626 !important; }
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
-        
         video::-webkit-media-controls-fullscreen-button { display: none !important; } 
-
-        @media (min-width: 768px) {
-            .modal-offset-sidebar { padding-left: 356px !important; }
-        }
-
         @media print {
           @page { size: A4; margin: 0mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
@@ -1953,11 +1947,7 @@ export default function App() {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 <div className="p-6 pb-2">
                     <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
-                        {confirmModal.isDanger ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.518c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.828v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
-                        )}
+                        {confirmModal.isDanger ? <Info className="w-7 h-7" strokeWidth={2.5}/> : <Check className="w-7 h-7" strokeWidth={2.5}/> }
                     </div>
                     <h3 className="text-xl font-black text-slate-900 mb-2">{confirmModal.title}</h3>
                     <p className="text-slate-500 text-sm leading-relaxed">{confirmModal.message}</p>
@@ -1974,7 +1964,7 @@ export default function App() {
         <div className="h-full flex items-center justify-center p-4 bg-slate-900 print-hidden overflow-y-auto">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-4 border-slate-800">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/30">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
+              <MapIcon className="w-8 h-8" strokeWidth={2.5} />
             </div>
             <h1 className="text-3xl font-black text-slate-900 mb-6">Map Sistem</h1>
 
@@ -1988,7 +1978,7 @@ export default function App() {
             <div className="space-y-4">
               <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="w-full bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
                 <div className="bg-blue-100 text-blue-600 p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                  <MapPin className="w-6 h-6" />
                 </div>
                 <div className="text-left">
                   <h3 className="font-extrabold text-slate-900">Aplikasi Surveyor</h3>
@@ -1998,7 +1988,7 @@ export default function App() {
 
               <button onClick={() => { window.location.hash = '#/admin'; fetchRoads(); }} className="w-full bg-white border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 p-4 rounded-2xl flex items-center transition-all group">
                 <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
+                  <Menu className="w-6 h-6" />
                 </div>
                 <div className="text-left">
                   <h3 className="font-extrabold text-slate-900">Dasbor Admin</h3>
@@ -2034,14 +2024,14 @@ export default function App() {
                 <div className="flex space-x-3 mb-4 mt-2">
                     <button onClick={startRealHardware} className="w-1/2 bg-white border-2 border-blue-500 hover:bg-blue-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
                         <div className="bg-blue-100 text-blue-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                            <Camera className="w-6 h-6" />
                         </div>
                         <span className="font-extrabold text-sm leading-tight text-center group-hover:text-blue-700 transition-colors">Rekam<br/>GPS Live</span>
                     </button>
 
                     <button onClick={startManualDrawing} className="w-1/2 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-slate-800 rounded-3xl p-5 shadow-sm transition-all flex flex-col items-center justify-center group">
                         <div className="bg-emerald-100 text-emerald-600 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg>
+                            <PenTool className="w-6 h-6" />
                         </div>
                         <span className="font-extrabold text-sm leading-tight text-center group-hover:text-emerald-700 transition-colors">Gambar<br/>Rute Manual</span>
                     </button>
@@ -2050,7 +2040,7 @@ export default function App() {
                 <button onClick={() => { window.location.hash = '#/surveyor/drafts'; }} className="w-full bg-white border-2 border-slate-200 text-slate-800 rounded-3xl p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="text-slate-600 pl-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+                      <FileText className="w-7 h-7" />
                     </div>
                     <div className="text-left">
                       <div className="font-bold text-lg">Draft</div>
@@ -2065,7 +2055,7 @@ export default function App() {
               <div className="flex-1 flex flex-col bg-slate-100 relative overflow-hidden">
                 <div className="flex-1 relative z-0">
                    <div ref={drawMapContainerRef} className="absolute inset-0 bg-slate-200 cursor-crosshair"></div>
-                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuatkan Peta...</div>}
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-slate-900/70 to-transparent z-10 pointer-events-none"></div>
@@ -2077,7 +2067,7 @@ export default function App() {
                          }}
                          className="bg-white/95 backdrop-blur-md p-3.5 rounded-full shadow-xl border border-slate-200/80 text-blue-600 hover:bg-blue-50"
                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                        <Crosshair className="w-5 h-5" />
                      </button>
                 </div>
 
@@ -2090,7 +2080,7 @@ export default function App() {
                             </div>
                          </div>
                          <button onClick={undoLastDrawnPoint} disabled={manualDrawnPoints.length === 0} className={`p-3.5 rounded-full flex items-center justify-center transition-all border shadow-sm ${manualDrawnPoints.length > 0 ? 'bg-amber-100 border-amber-200 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 border-slate-200 text-slate-400 opacity-50 cursor-not-allowed'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                            <Undo2 className="w-5 h-5" />
                          </button>
                      </div>
 
@@ -2118,7 +2108,7 @@ export default function App() {
                 </div>
 
                 <div className="absolute top-[68px] left-1/2 transform -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none w-full px-4">
-                     {recordingStatus === 'locating' && (<div className="bg-amber-500/95 px-5 py-2.5 rounded-full text-xs font-black flex items-center space-x-2 shadow-xl backdrop-blur-md text-white"><svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>Mencari GPS... ({gpsAccuracy}m)</span></div>)}
+                     {recordingStatus === 'locating' && (<div className="bg-amber-500/95 px-5 py-2.5 rounded-full text-xs font-black flex items-center space-x-2 shadow-xl backdrop-blur-md text-white"><RefreshCw className="h-4 w-4 animate-spin text-white" /><span>Mencari GPS... ({gpsAccuracy}m)</span></div>)}
                      {recordingStatus === 'ready' && (<div className="bg-emerald-500/95 px-5 py-2.5 rounded-full text-xs font-black flex items-center space-x-2 shadow-xl backdrop-blur-md text-white animate-pulse"><span className="text-sm">✅</span><span>GPS Siap! Mulai ({gpsAccuracy}m)</span></div>)}
                      {recordingStatus === 'recording' && (<div className="bg-red-600/90 px-4 py-1.5 rounded-full text-[11px] font-black flex items-center space-x-2 shadow-xl backdrop-blur-md text-white animate-pulse"><div className="w-2.5 h-2.5 bg-white rounded-full"></div><span>MEREKAM AKTIF</span></div>)}
                      {recordingStatus === 'paused' && (<div className="bg-amber-500/90 px-5 py-2 rounded-full text-xs font-black shadow-xl backdrop-blur-md text-white">⏸️ JEDA REKAMAN</div>)}
@@ -2130,7 +2120,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* AREA KONTROL BAWAH (STATISTIK & TOMBOL) */}
+                {/* AREA KONTROL BAWAH */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-30 flex flex-col gap-4">
                     
                     <div className="bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 shadow-2xl flex flex-col gap-3">
@@ -2163,10 +2153,10 @@ export default function App() {
                       ) : (
                          <div className="w-full flex space-x-3">
                              {(recordingStatus === 'recording' || recordingStatus === 'auto_paused') && (
-                                 <><button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>JEDA</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
+                                 <><button onClick={() => setRecordingStatus('paused')} className="w-1/2 bg-amber-500 hover:bg-amber-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><Pause className="w-5 h-5"/><span>JEDA</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><Square className="w-4 h-4" fill="currentColor"/><span>SELESAI</span></button></>
                              )}
                              {recordingStatus === 'paused' && (
-                                 <><button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>LANJUT</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><div className="w-4 h-4 bg-white rounded-sm"></div><span>SELESAI</span></button></>
+                                 <><button onClick={() => setRecordingStatus('recording')} className="w-1/2 bg-blue-500 hover:bg-blue-600 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><Play className="w-6 h-6"/><span>LANJUT</span></button><button onClick={stopRealHardware} className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl py-3.5 font-black text-sm shadow-xl flex justify-center items-center space-x-2"><Square className="w-4 h-4" fill="currentColor"/><span>SELESAI</span></button></>
                              )}
                          </div>
                       )}
@@ -2179,7 +2169,7 @@ export default function App() {
               <div className="flex-1 p-5 overflow-y-auto bg-white text-left custom-scrollbar">
                 <div className="bg-slate-50 p-4 rounded-3xl mb-6 flex items-center justify-between border border-slate-100">
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-100 text-blue-600 p-2.5 rounded-2xl"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></div>
+                    <div className="bg-blue-100 text-blue-600 p-2.5 rounded-2xl"><MapPin className="w-5 h-5"/></div>
                     <div><div className="text-slate-900 font-bold text-sm">Jalur Tersimpan</div><div className="text-slate-500 text-xs">{realGpsPoints.length} ttk | {(totalDistance/1000).toFixed(2)} km</div></div>
                   </div>
                   <button type="button" onClick={() => { window.location.hash = '#/surveyor/pin_map'; }} className="bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold active:scale-95">Lihat Peta</button>
@@ -2241,7 +2231,7 @@ export default function App() {
                         {uploadedPhotoUrls.map((url, idx) => (
                           <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
                             <img src={url} alt={`Prev ${idx}`} className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">x</button>
+                            <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><X className="w-3 h-3"/></button>
                           </div>
                         ))}
                       </div>
@@ -2265,7 +2255,7 @@ export default function App() {
                     ) : (
                       <div className="bg-emerald-50 rounded-2xl px-4 py-3 min-h-[3.5rem] flex items-center justify-between border border-emerald-100">
                          <div className="text-emerald-700 font-medium text-sm truncate max-w-[200px]">{uploadedVideoFile?.name || 'video.mp4'}</div>
-                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); }} className="text-rose-500 p-1.5">x</button>
+                         <button type="button" onClick={() => { setUploadedVideoUrl(null); setUploadedVideoFile(null); }} className="text-rose-500 p-1.5"><X className="w-4 h-4"/></button>
                       </div>
                     )}
                   </div>
@@ -2294,7 +2284,7 @@ export default function App() {
                 <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
                   <div className="flex justify-between items-center mb-3">
                     <button onClick={() => document.getElementById('import-draft-input').click()} className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-emerald-100 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        <Download className="w-4 h-4" />
                         Import (.json)
                     </button>
                     <input type="file" accept=".json" id="import-draft-input" className="hidden" onChange={handleImportDraftJSON} />
@@ -2321,10 +2311,10 @@ export default function App() {
                              <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
                              <div className="flex space-x-1.5">
                                <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan Info (Teks)">
-                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg>
+                                 <Share2 className="w-4 h-4" />
                                </button>
                                <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(d); }} className="bg-amber-50 text-amber-600 p-1.5 rounded-xl transition-colors hover:bg-amber-100" title="Download File (.json)">
-                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                                 <Download className="w-4 h-4" />
                                </button>
                                <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
                              </div>
@@ -2353,72 +2343,68 @@ export default function App() {
       {appRole === 'admin' && (
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
-          {/* --- HEADER MAP AREA (Di atas Sidebar) --- */}
+          {/* --- HEADER MAP AREA --- */}
           <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
             <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
+                <Menu className="w-5 h-5" />
               </button>
-              <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.246a1.5 1.5 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg></div>
+              <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><MapIcon className="w-5 h-5"/></div>
             </div>
 
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.baik}</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakRingan}</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakSedang}</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakParah}</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
               <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                <RefreshCw className="w-5 h-5" />
               </button>
               <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </header>
 
-          {/* --- AREA BAWAH HEADER (SIDEBAR & MAP) --- */}
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
             
             {/* Overlay Layar Gelap Mobile */}
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
-            {/* --- SIDEBAR KIRI (FLOATING GLASSMORPHISM) --- */}
+            {/* --- SIDEBAR KIRI --- */}
             <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
               <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
                 
-                {/* Header Sidebar Internal */}
                 <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
                   <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
                   <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                {/* Search Layer */}
                 <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
                   <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <Search className="w-4 h-4 text-slate-800" />
                     <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
                   </div>
                 </div>
 
-                {/* Semua Layer Actions */}
                 <div className="px-4 py-3 flex justify-between items-center border-b border-slate-300/40 bg-transparent">
                   <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
                   <div className="flex space-x-2">
@@ -2427,7 +2413,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Accordion Lists */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
                   {/* WILAYAH KELURAHAN */}
@@ -2439,7 +2424,7 @@ export default function App() {
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeKelurahan).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'kelurahan' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'kelurahan' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'kelurahan' && (
@@ -2468,7 +2453,7 @@ export default function App() {
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeConditions).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'kondisi' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'kondisi' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'kondisi' && (
@@ -2481,7 +2466,7 @@ export default function App() {
                                   </div>
                                   <div className="flex items-center space-x-3">
                                       <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[cond === 'Baik' ? 'baik' : cond === 'Rusak Ringan' ? 'rusakRingan' : cond === 'Rusak Sedang' ? 'rusakSedang' : 'rusakParah']}</span>
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      <Info className="h-4 w-4 text-slate-600" />
                                   </div>
                                </div>
                             ))}
@@ -2498,7 +2483,7 @@ export default function App() {
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeJenis).filter(Boolean).length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'material' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'material' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'material' && (
@@ -2511,7 +2496,7 @@ export default function App() {
                                   </div>
                                   <div className="flex items-center space-x-3">
                                       <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[mat.toLowerCase()]}</span>
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      <Info className="h-4 w-4 text-slate-600" />
                                   </div>
                                </div>
                             ))}
@@ -2528,7 +2513,7 @@ export default function App() {
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{searchedRoads.length}</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'rute' && (
@@ -2557,7 +2542,7 @@ export default function App() {
                                        className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
                                     
                                     <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
-                                        {isSelectedAdmin && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
+                                        {isSelectedAdmin && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                                     </div>
 
                                     <button 
@@ -2567,7 +2552,7 @@ export default function App() {
                                         className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
                                         title="Hapus Rute"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
 
                                     <div className="flex gap-3 pr-8">
@@ -2591,17 +2576,14 @@ export default function App() {
 
                 </div>
 
-                {/* Footer Sidebar */}
                 <div className="p-4 border-t border-slate-300/40 bg-white/20 backdrop-blur-md">
                     <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeConditions).filter(Boolean).length + Object.values(activeJenis).filter(Boolean).length + Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
                 </div>
               </div>
             </aside>
 
-            {/* --- MAIN CONTENT (MAP & WIDGETS) --- */}
+            {/* --- MAIN MAP AREA --- */}
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
-            
-            {/* Peta Container Asli 2D Leaflet */}
             <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
                <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
                    <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
@@ -2614,10 +2596,8 @@ export default function App() {
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
           <>
-            {/* Layer Gelap (Backdrop) */}
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
             
-            {/* Wrapper Pemusat Modal (100% Center di Layar) */}
             <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
               
               <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
@@ -2625,7 +2605,7 @@ export default function App() {
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
                     <h3 className="font-black text-slate-900">Detail Rute</h3>
-                    <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
                   </div>
                 )}
 
@@ -2692,7 +2672,7 @@ export default function App() {
           </>
         )}
 
-        {/* --- OVERLAY KONTROL ANIMASI BAWAH (FIXED RESPONSIVE) --- */}
+        {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
              <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
@@ -2703,23 +2683,19 @@ export default function App() {
                  ) : (
                      <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-3">
                          
-                         {/* --- HEADER KONTROL --- */}
                          <div className="flex justify-between items-center w-full">
                              <div className="flex gap-2 items-center">
                                  {isAnimFinished ? (
                                      <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors" title="Ulang">
-                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                         <RefreshCw className="w-5 h-5"/>
                                      </button>
                                  ) : (
                                      <>
                                          <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white shadow-sm transition-colors ${isAnimPaused ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`} title={isAnimPaused ? "Play" : "Pause"}>
-                                            {isAnimPaused ? 
-                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5"><path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" /></svg> : 
-                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75V5.25z" clipRule="evenodd" /></svg>
-                                            }
+                                            {isAnimPaused ? <Play className="w-5 h-5 ml-0.5" /> : <Pause className="w-5 h-5" />}
                                          </button>
                                          <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 shadow-sm transition-colors" title="Mulai Ulang">
-                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                             <RefreshCw className="w-5 h-5" />
                                          </button>
                                      </>
                                  )}
@@ -2730,15 +2706,14 @@ export default function App() {
 
                              <div className="flex gap-1.5 items-center">
                                  <button onClick={() => setIsAnimControlMinimized(true)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full shrink-0 hover:bg-slate-200 transition-colors" title="Sembunyikan">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                                    <ChevronDown className="w-4 h-4" />
                                  </button>
                                  <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <X className="w-4 h-4" />
                                  </button>
                              </div>
                          </div>
                          
-                         {/* --- INFO KENDARAAN & JARAK --- */}
                          <div className="flex gap-2 w-full items-stretch">
                              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 shadow-inner">
                                  {animatingRoadsList.length > 1 ? (
@@ -2758,7 +2733,6 @@ export default function App() {
                              </div>
                          </div>
 
-                         {/* --- KONTROL SPEED --- */}
                          {showSpeedControl && (
                              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
                                  <div className="flex items-center space-x-2 md:space-x-3 mb-3">
@@ -2774,16 +2748,14 @@ export default function App() {
                              </div>
                          )}
 
-                         {/* --- NEW: TOMBOL 3D & RECORDING TERPISAH --- */}
                          {animatingRoadsList.length === 1 && (
                             <div className="flex gap-2 w-full items-stretch pt-1">
                                 <button onClick={() => setIsExportingDroneVideo(true)} className={`w-full py-3.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700`}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>
+                                    <Camera className="w-5 h-5"/>
                                     Export Video 3D (Drone View)
                                 </button>
                             </div>
                          )}
-
                      </div>
                  )}
              </div>
