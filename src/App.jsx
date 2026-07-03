@@ -196,7 +196,6 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
     <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
         <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
             <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: ${conditionColor}; position: relative; border: 1px solid rgba(0,0,0,0.2);">
-                ${thumbnailUrl ? `<img src="${thumbnailUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
                 <div style="position: absolute; top: 10%; left: 15%; width: 25%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; filter: blur(1px);"></div>
             </div>
         </div>
@@ -2733,6 +2732,7 @@ export default function App() {
                              </div>
                          </div>
 
+                         {/* --- KONTROL SPEED --- */}
                          {showSpeedControl && (
                              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
                                  <div className="flex items-center space-x-2 md:space-x-3 mb-3">
@@ -2748,6 +2748,7 @@ export default function App() {
                              </div>
                          )}
 
+                         {/* --- NEW: TOMBOL 3D & RECORDING TERPISAH --- */}
                          {animatingRoadsList.length === 1 && (
                             <div className="flex gap-2 w-full items-stretch pt-1">
                                 <button onClick={() => setIsExportingDroneVideo(true)} className={`w-full py-3.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700`}>
