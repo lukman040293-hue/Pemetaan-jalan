@@ -221,41 +221,6 @@ const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topr
   L.control.layers(baseMaps, null, { position }).addTo(map);
 };
 
-const LockCylinder = ({ digit, idx }) => {
-  const stripRef = useRef(null);
-  const numbers = Array.from({ length: 40 }, (_, i) => i % 10);
-  const targetNum = parseInt(digit, 10);
-  const targetIndex = 30 + targetNum;
-
-  useEffect(() => {
-    if (stripRef.current) {
-      stripRef.current.style.transition = 'none';
-      stripRef.current.style.transform = `translateY(0em)`;
-      void stripRef.current.offsetHeight; 
-      const duration = 2.0 + (idx * 0.4); 
-      stripRef.current.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.2, 1)`;
-      stripRef.current.style.transform = `translateY(-${targetIndex * 1.1}em)`;
-    }
-  }, [digit, idx]);
-
-  return (
-    <span style={{ display: 'inline-block', height: '1.1em', lineHeight: '1.1em', overflow: 'hidden', position: 'relative', background: 'transparent', margin: '0 1px', color: '#0f172a' }}>
-      <span ref={stripRef} style={{ display: 'flex', flexDirection: 'column', willChange: 'transform' }}>
-        {numbers.map((num, i) => <span key={i} style={{ height: '1.1em', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>{num}</span>)}
-      </span>
-    </span>
-  );
-};
-
-const AnimatedNumber = ({ value }) => {
-  const valStr = String(value); const digits = valStr.split('');
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', margin: '0 -2px' }}>
-      {digits.map((digit, idx) => <LockCylinder key={`${digits.length}-${idx}`} digit={digit} idx={idx} />)}
-    </span>
-  );
-};
-
 const LayerToggle = ({ active, color, onClick }) => (
   <div onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors relative flex items-center shrink-0 border border-black/10 shadow-inner" style={{ backgroundColor: active ? color : '#cbd5e1' }}>
       <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform transform ${active ? 'translate-x-4' : 'translate-x-0'}`}></div>
@@ -1196,17 +1161,28 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
     
+    if (adminMapInstanceRef.current) {
+        adminMapInstanceRef.current.remove();
+        adminMapInstanceRef.current = null;
+    }
+
     const map = window.L.map(adminMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 13);
     window.L.control.zoom({ position: 'topright' }).addTo(map);
 
-    initBaseMaps(map, window.L, "Google Satelit + Jalan (Bersih)", 'topright');
+    initBaseMaps(map, window.L, "Google Hybrid (Semua Label)", 'topright');
     
     adminMapInstanceRef.current = map;
     adminLayerGroupRef.current = window.L.layerGroup().addTo(map);
     adminHighlightLayerGroupRef.current = window.L.layerGroup().addTo(map);
 
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
-    return () => { map.remove(); adminMapInstanceRef.current = null; adminLayerGroupRef.current = null; };
+    return () => { 
+        if (adminMapInstanceRef.current) {
+            adminMapInstanceRef.current.remove();
+            adminMapInstanceRef.current = null;
+        }
+        adminLayerGroupRef.current = null; 
+    };
   }, [appRole, isLeafletLoaded]);
 
   useEffect(() => {
@@ -1301,355 +1277,26 @@ export default function App() {
   }, [appRole, syncedRoads, activeKelurahan, activeConditions, activeJenis, searchQuery, selectedAdminRouteIds]);
 
   useEffect(() => {
-    if (appRole !== 'admin' || !adminHighlightLayerGroupRef.current) return;
-    const highlightGroup = adminHighlightLayerGroupRef.current;
-    highlightGroup.clearLayers();
-
-    if (highlightedRoadId) {
-      const activeRoad = syncedRoads.find(r => (r.id || r.dbId) === highlightedRoadId);
-      if (activeRoad && activeRoad.realGps && activeRoad.realGps.length > 0) {
-        const latlngs = activeRoad.realGps.map(pt => [pt.lat, pt.lng]);
-        window.L.polyline(latlngs, { color: '#3B82F6', weight: 16, opacity: 0.5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
-        window.L.polyline(latlngs, { color: '#ffffff', weight: 10, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
-        window.L.polyline(latlngs, { color: getConditionColor(activeRoad.condition), weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(highlightGroup);
-      }
-    }
-  }, [highlightedRoadId, syncedRoads, appRole]);
-
-  useEffect(() => {
-    if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
-  }, [isSidebarOpen, appRole]);
-
-  useEffect(() => {
-    let onInteractionStart = null; let onInteractionEnd = null;
-    let activeTimeouts = []; let activeMarkers = [];
-
-    if (isAnimatingMap && animatingRoadsList.length > 0 && adminMapInstanceRef.current) {
-       const map = adminMapInstanceRef.current;
-       let isInteracting = false;
-
-       onInteractionStart = () => { isInteracting = true; activeMarkers.forEach(m => { if(m && m.getElement()) m.getElement().style.transition = 'none'; }); };
-       onInteractionEnd = () => { isInteracting = false; };
-       
-       map.on('zoomstart', onInteractionStart); map.on('zoomend', onInteractionEnd); map.on('dragstart', onInteractionStart); map.on('dragend', onInteractionEnd);
-
-       let finishedCount = 0; const totalVehicles = animatingRoadsList.length;
-
-       animatingRoadsList.forEach((road, vIndex) => {
-           const points = road.realGps;
-           if (!points || points.length < 2) { finishedCount++; return; }
-
-           const individualSpeedFactor = 0.7 + (Math.random() * 0.7);
-           let currentIndex = 0; let accumulatedDistance = 0;
-           let currentAngle = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-           
-           let vehicleSvg = ''; let iconSize = [32, 50]; let iconAnchor = [16, 25];
-
-           if (animIconType === 'motorcycle') {
-               iconSize = [26, 42]; iconAnchor = [13, 21];
-               vehicleSvg = `<svg viewBox="0 0 40 95" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));"><rect x="17" y="72" width="6" height="20" rx="3" fill="#0f172a"/><rect x="27" y="58" width="4" height="24" rx="2" fill="#94a3b8"/><path d="M 15 55 L 25 55 L 23 82 L 17 82 Z" fill="#334155"/><rect x="16" y="81" width="8" height="3" rx="1" fill="#ef4444"/><rect x="17" y="3" width="6" height="18" rx="3" fill="#0f172a"/><path d="M 15 13 L 25 13 L 26 23 L 14 23 Z" fill="#334155"/><circle cx="20" cy="12" r="3" fill="#fef08a" /><path d="M 6 28 Q 20 22 34 28" stroke="#475569" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="4" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(15, 6, 30)"/><rect x="31" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(-15, 34, 30)"/><path d="M 13 26 Q 20 18 27 26 L 29 45 Q 20 49 11 45 Z" fill="#dc2626"/><path d="M 15 28 Q 20 22 25 28 L 26 40 Q 20 42 14 40 Z" fill="rgba(255,255,255,0.2)"/><path d="M 13 45 Q 20 42 27 45 L 25 65 Q 20 70 15 65 Z" fill="#1e293b"/><path d="M 9 48 Q 20 40 31 48 L 28 55 Q 20 59 12 55 Z" fill="#334155"/><circle cx="20" cy="46" r="8" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/><path d="M 14 43.5 Q 20 38 26 43.5 Q 20 47 14 43.5 Z" fill="#0f172a"/></svg>`;
-           } else if (animIconType === 'runner') {
-               iconSize = [28, 28]; iconAnchor = [14, 14];
-               vehicleSvg = `<svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));"><style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style><g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;"><rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" /><rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" /><path d="M 14 25 Q 6 36 12 44" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="12" cy="44" r="3" fill="#fcd34d" /><path d="M 36 25 Q 44 14 38 6" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="38" cy="6" r="3" fill="#fcd34d" /><rect x="13" y="20" width="24" height="10" rx="5" fill="#3b82f6" /></g><circle cx="25" cy="25" r="7" fill="#fcd34d" /><path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" /></svg>`;
-           } else if (animIconType === 'truck') {
-               iconSize = [24, 60]; iconAnchor = [12, 30];
-               vehicleSvg = `<svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.5));"><rect x="4" y="25" width="32" height="70" rx="4" fill="#64748b"/><rect x="6" y="27" width="28" height="66" rx="2" fill="#94a3b8"/><rect x="6" y="4" width="28" height="20" rx="4" fill="#eab308"/><rect x="8" y="14" width="24" height="6" rx="2" fill="#1e293b"/><rect x="8" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="26" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="2" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="35" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="2" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="2" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="16" y="22" width="8" height="6" fill="#334155"/></svg>`;
-           } else {
-               iconSize = [24, 38]; iconAnchor = [12, 19];
-               vehicleSvg = `<svg viewBox="0 0 100 160" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));"><rect x="8" y="35" width="16" height="30" rx="6" fill="#334155"/><rect x="76" y="35" width="16" height="30" rx="6" fill="#334155"/><rect x="8" y="105" width="16" height="30" rx="6" fill="#334155"/><rect x="76" y="105" width="16" height="30" rx="6" fill="#334155"/><rect x="18" y="5" width="64" height="14" rx="7" fill="#cbd5e1"/><rect x="22" y="145" width="56" height="10" rx="5" fill="#cbd5e1"/><rect x="14" y="12" width="72" height="135" rx="28" fill="#94a3b8"/><rect x="18" y="16" width="64" height="127" rx="24" fill="rgba(0,0,0,0.15)"/><rect x="20" y="18" width="60" height="123" rx="22" fill="#cbd5e1"/><circle cx="26" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/><circle cx="26" cy="18" r="4" fill="#fef08a"/><circle cx="74" cy="18" r="9" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/><circle cx="74" cy="18" r="4" fill="#fef08a"/><path d="M 22 55 Q 50 40 78 55 L 72 75 Q 50 65 28 75 Z" fill="#1e293b"/><path d="M 26 120 Q 50 130 74 120 L 70 108 Q 50 115 30 108 Z" fill="#1e293b"/><path d="M 20 78 L 24 105 Q 26 90 28 78 Z" fill="#1e293b"/><path d="M 80 78 L 76 105 Q 74 90 72 78 Z" fill="#1e293b"/><rect x="28" y="72" width="44" height="38" rx="12" fill="#cbd5e1"/><rect x="32" y="74" width="36" height="16" rx="8" fill="rgba(255,255,255,0.4)"/><rect x="22" y="140" width="12" height="6" rx="3" fill="#ef4444"/><rect x="66" y="140" width="12" height="6" rx="3" fill="#ef4444"/></svg>`;
-           }
-           
-           const iconHtml = `<div id="anim-car-wrapper-${vIndex}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px; transform-origin: center center; transform: rotate(${currentAngle}deg); transition: transform 0.3s ease-out;">${vehicleSvg}</div>`;
-           const customVehicleIcon = window.L.divIcon({ className: 'moving-vehicle-icon', html: iconHtml, iconSize: iconSize, iconAnchor: iconAnchor });
-           const marker = window.L.marker([points[0].lat, points[0].lng], { icon: customVehicleIcon, zIndexOffset: 1000 }).addTo(map);
-           activeMarkers.push(marker);
-
-           const midPoint = points[Math.floor(points.length / 2)];
-           const dirX = vIndex % 2 === 0 ? 40 : -40; const dirY = vIndex % 3 === 0 ? -45 : (vIndex % 3 === 1 ? -25 : -65);
-           const staticLabelIcon = window.L.divIcon({
-               className: 'static-route-label',
-               html: `<div style="position: relative; width: 0; height: 0; pointer-events: none;"><div style="position: absolute; width: 8px; height: 8px; background: #ffffff; border: 2.5px solid #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div><svg style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 1;"><line x1="0" y1="0" x2="${dirX}" y2="${dirY}" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.9" /></svg><div style="position: absolute; transform: translate(calc(${dirX}px ${dirX > 0 ? '+ 3px' : '- 100% - 3px'}), calc(${dirY}px - 50%)); background-color: #3b82f6; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.25); z-index: 3; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">${road.name}</div></div>`,
-               iconSize: [0, 0], iconAnchor: [0, 0]
-           });
-           const staticLabelMarker = window.L.marker([midPoint.lat, midPoint.lng], { icon: staticLabelIcon, interactive: false }).addTo(map);
-           activeMarkers.push(staticLabelMarker); 
-
-           const animate = () => {
-              if (currentIndex >= points.length) {
-                 finishedCount++;
-                 if (finishedCount >= totalVehicles) { setIsAnimPaused(true); setIsAnimFinished(true); }
-                 return;
-              }
-              if (isAnimPausedRef.current) { activeTimeouts.push(setTimeout(animate, 100)); return; }
-              
-              const pt = points[currentIndex];
-              let segmentDelay = 600 / animationSpeedRef.current; 
-
-              if (currentIndex > 0) {
-                  const prevPt = points[currentIndex - 1];
-                  const dist = getDistanceMeters(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
-                  accumulatedDistance += dist;
-                  if (totalVehicles === 1) setCurrentAnimDistance(accumulatedDistance);
-                  const baseVisualSpeedMps = 75; 
-                  let calculatedDelay = (dist / baseVisualSpeedMps) * 1000 / (animationSpeedRef.current * individualSpeedFactor);
-                  segmentDelay = Math.max(30, Math.min(calculatedDelay, 8000));
-              }
-
-              if (marker) {
-                  const el = marker.getElement();
-                  if (el && currentIndex > 0) el.style.transition = isInteracting ? 'none' : `transform ${segmentDelay}ms linear`;
-                  marker.setLatLng([pt.lat, pt.lng]);
-              }
-              
-              if (currentIndex > 0) {
-                  const prevPt = points[currentIndex - 1];
-                  if (prevPt.lat !== pt.lat || prevPt.lng !== pt.lng) {
-                      const targetBearing = getBearing(prevPt.lat, prevPt.lng, pt.lat, pt.lng);
-                      let diff = targetBearing - (currentAngle % 360);
-                      if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                      currentAngle += diff;
-                      const carWrapper = document.getElementById(`anim-car-wrapper-${vIndex}`);
-                      if (carWrapper) { carWrapper.style.transition = `transform ${Math.min(segmentDelay * 0.5, 400)}ms ease-in-out`; carWrapper.style.transform = `rotate(${currentAngle}deg)`; }
-                  }
-              }
-
-              currentIndex++;
-              activeTimeouts.push(setTimeout(animate, segmentDelay)); 
-           };
-
-           activeTimeouts.push(setTimeout(animate, 800 + (vIndex * 60))); 
-       });
-
-       const allRouteBounds = animatingRoadsList.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
-       if (allRouteBounds.length > 0) {
-           const isMobile = window.innerWidth < 768;
-           map.fitBounds(window.L.latLngBounds(allRouteBounds), { 
-               paddingTopLeft: isMobile ? [20, 40] : [80, 80], paddingBottomRight: isMobile ? [20, 240] : [80, 180], maxZoom: 18
-           });
-       }
+    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded) return;
+    
+    if (liveMapInstanceRef.current) {
+        liveMapInstanceRef.current.remove();
+        liveMapInstanceRef.current = null;
     }
 
-    return () => {
-       activeTimeouts.forEach(clearTimeout);
-       activeMarkers.forEach(m => { if(m && adminMapInstanceRef.current) adminMapInstanceRef.current.removeLayer(m); });
-       if (adminMapInstanceRef.current && onInteractionStart && onInteractionEnd) {
-           adminMapInstanceRef.current.off('zoomstart', onInteractionStart); adminMapInstanceRef.current.off('zoomend', onInteractionEnd);
-           adminMapInstanceRef.current.off('dragstart', onInteractionStart); adminMapInstanceRef.current.off('dragend', onInteractionEnd);
-       }
-    };
-  }, [isAnimatingMap, animatingRoadsList, animIconType]);
-
-  useEffect(() => {
-      if (appRole !== 'surveyor') return;
-      let watchId;
-      if ('geolocation' in navigator) {
-          watchId = navigator.geolocation.watchPosition(
-              (position) => setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
-              () => console.warn("GPS belum stabil atau izin ditolak."),
-              { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
-          );
-      }
-      return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
-  }, [appRole]);
-
-  useEffect(() => {
-    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
-    const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
-    drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
-    drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-    if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
-    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
-    return () => { map.remove(); drawMapInstanceRef.current = null; drawPolylineRef.current = null; drawMarkersGroupRef.current = null; drawMapCurrentLocMarkerRef.current = null; };
-  }, [appRole, mobileScreen, isLeafletLoaded]);
-
-  useEffect(() => {
-    if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
-    if (currentLocation) {
-        if (drawMapCurrentLocMarkerRef.current) drawMapCurrentLocMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-        else {
-            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-            drawMapCurrentLocMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000, interactive: false }).addTo(drawMapInstanceRef.current);
-        }
-    }
-  }, [appRole, mobileScreen, currentLocation]);
-
-  useEffect(() => {
-      if (mobileScreen !== 'draw_map' || !drawMapInstanceRef.current) return;
-      const onMapClick = (e) => {
-          setManualDrawnPoints(prev => {
-              const newPt = { lat: e.latlng.lat, lng: e.latlng.lng };
-              if (prev.length > 0) setTotalDistance(d => d + getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, newPt.lat, newPt.lng));
-              return [...prev, newPt];
-          });
-      };
-      drawMapInstanceRef.current.on('click', onMapClick);
-      return () => { if(drawMapInstanceRef.current) drawMapInstanceRef.current.off('click', onMapClick); };
-  }, [mobileScreen]);
-
-  useEffect(() => {
-      if (mobileScreen !== 'draw_map' || !drawPolylineRef.current || !drawMarkersGroupRef.current) return;
-      drawPolylineRef.current.setLatLngs(manualDrawnPoints.map(p => [p.lat, p.lng]));
-      drawMarkersGroupRef.current.clearLayers();
-      manualDrawnPoints.forEach((pt, idx) => {
-          const isStart = idx === 0; const isEnd = idx === manualDrawnPoints.length - 1;
-          const color = isStart ? '#10B981' : (isEnd ? '#EF4444' : '#ffffff');
-          window.L.circleMarker([pt.lat, pt.lng], { radius: isStart||isEnd ? 5 : 3, fillColor: color, color: isStart||isEnd?'#fff':'#3B82F6', weight: isStart||isEnd ? 2 : 1.5, fillOpacity: 1 }).addTo(drawMarkersGroupRef.current);
-      });
-  }, [manualDrawnPoints, mobileScreen]);
-
-  useEffect(() => {
-    if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
-    const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
-    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
-
-    if (realGpsPoints.length > 0) {
-      const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
-      window.L.polyline(latlngs, { color: getConditionColor(formData.condition), weight: 6, opacity: 0.9 }).addTo(map);
-      window.L.circleMarker(latlngs[0], { radius: 3, fillColor: '#10B981', color: '#fff' }).addTo(map);
-      window.L.circleMarker(latlngs[latlngs.length - 1], { radius: 3, fillColor: '#EF4444', color: '#fff' }).addTo(map);
-      map.fitBounds(window.L.latLngBounds(latlngs), { padding: [30, 30] });
-    } else map.setView([-0.425, 117.185], 13);
-
-    map.on('click', async (e) => {
-      setPinLocation({ lat: e.latlng.lat, lng: e.latlng.lng }); showToast("📍 Pin diletakkan! Mendeteksi...");
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=18&addressdetails=1`);
-        const data = await response.json();
-        if (data && data.address) {
-          const possibleNames = [data.address.village, data.address.suburb, data.address.neighbourhood, data.address.city_district].filter(Boolean);
-          for (let name of possibleNames) {
-            const normalized = name.toLowerCase().replace(/kelurahan|desa|kecamatan/gi, '').trim();
-            const match = KELURAHAN_LIST.find(k => k.toLowerCase() === normalized);
-            if (match) { setFormData(prev => ({ ...prev, kelurahan: match })); showToast(`✅ Kel. ${match}`); break; }
-          }
-        }
-      } catch (err) {}
-    });
-
-    return () => { map.remove(); surveyorMapInstanceRef.current = null; surveyorMarkerRef.current = null; currentLocationMarkerRef.current = null; };
-  }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
-
-  useEffect(() => {
-    if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
-    if (pinLocation) {
-      if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); // Ubah ukuran ke 'md' (sedang)
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); // Sesuaikan ukuran iconSize dan anchor
-      surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
-    }
-    if (currentLocation) {
-        if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-        else {
-            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
-        }
-    }
-  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
-
-
-  const startRealHardware = async () => {
-    setMobileScreen('record'); 
-    window.location.hash = '#/surveyor/record'; 
-    setRealGpsPoints([]); setIsRecording(true); 
-    setRecordingStatus('locating'); setRecordTab('map'); 
-    setGpsAccuracy('-'); setCurrentSpeed(0); setTotalDistance(0); setRecordingDuration(0);
-    setUploadedVideoUrl(null); setUploadedVideoFile(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]);
-    setPinLocation(null); setEditingDraftId(null); isGpsForcedRef.current = false;
-
-    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
-    locatingTimeoutRef.current = setTimeout(() => {
-      if (recordingStatusRef.current === 'locating') { showToast("⏳ Sinyal GPS sulit didapat. Diaktifkan paksa."); isGpsForcedRef.current = true; setRecordingStatus('ready'); }
-    }, 15000);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) { showToast("Kamera tidak diizinkan."); }
-
-    if ('geolocation' in navigator) {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude, accuracy, speed } = position.coords;
-          setGpsAccuracy(Math.round(accuracy)); setCurrentSpeed(speed ? Math.round(speed * 3.6) : 0);
-          setCurrentLocation({ lat: latitude, lng: longitude });
-          
-          if (recordingStatusRef.current === 'locating' && accuracy <= 25) {
-             if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
-             setRecordingStatus('ready'); showToast("Sinyal GPS Bagus!");
-          } else if (recordingStatusRef.current === 'ready' && accuracy > 40 && !isGpsForcedRef.current) setRecordingStatus('locating'); 
-
-          if (recordingStatusRef.current === 'recording' || recordingStatusRef.current === 'auto_paused') {
-            if (accuracy > 40 && !isGpsForcedRef.current) return; 
-            setRealGpsPoints(prev => {
-              if (prev.length === 0) { lastMoveTimeRef.current = Date.now(); return [{ lat: latitude, lng: longitude }]; }
-              const dist = getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, latitude, longitude);
-              if (dist < 3.5) {
-                 if (Date.now() - lastMoveTimeRef.current > 10000 && recordingStatusRef.current === 'recording') { setRecordingStatus('auto_paused'); showToast("Auto-Pause aktif."); }
-                 return prev;
-              }
-              if (dist > 100) return prev; 
-              if (recordingStatusRef.current === 'auto_paused') { setRecordingStatus('recording'); showToast("Melanjutkan rekaman."); }
-              lastMoveTimeRef.current = Date.now(); setTotalDistance(d => d + dist);
-              return [...prev, { lat: latitude, lng: longitude }];
-            });
-          }
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-      );
-    }
-  };
-
-  const startManualDrawing = () => {
-    setMobileScreen('draw_map');
-    window.location.hash = '#/surveyor/draw_map';
-    setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
-    setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); 
-  };
-
-  const undoLastDrawnPoint = () => {
-    setManualDrawnPoints(prev => {
-        if (prev.length <= 1) { setTotalDistance(0); return []; }
-        const newPoints = prev.slice(0, -1);
-        let newDist = 0; for (let i = 1; i < newPoints.length; i++) newDist += getDistanceMeters(newPoints[i-1].lat, newPoints[i-1].lng, newPoints[i].lat, newPoints[i].lng);
-        setTotalDistance(newDist); return newPoints;
-    });
-  };
-
-  const finishManualDrawing = () => {
-    if (manualDrawnPoints.length < 2) return showToast("Gambarkan minimal 2 titik!");
-    setRealGpsPoints(manualDrawnPoints); 
-    setMobileScreen('form');
-    window.location.hash = '#/surveyor/form';
-  };
-
-  const stopRealHardware = () => {
-    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
-    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-    if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); 
-    setMobileScreen('form');
-    window.location.hash = '#/surveyor/form';
-  };
-
-  const cancelRecording = () => {
-    if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
-    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-    if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); 
-    setMobileScreen('home');
-    window.location.hash = '#/surveyor/home';
-  };
-
-  useEffect(() => {
-    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
     const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
     initBaseMaps(map, window.L, "OSM Default", 'topleft');
     liveMapInstanceRef.current = map;
     liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
     setTimeout(() => map.invalidateSize(), 300);
-    return () => { map.remove(); liveMapInstanceRef.current = null; liveMapPolylineRef.current = null; liveMapMarkerRef.current = null; };
+    return () => { 
+        if (liveMapInstanceRef.current) {
+            liveMapInstanceRef.current.remove();
+            liveMapInstanceRef.current = null;
+        }
+        liveMapPolylineRef.current = null; 
+        liveMapMarkerRef.current = null; 
+    };
   }, [mobileScreen, isLeafletLoaded]);
 
   useEffect(() => {
@@ -1677,13 +1324,27 @@ export default function App() {
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
+    
+    if (drawMapInstanceRef.current) {
+        drawMapInstanceRef.current.remove();
+        drawMapInstanceRef.current = null;
+    }
+
     const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
     initBaseMaps(map, window.L, "OSM Default", 'topleft');
     drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
     drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
     if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
-    return () => { map.remove(); drawMapInstanceRef.current = null; drawPolylineRef.current = null; drawMarkersGroupRef.current = null; drawMapCurrentLocMarkerRef.current = null; };
+    return () => { 
+        if (drawMapInstanceRef.current) {
+            drawMapInstanceRef.current.remove();
+            drawMapInstanceRef.current = null;
+        }
+        drawPolylineRef.current = null; 
+        drawMarkersGroupRef.current = null; 
+        drawMapCurrentLocMarkerRef.current = null; 
+    };
   }, [appRole, mobileScreen, isLeafletLoaded]);
 
   useEffect(() => {
@@ -1723,6 +1384,12 @@ export default function App() {
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
+    
+    if (surveyorMapInstanceRef.current) {
+        surveyorMapInstanceRef.current.remove();
+        surveyorMapInstanceRef.current = null;
+    }
+
     const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
     initBaseMaps(map, window.L, "OSM Default", 'topleft');
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
@@ -1751,7 +1418,14 @@ export default function App() {
       } catch (err) {}
     });
 
-    return () => { map.remove(); surveyorMapInstanceRef.current = null; surveyorMarkerRef.current = null; currentLocationMarkerRef.current = null; };
+    return () => { 
+        if (surveyorMapInstanceRef.current) {
+            surveyorMapInstanceRef.current.remove();
+            surveyorMapInstanceRef.current = null;
+        }
+        surveyorMarkerRef.current = null; 
+        currentLocationMarkerRef.current = null; 
+    };
   }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
 
   useEffect(() => {
@@ -1764,13 +1438,89 @@ export default function App() {
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
-        if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-        else {
-            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
+        if (currentLocationMarkerRef.current) {
+            currentLocationMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+        } else {
+            const icon = window.L.divIcon({ className: 'current-location-dot', html: `<div style="position: relative; width: 16px; height: 16px;"><div style="position: absolute; width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); z-index: 2;"></div><div style="position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: 1;"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+            currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000, interactive: false }).addTo(surveyorMapInstanceRef.current);
         }
     }
-  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData.condition, uploadedPhotoUrls]);
+
+  const startRealHardware = () => {
+      setRealGpsPoints([]); setTotalDistance(0); setCurrentSpeed(0); setRecordingDuration(0);
+      setMobileScreen('record'); setRecordingStatus('locating');
+      
+      if (navigator.geolocation) {
+          watchIdRef.current = navigator.geolocation.watchPosition((pos) => {
+              const { latitude: lat, longitude: lng, accuracy: acc, speed } = pos.coords;
+              const spd = speed ? (speed * 3.6).toFixed(1) : 0;
+              setCurrentLocation({lat, lng}); setGpsAccuracy(Math.round(acc)); setCurrentSpeed(spd);
+              
+              if (recordingStatusRef.current === 'locating' && acc <= 20) setRecordingStatus('ready');
+              
+              if (recordingStatusRef.current === 'recording') {
+                  setRealGpsPoints(prev => {
+                      const newPt = { lat, lng };
+                      if (prev.length > 0) {
+                          const dist = getDistanceMeters(prev[prev.length - 1].lat, prev[prev.length - 1].lng, lat, lng);
+                          if (dist > 2) { setTotalDistance(d => d + dist); return [...prev, newPt]; }
+                          return prev;
+                      }
+                      return [newPt];
+                  });
+              }
+          }, (err) => console.warn(err), { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
+      } else {
+          showToast("GPS tidak didukung perangkat ini.");
+      }
+      
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+              .then(stream => { streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream; })
+              .catch(err => console.warn("Kamera error:", err));
+      }
+  };
+
+  const stopRealHardware = () => {
+      if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+      if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+      setRecordingStatus('idle'); setMobileScreen('form');
+      setPinLocation(realGpsPoints.length > 0 ? realGpsPoints[Math.floor(realGpsPoints.length/2)] : null);
+  };
+
+  const cancelRecording = () => {
+      if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+      if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+      setRecordingStatus('idle'); setMobileScreen('home');
+  };
+
+  const startManualDrawing = () => {
+      setManualDrawnPoints([]); setTotalDistance(0); setMobileScreen('draw_map');
+      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => setCurrentLocation({lat: pos.coords.latitude, lng: pos.coords.longitude}));
+  };
+
+  const finishManualDrawing = () => {
+      setRealGpsPoints(manualDrawnPoints); setMobileScreen('form');
+      setPinLocation(manualDrawnPoints.length > 0 ? manualDrawnPoints[Math.floor(manualDrawnPoints.length/2)] : null);
+  };
+
+  const undoLastDrawnPoint = () => {
+      setManualDrawnPoints(prev => {
+          if (prev.length === 0) return prev;
+          const newPts = prev.slice(0, -1);
+          let dist = 0; for(let i=1; i<newPts.length; i++) dist += getDistanceMeters(newPts[i-1].lat, newPts[i-1].lng, newPts[i].lat, newPts[i].lng);
+          setTotalDistance(dist); return newPts;
+      });
+  };
+
+  useEffect(() => {
+     if (recordTab === 'map' && liveMapInstanceRef.current) {
+        liveMapInstanceRef.current.invalidateSize();
+        const timers = [100, 300].map(time => setTimeout(() => { if (liveMapInstanceRef.current) liveMapInstanceRef.current.invalidateSize(true); }, time));
+        return () => timers.forEach(clearTimeout);
+     }
+  }, [recordTab]);
 
   const handlePhotoChange = async (e) => {
     const files = Array.from(e.target.files);
@@ -2616,19 +2366,19 @@ export default function App() {
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.baik}</span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakRingan}</span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakSedang}</span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
                  <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800">{adminStats.rusakParah}</span></div>
               </div>
             </div>
 
