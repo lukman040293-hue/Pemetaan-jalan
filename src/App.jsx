@@ -187,20 +187,57 @@ const getThumbnailUrl = (road) => {
 };
 
 const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
-    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); 
-    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); 
-    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); 
-    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); 
+    // Ukuran dasar untuk pin push-pin (lebih tinggi dari sebelumnya)
+    const w = size === 'lg' ? 48 : (size === 'md' ? 40 : 32);
+    const h = Math.round(w * 1.8); // Proporsi tinggi ke lebar
+    const headRadius = w / 2;
+    const clipId = `clip-${Math.random().toString(36).substr(2, 5)}`;
+    const gradId = `grad-${Math.random().toString(36).substr(2, 5)}`;
     
-    // Thumbnail img tag telah dihapus di sini agar pin bersih
+    // Konten di dalam kepala pin: gambar atau warna solid dengan efek kilau
+    const innerContent = thumbnailUrl
+        ? `<image href="${thumbnailUrl}" x="0" y="0" width="${w}" height="${w}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice" />`
+        : `<circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="${conditionColor}"/>`;
+
+    // Efek kilau 3D pada kepala pin
+    const shineEffect = `
+        <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+            <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:0.6" />
+            <stop offset="40%" style="stop-color:rgb(255,255,255);stop-opacity:0.2" />
+            <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.2" />
+        </radialGradient>
+        <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="url(#${gradId})" style="pointer-events: none;"/>
+    `;
+        
     return `
-    <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
-        <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
-            <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: ${conditionColor}; position: relative; border: 1px solid rgba(0,0,0,0.2);">
-                <div style="position: absolute; top: 10%; left: 15%; width: 25%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; filter: blur(1px);"></div>
-            </div>
-        </div>
-        <div style="width: ${size === 'sm' ? 3 : 4}px; height: ${poleH}px; background-color: #334155; border-radius: 2px; margin-top: ${mt}px; z-index: 1; box-shadow: inset 1px 0 2px rgba(255,255,255,0.3);"></div>
+    <div style="width: ${w}px; height: ${h}px; position: relative; background: transparent;">
+        <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); overflow: visible;">
+            <defs>
+                <clipPath id="${clipId}">
+                    <circle cx="${w/2}" cy="${w/2}" r="${headRadius}" />
+                </clipPath>
+            </defs>
+            
+            <!-- Jarum Pin -->
+            <rect x="${w/2 - 2}" y="${w/2 + 2}" width="4" height="${h - w/2 - 4}" rx="1" fill="url(#needleGrad)" />
+            <defs>
+                <linearGradient id="needleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#64748b;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#cbd5e1;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#64748b;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+
+            <!-- Bayangan Jarum -->
+            <ellipse cx="${w/2}" cy="${h-2}" rx="${w/4}" ry="2" fill="rgba(0,0,0,0.3)" filter="blur(1px)"/>
+
+            <!-- Kepala Pin -->
+            <g>
+                ${innerContent}
+                ${!thumbnailUrl ? shineEffect : ''} <!-- Hanya beri efek kilau kuat jika tidak ada gambar -->
+                ${thumbnailUrl ? `<circle cx="${w/2}" cy="${w/2}" r="${headRadius}" fill="none" stroke="${conditionColor}" stroke-width="2" style="filter: brightness(1.2);"/>` : ''} <!-- Border warna kondisi jika ada gambar -->
+            </g>
+        </svg>
     </div>
     `;
 };
@@ -860,10 +897,6 @@ export default function App() {
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
-    if (!document.getElementById('tailwind-cdn')) {
-      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
-    }
-
     if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
 
     const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
@@ -1021,8 +1054,10 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
 
+  // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
+  // Gunakan Fetch Loader yang aman untuk mengunduh Leaflet
   useEffect(() => {
     const initLeaflet = async () => {
         const success = await loadLibrarySafely(
@@ -1084,6 +1119,7 @@ export default function App() {
     const map = adminMapInstanceRef.current;
     layerGroup.clearLayers();
 
+    // IMPLEMENTASI MODE FOKUS: Hanya tampilkan rute yang dicentang jika ada
     const roadsToDisplay = selectedAdminRouteIds.length > 0 
         ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
         : filteredRoads;
@@ -1100,10 +1136,11 @@ export default function App() {
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
           const thumbUrl = getThumbnailUrl(road);
+          // Ukuran icon disesuaikan untuk pin baru (32x58 px), anchor di ujung bawah jarum (16, 58)
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
             html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
-            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37]
+            iconSize: [32, 58], iconAnchor: [16, 58], popupAnchor: [0, -58]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1138,6 +1175,7 @@ export default function App() {
     const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
     prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
 
+    // AUTO-ZOOM (FOKUS) LOGIC:
     if (roadsToDisplay.length > 0 && map) {
       const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
@@ -1397,9 +1435,10 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
+      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null;
+      // Ukuran icon disesuaikan untuk surveyor (40x72 px), anchor di ujung bawah jarum (20, 72)
       const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [40, 72], iconAnchor: [20, 72] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -1409,7 +1448,7 @@ export default function App() {
             currentLocationMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(surveyorMapInstanceRef.current);
         }
     }
-  }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
+  }, [appRole, mobileScreen, pinLocation, currentLocation, formData, uploadedPhotoUrls]);
 
   const startRealHardware = async () => {
     setMobileScreen('record'); 
