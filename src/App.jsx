@@ -172,15 +172,55 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const createPinIconHtml = (conditionColor, sizeStr = 'sm') => {
-    const size = sizeStr === 'lg' ? 40 : (sizeStr === 'md' ? 32 : 24); 
-    const height = size * 1.4; 
-    
+const getVideoThumbnail = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    if (url.includes('cloudinary.com/video/upload/')) {
+        return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
+    }
+    return url.replace(/\.[^/.]+$/, ".jpg"); 
+};
+
+const getThumbnailUrl = (road) => {
+    if (road.photoUrls && road.photoUrls.length > 0) return road.photoUrls[0];
+    if (road.videoUrl) return getVideoThumbnail(road.videoUrl);
+    return null;
+};
+
+const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
+    const idSuffix = conditionColor.replace('#', '');
     return `
-    <div style="display: flex; justify-content: center; align-items: flex-end; width: ${size}px; height: ${height}px;">
-        <svg width="${size}" height="${height}" viewBox="0 0 24 34" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 3px 4px rgba(0, 0, 0, 0.4));">
-            <path d="M12 0C5.37258 0 0 5.37258 0 12C0 21 12 34 12 34C12 34 24 21 24 12C24 5.37258 18.6274 0 12 0Z" fill="${conditionColor}" stroke="white" stroke-width="1.5"/>
-            <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.9"/>
+    <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+        <svg viewBox="0 0 40 80" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" style="overflow: visible;">
+            <defs>
+                <radialGradient id="sphereLight-${idSuffix}" cx="35%" cy="30%" r="65%">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                    <stop offset="15%" stop-color="#ffffff" stop-opacity="0.5"/>
+                    <stop offset="45%" stop-color="${conditionColor}" stop-opacity="0"/>
+                    <stop offset="85%" stop-color="#000000" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
+                </radialGradient>
+                <linearGradient id="poleGrad-${idSuffix}" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="25%" stop-color="#e4e4e7"/>
+                    <stop offset="50%" stop-color="#ffffff"/>
+                    <stop offset="75%" stop-color="#a1a1aa"/>
+                    <stop offset="100%" stop-color="#3f3f46"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Base Metallic Rim -->
+            <ellipse cx="20" cy="76" rx="10" ry="3.5" fill="url(#poleGrad-${idSuffix})" />
+            <!-- Base Dark Hole -->
+            <ellipse cx="20" cy="75.5" rx="7.5" ry="2" fill="#09090b" />
+
+            <!-- Pole -->
+            <rect x="17" y="20" width="6" height="56" fill="url(#poleGrad-${idSuffix})" />
+
+            <!-- Sphere Base Color -->
+            <circle cx="20" cy="20" r="18" fill="${conditionColor}" />
+            
+            <!-- Sphere 3D Highlight & Shadow Overlay -->
+            <circle cx="20" cy="20" r="18" fill="url(#sphereLight-${idSuffix})" />
         </svg>
     </div>
     `;
@@ -1080,11 +1120,11 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
-          const size = 24; const height = size * 1.4;
+          const thumbUrl = getThumbnailUrl(road);
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
-            html: createPinIconHtml(getConditionColor(road.condition), 'sm'),
-            iconSize: [size, height], iconAnchor: [size / 2, height], popupAnchor: [0, -height]
+            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
+            iconSize: [20, 40], iconAnchor: [10, 40], popupAnchor: [0, -36]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1378,9 +1418,9 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const size = 32; const height = size * 1.4;
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [size, height], iconAnchor: [size / 2, height] }); 
+      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [26, 52], iconAnchor: [13, 52] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -1901,7 +1941,6 @@ export default function App() {
         .leaflet-popup-content { margin: 14px 16px !important; width: 260px !important; line-height: 1.4 !important; }
         .leaflet-popup-close-button { top: 8px !important; right: 8px !important; color: #ef4444 !important; font-weight: bold !important; font-size: 16px !important; }
         .leaflet-popup-close-button:hover { color: #dc2626 !important; }
-        .custom-pin-html { background: transparent !important; border: none !important; }
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         video::-webkit-media-controls-fullscreen-button { display: none !important; } 
