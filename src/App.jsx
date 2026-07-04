@@ -96,8 +96,8 @@ const getConditionColor = (condition) => {
   switch (condition) {
     case 'Baik': return '#10B981';         
     case 'Rusak Ringan': return '#FACC15'; 
-    case 'Rusak Sedang': return '#EC8533'; // Oranye Kalem Kontras
-    case 'Rusak Parah': return '#EF4444';  // Merah Terang
+    case 'Rusak Sedang': return '#EC8533'; 
+    case 'Rusak Parah': return '#EF4444';  
     default: return '#6B7280';
   }
 };
@@ -2563,7 +2563,11 @@ export default function App() {
 
                                     <div className="flex gap-3 pr-8">
                                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 shrink-0 border border-slate-300/50 flex items-center justify-center">
-                                        {road.photoUrls?.length > 0 ? <img src={road.photoUrls[0]} className="w-full h-full object-cover" /> : road.videoUrl ? <video src={`${road.videoUrl}#t=0.5`} className="w-full h-full object-cover" /> : <span className="text-[8px] text-slate-600 font-bold">No Media</span>}
+                                        {getThumbnailUrl(road) ? (
+                                            <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200" alt="thumb" />
+                                        ) : (
+                                            <span className="text-[8px] text-slate-500 font-bold text-center leading-tight">No<br/>Media</span>
+                                        )}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                                         <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
