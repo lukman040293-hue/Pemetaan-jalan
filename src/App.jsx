@@ -190,9 +190,9 @@ const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
     // Desain Pin Flat Minimalis & Tipis
     return `
     <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-        <svg viewBox="0 0 40 80" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" style="overflow: visible;">
+        <svg viewBox="0 0 40 55" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" style="overflow: visible;">
             <!-- Tiang / Jarum Tipis Abu-abu -->
-            <rect x="18.5" y="20" width="3" height="60" rx="1.5" fill="#64748b" />
+            <rect x="18.5" y="20" width="3" height="35" rx="1.5" fill="#64748b" />
 
             <!-- Kepala Pin Bulat Polos -->
             <circle cx="20" cy="20" r="19" fill="${conditionColor}" />
@@ -1109,7 +1109,7 @@ export default function App() {
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
             html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
-            iconSize: [14, 28], iconAnchor: [7, 28], popupAnchor: [0, -26]
+            iconSize: [16, 22], iconAnchor: [8, 22], popupAnchor: [0, -20]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1405,7 +1405,7 @@ export default function App() {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
       const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
       const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [18, 36], iconAnchor: [9, 36] }); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [22, 30], iconAnchor: [11, 30] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
