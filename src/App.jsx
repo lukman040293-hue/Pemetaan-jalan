@@ -2594,81 +2594,81 @@ export default function App() {
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
-          <>
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
+          <div className="absolute z-[1500] pointer-events-none print-hidden flex flex-col justify-end md:justify-start bottom-0 left-0 right-0 md:top-[80px] md:bottom-4 md:right-4 md:left-auto md:w-[400px] lg:w-[450px] animate-fade-in-up">
             
-            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
-              
-              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
+            <div className={`pointer-events-auto relative w-full ${isVideoFullscreen ? 'fixed inset-0 h-[100vh] z-[9999] rounded-none' : 'max-h-[85vh] md:h-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.2)] md:shadow-2xl rounded-t-3xl md:rounded-3xl border border-slate-200'} flex flex-col overflow-hidden transition-all duration-300`}>
                 
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
                     <h3 className="font-black text-slate-900">Detail Rute</h3>
-                    <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-500 hidden sm:block">{selectedRoad.date || new Date().toLocaleDateString('id-ID')}</span>
+                        <button onClick={closeAdminModal} className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+                    </div>
                   </div>
                 )}
 
-                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full max-h-[35vh] md:max-h-[300px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
-                  {videoSnapshot.length > 0 ? (
-                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
-                          {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col bg-white">
+                    <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full bg-slate-900 relative shrink-0'} transition-all duration-300`}>
+                        {videoSnapshot.length > 0 ? (
+                            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                                {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                            </div>
+                          ) : selectedRoad.videoUrl ? (
+                            <>
+                              <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
+                              <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-3 right-3'}`} title="Toggle Fullscreen">
+                                  {isVideoFullscreen ? (
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
+                                  ) : (
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
+                                  )}
+                              </button>
+                            </>
+                          ) : selectedRoad.photoUrls?.length > 0 ? (
+                            <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
+                          ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-xs font-bold">Media Tidak Dilampirkan</div>)}
+                        
+                        {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
+                             <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg opacity-60'}`}>
+                                {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
+                             </div>
+                          </div>
+                        )}
+                    </div>
+                    
+                    {!isVideoFullscreen && (
+                      <div className="w-full p-4 flex flex-col flex-1 min-h-0 gap-3">
+                        <div className="flex flex-wrap gap-1.5 shrink-0">
+                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Hapus</button>
+                           <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Play Animasi</button>
+                           <button onClick={handleShareLocation} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Share Lokasi</button>
+                           <button onClick={handleExportKML} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Export KML</button>
+                           <button onClick={handlePrint} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Print</button>
+                        </div>
+                        
+                        <div className="shrink-0 mt-1">
+                            <h4 className="text-lg font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                            <p className="text-xs text-slate-600 italic">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                        </div>
+                        
+                        <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
+                          <table className="w-full text-left text-[11px] border-collapse">
+                            <tbody className="divide-y divide-slate-200">
+                              <tr><th className="py-2.5 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-2.5 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
+                              <tr><th className="py-2.5 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-2.5 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
+                              <tr><th className="py-2.5 px-3 bg-slate-50">Panjang Rute</th><td className="py-2.5 px-3">{formatLength(selectedRoad.length)}</td></tr>
+                              <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-2.5 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
+                              <tr className="sm:hidden"><th className="py-2.5 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-2.5 px-3">{selectedRoad.date || '-'}</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    ) : selectedRoad.videoUrl ? (
-                      <>
-                        <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
-                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-12 right-4 md:bottom-4 md:right-4'}`} title="Toggle Fullscreen">
-                            {isVideoFullscreen ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                            )}
-                        </button>
-                      </>
-                    ) : selectedRoad.photoUrls?.length > 0 ? (
-                      <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
-                  
-                  {/* --- WATERMARK OVERLAY --- */}
-                  {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
-                       <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
-                          {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
-                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
-                
-                {!isVideoFullscreen && (
-                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
-                    <div className="flex flex-wrap gap-2 justify-end shrink-0">
-                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
-                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
-                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
-                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
-                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
-                    </div>
-                    
-                    <div className="shrink-0">
-                        <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
-                        <p className="text-xs md:text-sm text-slate-600 italic mb-2">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
-                    </div>
-                    
-                    <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
-                      <table className="w-full text-left text-[10px] md:text-xs border-collapse">
-                        <tbody className="divide-y divide-slate-200">
-                          <tr><th className="py-3 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-3 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
-                          <tr><th className="py-3 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-3 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
-                          <tr><th className="py-3 px-3 bg-slate-50">Panjang Rute</th><td className="py-3 px-3">{formatLength(selectedRoad.length)}</td></tr>
-                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-3 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
-                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-3 px-3">{selectedRoad.date || '-'}</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
