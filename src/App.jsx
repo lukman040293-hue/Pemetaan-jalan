@@ -95,8 +95,8 @@ const KELURAHAN_LIST = [
 const getConditionColor = (condition) => {
   switch (condition) {
     case 'Baik': return '#10B981';         
-    case 'Rusak Ringan': return '#FBBF24'; 
-    case 'Rusak Sedang': return '#F97316'; 
+    case 'Rusak Ringan': return '#FACC15'; 
+    case 'Rusak Sedang': return '#EC8533'; 
     case 'Rusak Parah': return '#EF4444';  
     default: return '#6B7280';
   }
@@ -187,40 +187,17 @@ const getThumbnailUrl = (road) => {
 };
 
 const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
-    const idSuffix = conditionColor.replace('#', '');
     return `
-    <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+    <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         <svg viewBox="0 0 40 80" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" style="overflow: visible;">
-            <defs>
-                <radialGradient id="sphereLight-${idSuffix}" cx="35%" cy="30%" r="65%">
-                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-                    <stop offset="15%" stop-color="#ffffff" stop-opacity="0.5"/>
-                    <stop offset="45%" stop-color="${conditionColor}" stop-opacity="0"/>
-                    <stop offset="85%" stop-color="#000000" stop-opacity="0.25"/>
-                    <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
-                </radialGradient>
-                <linearGradient id="poleGrad-${idSuffix}" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#71717a"/>
-                    <stop offset="25%" stop-color="#e4e4e7"/>
-                    <stop offset="50%" stop-color="#ffffff"/>
-                    <stop offset="75%" stop-color="#a1a1aa"/>
-                    <stop offset="100%" stop-color="#3f3f46"/>
-                </linearGradient>
-            </defs>
+            <!-- Tiang / Jarum Tipis -->
+            <rect x="18.5" y="20" width="3" height="60" rx="1.5" fill="#64748b" />
 
-            <!-- Base Metallic Rim -->
-            <ellipse cx="20" cy="76" rx="10" ry="3.5" fill="url(#poleGrad-${idSuffix})" />
-            <!-- Base Dark Hole -->
-            <ellipse cx="20" cy="75.5" rx="7.5" ry="2" fill="#09090b" />
-
-            <!-- Pole -->
-            <rect x="17" y="20" width="6" height="56" fill="url(#poleGrad-${idSuffix})" />
-
-            <!-- Sphere Base Color -->
-            <circle cx="20" cy="20" r="18" fill="${conditionColor}" />
+            <!-- Kepala Pin Solid -->
+            <circle cx="20" cy="20" r="19" fill="${conditionColor}" />
             
-            <!-- Sphere 3D Highlight & Shadow Overlay -->
-            <circle cx="20" cy="20" r="18" fill="url(#sphereLight-${idSuffix})" />
+            <!-- Pantulan Cahaya (Highlight Flat) -->
+            <circle cx="27" cy="13" r="5.5" fill="rgba(255,255,255,0.35)" />
         </svg>
     </div>
     `;
@@ -1124,7 +1101,7 @@ export default function App() {
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
             html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
-            iconSize: [20, 40], iconAnchor: [10, 40], popupAnchor: [0, -36]
+            iconSize: [16, 32], iconAnchor: [8, 32], popupAnchor: [0, -28]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1420,7 +1397,7 @@ export default function App() {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
       const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
       const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [26, 52], iconAnchor: [13, 52] }); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [22, 44], iconAnchor: [11, 44] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -2376,15 +2353,7 @@ export default function App() {
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
-              </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
-              </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#F97316]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
                  <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
               <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
