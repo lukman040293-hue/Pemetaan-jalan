@@ -172,34 +172,16 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const getVideoThumbnail = (url) => {
-    if (!url || typeof url !== 'string') return null;
-    if (url.includes('cloudinary.com/video/upload/')) {
-        return url.replace('/upload/', '/upload/so_0,w_150,h_150,c_fill/').replace(/\.[^/.]+$/, ".jpg");
-    }
-    return url.replace(/\.[^/.]+$/, ".jpg"); 
-};
-
-const getThumbnailUrl = (road) => {
-    if (road.photoUrls && road.photoUrls.length > 0) return road.photoUrls[0];
-    if (road.videoUrl) return getVideoThumbnail(road.videoUrl);
-    return null;
-};
-
-const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
-    const s = size === 'lg' ? 36 : (size === 'md' ? 28 : 24); 
-    const poleH = size === 'lg' ? 18 : (size === 'md' ? 14 : 10); 
-    const padding = size === 'lg' ? 3 : (size === 'md' ? 2.5 : 2); 
-    const mt = size === 'lg' ? -5 : (size === 'md' ? -4 : -3); 
+const createPinIconHtml = (conditionColor, sizeStr = 'sm') => {
+    const size = sizeStr === 'lg' ? 40 : (sizeStr === 'md' ? 32 : 24); 
+    const height = size * 1.4; 
     
     return `
-    <div style="position: relative; width: ${s}px; height: ${s + poleH + mt}px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
-        <div style="width: ${s}px; height: ${s}px; border-radius: 50%; background-color: ${conditionColor}; padding: ${padding}px; z-index: 2; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);">
-            <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: ${conditionColor}; position: relative; border: 1px solid rgba(0,0,0,0.2);">
-                <div style="position: absolute; top: 10%; left: 15%; width: 25%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; filter: blur(1px);"></div>
-            </div>
-        </div>
-        <div style="width: ${size === 'sm' ? 3 : 4}px; height: ${poleH}px; background-color: #334155; border-radius: 2px; margin-top: ${mt}px; z-index: 1; box-shadow: inset 1px 0 2px rgba(255,255,255,0.3);"></div>
+    <div style="display: flex; justify-content: center; align-items: flex-end; width: ${size}px; height: ${height}px;">
+        <svg width="${size}" height="${height}" viewBox="0 0 24 34" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 3px 4px rgba(0, 0, 0, 0.4));">
+            <path d="M12 0C5.37258 0 0 5.37258 0 12C0 21 12 34 12 34C12 34 24 21 24 12C24 5.37258 18.6274 0 12 0Z" fill="${conditionColor}" stroke="white" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.9"/>
+        </svg>
     </div>
     `;
 };
@@ -859,6 +841,10 @@ export default function App() {
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
+    }
+
     if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
 
     const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
@@ -1016,10 +1002,8 @@ export default function App() {
   const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
   const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
 
-  // Status map 
   const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
 
-  // Gunakan Fetch Loader yang aman untuk mengunduh Leaflet
   useEffect(() => {
     const initLeaflet = async () => {
         const success = await loadLibrarySafely(
@@ -1081,7 +1065,6 @@ export default function App() {
     const map = adminMapInstanceRef.current;
     layerGroup.clearLayers();
 
-    // IMPLEMENTASI MODE FOKUS: Hanya tampilkan rute yang dicentang jika ada
     const roadsToDisplay = selectedAdminRouteIds.length > 0 
         ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
         : filteredRoads;
@@ -1097,11 +1080,11 @@ export default function App() {
 
         let marker = null;
         if (road.pinLocation && road.pinLocation.lat && road.pinLocation.lng) {
-          const thumbUrl = getThumbnailUrl(road);
+          const size = 24; const height = size * 1.4;
           const pinIcon = window.L.divIcon({
             className: 'custom-pin-html', 
-            html: createPinIconHtml(getConditionColor(road.condition), thumbUrl, 'sm'),
-            iconSize: [24, 37], iconAnchor: [12, 37], popupAnchor: [0, -37]
+            html: createPinIconHtml(getConditionColor(road.condition), 'sm'),
+            iconSize: [size, height], iconAnchor: [size / 2, height], popupAnchor: [0, -height]
           });
           
           const uniqueId = roadId || Math.floor(Math.random() * 1000000);
@@ -1136,7 +1119,6 @@ export default function App() {
     const justExitedFocusMode = prevAdminSelectionCountRef.current > 0 && selectedAdminRouteIds.length === 0;
     prevAdminSelectionCountRef.current = selectedAdminRouteIds.length;
 
-    // AUTO-ZOOM (FOKUS) LOGIC:
     if (roadsToDisplay.length > 0 && map) {
       const allLatLngs = roadsToDisplay.flatMap(r => r.realGps.map(pt => [pt.lat, pt.lng]));
       if (allLatLngs.length > 0) { 
@@ -1396,9 +1378,9 @@ export default function App() {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !surveyorMapInstanceRef.current) return;
     if (pinLocation) {
       if (surveyorMarkerRef.current) surveyorMarkerRef.current.remove();
-      const thumbUrl = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null; 
-      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), thumbUrl, 'md'); 
-      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [28, 42], iconAnchor: [14, 42] }); 
+      const size = 32; const height = size * 1.4;
+      const htmlPin = createPinIconHtml(getConditionColor(formData.condition), 'md'); 
+      const pinIcon = window.L.divIcon({ className: 'custom-pin-html', html: htmlPin, iconSize: [size, height], iconAnchor: [size / 2, height] }); 
       surveyorMarkerRef.current = window.L.marker([pinLocation.lat, pinLocation.lng], { icon: pinIcon }).addTo(surveyorMapInstanceRef.current);
     }
     if (currentLocation) {
@@ -1919,6 +1901,7 @@ export default function App() {
         .leaflet-popup-content { margin: 14px 16px !important; width: 260px !important; line-height: 1.4 !important; }
         .leaflet-popup-close-button { top: 8px !important; right: 8px !important; color: #ef4444 !important; font-weight: bold !important; font-size: 16px !important; }
         .leaflet-popup-close-button:hover { color: #dc2626 !important; }
+        .custom-pin-html { background: transparent !important; border: none !important; }
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         video::-webkit-media-controls-fullscreen-button { display: none !important; } 
@@ -2343,10 +2326,9 @@ export default function App() {
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
           {/* --- HEADER MAP AREA --- */}
-          {/* DIPERBAIKI: Menaikkan z-index menjadi 9999 agar sidebar selalu bisa diklik */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[9999] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
+          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors pointer-events-auto">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <Menu className="w-5 h-5" />
               </button>
               <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><MapIcon className="w-5 h-5"/></div>
@@ -2595,82 +2577,81 @@ export default function App() {
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
-          <div className="absolute z-[1500] pointer-events-none print-hidden flex flex-col justify-end md:justify-start bottom-0 left-0 right-0 md:top-[80px] md:bottom-4 md:right-4 md:left-auto md:w-[400px] lg:w-[450px] animate-fade-in-up">
+          <>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
             
-            <div className={`pointer-events-auto relative w-full ${isVideoFullscreen ? 'fixed inset-0 h-[100vh] z-[9999] rounded-none' : 'max-h-[85vh] md:max-h-[calc(100vh-100px)] bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.2)] md:shadow-2xl rounded-t-3xl md:rounded-3xl border border-slate-200'} flex flex-col overflow-hidden transition-all duration-300`}>
+            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
+              
+              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
                 
                 {!isVideoFullscreen && (
                   <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
                     <h3 className="font-black text-slate-900">Detail Rute</h3>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-500 hidden sm:block">{selectedRoad.date || new Date().toLocaleDateString('id-ID')}</span>
-                        <button onClick={closeAdminModal} className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
-                    </div>
+                    <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
                   </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col bg-white">
-                    {/* DIPERBAIKI: Mengganti aspect-video dengan hardcode style agar kotak hitam tidak hilang di Vercel */}
-                    <div style={!isVideoFullscreen ? { minHeight: '220px', aspectRatio: '16/9' } : {}} className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'w-full bg-slate-900 relative shrink-0'} transition-all duration-300`}>
-                        {videoSnapshot.length > 0 ? (
-                            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
-                                {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
-                            </div>
-                          ) : selectedRoad.videoUrl ? (
-                            <>
-                              <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
-                              <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-3 right-3'}`} title="Toggle Fullscreen">
-                                  {isVideoFullscreen ? (
-                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-                                  ) : (
-                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                                  )}
-                              </button>
-                            </>
-                          ) : selectedRoad.photoUrls?.length > 0 ? (
-                            <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
-                          ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-xs font-bold">Media Tidak Dilampirkan</div>)}
-                        
-                        {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
-                             <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg opacity-60'}`}>
-                                {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
-                             </div>
-                          </div>
-                        )}
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full max-h-[35vh] md:max-h-[300px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
+                  {videoSnapshot.length > 0 ? (
+                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                          {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                      </div>
+                    ) : selectedRoad.videoUrl ? (
+                      <>
+                        <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
+                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-12 right-4 md:bottom-4 md:right-4'}`} title="Toggle Fullscreen">
+                            {isVideoFullscreen ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
+                            )}
+                        </button>
+                      </>
+                    ) : selectedRoad.photoUrls?.length > 0 ? (
+                      <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
+                  
+                  {/* --- WATERMARK OVERLAY --- */}
+                  {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
+                       <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
+                          {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
+                       </div>
+                    </div>
+                  )}
+                </div>
+                
+                {!isVideoFullscreen && (
+                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
+                    <div className="flex flex-wrap gap-2 justify-end shrink-0">
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
+                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
+                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
                     </div>
                     
-                    {!isVideoFullscreen && (
-                      <div className="w-full p-4 flex flex-col flex-1 min-h-0 gap-3">
-                        <div className="flex flex-wrap gap-1.5 shrink-0">
-                           <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Hapus</button>
-                           <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Play Animasi</button>
-                           <button onClick={handleShareLocation} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Share Lokasi</button>
-                           <button onClick={handleExportKML} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Export KML</button>
-                           <button onClick={handlePrint} className="text-[10px] text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded font-bold transition-colors shadow-sm">Print</button>
-                        </div>
-                        
-                        <div className="shrink-0 mt-1">
-                            <h4 className="text-lg font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
-                            <p className="text-xs text-slate-600 italic">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
-                        </div>
-                        
-                        <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
-                          <table className="w-full text-left text-[11px] border-collapse">
-                            <tbody className="divide-y divide-slate-200">
-                              <tr><th className="py-2.5 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-2.5 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
-                              <tr><th className="py-2.5 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-2.5 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
-                              <tr><th className="py-2.5 px-3 bg-slate-50">Panjang Rute</th><td className="py-2.5 px-3">{formatLength(selectedRoad.length)}</td></tr>
-                              <tr><th className="py-2.5 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-2.5 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
-                              <tr className="sm:hidden"><th className="py-2.5 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-2.5 px-3">{selectedRoad.date || '-'}</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                </div>
+                    <div className="shrink-0">
+                        <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                        <p className="text-xs md:text-sm text-slate-600 italic mb-2">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                    </div>
+                    
+                    <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
+                      <table className="w-full text-left text-[10px] md:text-xs border-collapse">
+                        <tbody className="divide-y divide-slate-200">
+                          <tr><th className="py-3 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-3 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-3 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Panjang Rute</th><td className="py-3 px-3">{formatLength(selectedRoad.length)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-3 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-3 px-3">{selectedRoad.date || '-'}</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
