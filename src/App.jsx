@@ -322,18 +322,38 @@ const DroneVideoExporter = ({ road, onClose }) => {
         } else if (type === 'truck') {
             return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
         } else if (type === 'runner') {
-            // Efek animasi lari 3D menggunakan gambar referensi image_60a628.png
+            // Model Pelari 3D Voxel/Blocky Murni menggunakan CSS
             return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative;">
-                <div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.6); filter: blur(4px); transform: translateZ(0px) scale(0.6);"></div>
-                <style>
-                    @keyframes runBounce3D {
-                        0% { transform: rotateX(-70deg) translateZ(10px) scale(1.5); }
-                        50% { transform: rotateX(-70deg) translateZ(18px) scale(1.5); }
-                        100% { transform: rotateX(-70deg) translateZ(10px) scale(1.5); }
-                    }
-                </style>
-                <img src="image_60a628.png" style="width: 100%; height: 100%; object-fit: contain; transform-origin: bottom center; animation: runBounce3D 0.3s infinite linear;" alt="Pelari 3D" />
-            </div>`;
+            <style>
+                .r-man { position: absolute; left: 20px; top: 20px; transform-style: preserve-3d; animation: runBnc 0.4s infinite alternate ease-in-out; transform: rotateX(-90deg) translateZ(10px); }
+                .r-hd { width: 12px; height: 12px; background: #fcd34d; position: absolute; transform: translate3d(-6px, -24px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2); }
+                .r-bd { width: 16px; height: 18px; background: #3b82f6; position: absolute; transform: translate3d(-8px, -10px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3); }
+                .r-arm { width: 5px; height: 16px; background: #fcd34d; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
+                .r-leg { width: 6px; height: 16px; background: #1e293b; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
+                
+                @keyframes runBnc { 0% { transform: rotateX(-90deg) translateZ(10px); } 100% { transform: rotateX(-90deg) translateZ(16px); } }
+                @keyframes swL { 0% { transform: translate3d(-14px, -10px, 0) rotateX(45deg); } 50% { transform: translate3d(-14px, -10px, 0) rotateX(-45deg); } 100% { transform: translate3d(-14px, -10px, 0) rotateX(45deg); } }
+                @keyframes swR { 0% { transform: translate3d(9px, -10px, 0) rotateX(-45deg); } 50% { transform: translate3d(9px, -10px, 0) rotateX(45deg); } 100% { transform: translate3d(9px, -10px, 0) rotateX(-45deg); } }
+                @keyframes legL { 0% { transform: translate3d(-7px, 6px, 0) rotateX(-45deg); } 50% { transform: translate3d(-7px, 6px, 0) rotateX(45deg); } 100% { transform: translate3d(-7px, 6px, 0) rotateX(-45deg); } }
+                @keyframes legR { 0% { transform: translate3d(1px, 6px, 0) rotateX(45deg); } 50% { transform: translate3d(1px, 6px, 0) rotateX(-45deg); } 100% { transform: translate3d(1px, 6px, 0) rotateX(45deg); } }
+                
+                .r-shdw { position: absolute; width: 22px; height: 22px; background: rgba(0,0,0,0.6); filter: blur(3px); left: 9px; top: 9px; border-radius: 50%; animation: shdwBnc 0.4s infinite alternate; }
+                @keyframes shdwBnc { 0% { transform: scale(1.2); opacity: 0.8; } 100% { transform: scale(0.8); opacity: 0.4; } }
+            </style>
+            <div class="r-shdw"></div>
+            <div class="r-man">
+                <div class="r-arm" style="animation: swL 0.5s infinite linear;"></div>
+                <div class="r-leg" style="animation: legR 0.5s infinite linear; background: #0f172a;"></div>
+                <div class="r-bd">
+                    <div style="position:absolute; top:2px; left:0; width:100%; height:5px; background:#fff; opacity:0.8;"></div>
+                </div>
+                <div class="r-hd">
+                    <div style="position:absolute; top:2px; left:0; width:100%; height:4px; background:#ef4444;"></div>
+                </div>
+                <div class="r-arm" style="animation: swR 0.5s infinite linear;"></div>
+                <div class="r-leg" style="animation: legL 0.5s infinite linear;"></div>
+            </div>
+        </div>`;
         } else {
             return `<div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div><div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div><div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div></div>`;
         }
@@ -554,13 +574,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
                                 ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
-                            } else if (type === 'runner') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
-                                // Gambar sederhana dari atas untuk pelari 
-                                ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill(); // Badan
-                                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(0, -6, 6, 0, 2*Math.PI); ctx.fill();  // Kepala
-                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-12, -2, 6, 4); // Tangan kiri ayun
-                                ctx.fillStyle = '#1e293b'; ctx.fillRect(6, -2, 6, 4);   // Tangan kanan ayun
                             } else { 
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
@@ -1241,8 +1254,8 @@ export default function App() {
                iconSize = [26, 42]; iconAnchor = [13, 21];
                vehicleSvg = `<svg viewBox="0 0 40 95" width="100%" height="100%" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));"><rect x="17" y="72" width="6" height="20" rx="3" fill="#0f172a"/><rect x="27" y="58" width="4" height="24" rx="2" fill="#94a3b8"/><path d="M 15 55 L 25 55 L 23 82 L 17 82 Z" fill="#334155"/><rect x="16" y="81" width="8" height="3" rx="1" fill="#ef4444"/><rect x="17" y="3" width="6" height="18" rx="3" fill="#0f172a"/><path d="M 15 13 L 25 13 L 26 23 L 14 23 Z" fill="#334155"/><circle cx="20" cy="12" r="3" fill="#fef08a" /><path d="M 6 28 Q 20 22 34 28" stroke="#475569" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="4" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(15, 6, 30)"/><rect x="31" y="26" width="5" height="9" rx="2" fill="#000" transform="rotate(-15, 34, 30)"/><path d="M 13 26 Q 20 18 27 26 L 29 45 Q 20 49 11 45 Z" fill="#dc2626"/><path d="M 15 28 Q 20 22 25 28 L 26 40 Q 20 42 14 40 Z" fill="rgba(255,255,255,0.2)"/><path d="M 13 45 Q 20 42 27 45 L 25 65 Q 20 70 15 65 Z" fill="#1e293b"/><path d="M 9 48 Q 20 40 31 48 L 28 55 Q 20 59 12 55 Z" fill="#334155"/><circle cx="20" cy="46" r="8" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/><path d="M 14 43.5 Q 20 38 26 43.5 Q 20 47 14 43.5 Z" fill="#0f172a"/></svg>`;
            } else if (animIconType === 'runner') {
-               iconSize = [42, 42]; iconAnchor = [21, 21];
-               vehicleSvg = `<div style="width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));"><style>@keyframes runTopDown { 0% { transform: scaleX(1) translateY(0); } 25% { transform: scaleX(1) translateY(-4px); } 50% { transform: scaleX(-1) translateY(0); } 75% { transform: scaleX(-1) translateY(-4px); } 100% { transform: scaleX(1) translateY(0); } }</style><img src="image_60a628.png" style="width: 100%; height: 100%; object-fit: contain; animation: runTopDown 0.6s infinite linear; transform-origin: center center;" /></div>`;
+               iconSize = [28, 28]; iconAnchor = [14, 14];
+               vehicleSvg = `<svg viewBox="0 0 50 50" width="100%" height="100%" style="filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));"><style>@keyframes runCycle { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }</style><g style="animation: runCycle 0.5s infinite steps(1); transform-origin: 25px 25px;"><rect x="16" y="6" width="6" height="14" rx="3" fill="#1e293b" /><rect x="28" y="30" width="6" height="14" rx="3" fill="#1e293b" /><path d="M 14 25 Q 6 36 12 44" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="12" cy="44" r="3" fill="#fcd34d" /><path d="M 36 25 Q 44 14 38 6" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round" /><circle cx="38" cy="6" r="3" fill="#fcd34d" /><rect x="13" y="20" width="24" height="10" rx="5" fill="#3b82f6" /></g><circle cx="25" cy="25" r="7" fill="#fcd34d" /><path d="M 18 25 A 7 7 0 0 1 32 25 Z" fill="#0f172a" /></svg>`;
            } else if (animIconType === 'truck') {
                iconSize = [24, 60]; iconAnchor = [12, 30];
                vehicleSvg = `<svg viewBox="0 0 40 100" width="100%" height="100%" style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.5));"><rect x="4" y="25" width="32" height="70" rx="4" fill="#64748b"/><rect x="6" y="27" width="28" height="66" rx="2" fill="#94a3b8"/><rect x="6" y="4" width="28" height="20" rx="4" fill="#eab308"/><rect x="8" y="14" width="24" height="6" rx="2" fill="#1e293b"/><rect x="8" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="26" y="2" width="6" height="3" rx="1" fill="#fef08a"/><rect x="2" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="35" y="10" width="3" height="8" rx="1" fill="#0f172a"/><rect x="2" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="35" width="3" height="12" rx="1" fill="#0f172a"/><rect x="2" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="35" y="75" width="3" height="12" rx="1" fill="#0f172a"/><rect x="16" y="22" width="8" height="6" fill="#334155"/></svg>`;
