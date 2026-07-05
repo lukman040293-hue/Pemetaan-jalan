@@ -315,6 +315,9 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null, isPlaying: true, speed: 1, vehicleType: 'runner', status: 'menu' });
 
     const getVehicle3DHtml = (type) => {
+        // Durasi animasi disinkronkan dengan kecepatan putar (speed)
+        const s1 = (0.4 / speed).toFixed(2) + 's';
+        
         if (type === 'drone') {
             return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative; transform: translateZ(30px) rotateX(10deg);"><div style="position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: rgba(0,0,0,0.5); filter: blur(5px); transform: translateZ(-30px);"></div><div style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; background: #e2e8f0; border-radius: 4px; transform: translateZ(2px); border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 14px; top: 10px; width: 12px; height: 4px; background: #ef4444; border-radius: 2px; transform: translateZ(4px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(45deg) translateZ(1px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(-45deg) translateZ(1px);"></div><style>@keyframes spinFast { 100% { transform: rotate(360deg) translateZ(3px); } } .rotor { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(transparent 20%, rgba(0,0,0,0.3) 50%, transparent 80%); animation: spinFast 0.1s linear infinite; transform: translateZ(3px); border: 1px solid rgba(0,0,0,0.1); }</style><div class="rotor" style="left: -4px; top: -4px;"></div><div class="rotor" style="right: -4px; top: -4px;"></div><div class="rotor" style="left: -4px; bottom: -4px;"></div><div class="rotor" style="right: -4px; bottom: -4px;"></div></div>`;
         } else if (type === 'motorcycle') {
@@ -322,45 +325,63 @@ const DroneVideoExporter = ({ road, onClose }) => {
         } else if (type === 'truck') {
             return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
         } else if (type === 'runner') {
-            // UPDATE: Animasi Lari yang Jauh Lebih Realistis & Dinamis
-            return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative;">
+            // UPDATE: Karakter Top-Down dengan pseudo-3D perspective yang sangat mulus dan andal
+            return `<div style="width: 50px; height: 50px; position: relative; transform: scale(1.3);">
             <style>
-                /* Kecepatan animasi dipercepat menjadi 0.25s untuk ritme lari yang cepat */
-                /* Menambahkan rotasi sedikit ke depan (-80deg) agar terlihat condong berlari */
-                .r-man { position: absolute; left: 20px; top: 20px; transform-style: preserve-3d; animation: runBnc 0.25s infinite alternate ease-in-out; transform: rotateX(-80deg) translateZ(10px); }
-                
-                .r-hd { width: 12px; height: 12px; background: #fcd34d; position: absolute; transform: translate3d(-6px, -24px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2); }
-                .r-bd { width: 16px; height: 18px; background: #3b82f6; position: absolute; transform: translate3d(-8px, -10px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3); }
-                /* Lengan dan kaki sedikit diperpanjang visualnya agar ayunan lebih terlihat */
-                .r-arm { width: 5px; height: 17px; background: #fcd34d; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
-                .r-leg { width: 6px; height: 18px; background: #1e293b; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
-                
-                /* Pantulan tubuh lebih tinggi untuk efek "terbang" */
-                @keyframes runBnc { 0% { transform: rotateX(-80deg) translateZ(10px); } 100% { transform: rotateX(-80deg) translateZ(18px); } }
-                
-                /* Sudut ayunan diperlebar secara ekstrem (±75deg untuk kaki, ±55deg untuk tangan) */
-                @keyframes swL { 0% { transform: translate3d(-14px, -10px, 0) rotateX(55deg); } 100% { transform: translate3d(-14px, -10px, 0) rotateX(-55deg); } }
-                @keyframes swR { 0% { transform: translate3d(9px, -10px, 0) rotateX(-55deg); } 100% { transform: translate3d(9px, -10px, 0) rotateX(55deg); } }
-                @keyframes legL { 0% { transform: translate3d(-7px, 6px, 0) rotateX(-75deg); } 100% { transform: translate3d(-7px, 6px, 0) rotateX(75deg); } }
-                @keyframes legR { 0% { transform: translate3d(1px, 6px, 0) rotateX(75deg); } 100% { transform: translate3d(1px, 6px, 0) rotateX(-75deg); } }
-                
-                /* Bayangan berkedip lebih cepat menyesuaikan ritme lari */
-                .r-shdw { position: absolute; width: 22px; height: 22px; background: rgba(0,0,0,0.6); filter: blur(3px); left: 9px; top: 9px; border-radius: 50%; animation: shdwBnc 0.25s infinite alternate ease-in-out; }
-                @keyframes shdwBnc { 0% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0.7); opacity: 0.3; } }
+                @keyframes runSway {
+                    0% { transform: rotate(-15deg) translateX(-2px); }
+                    50% { transform: rotate(15deg) translateX(2px); }
+                    100% { transform: rotate(-15deg) translateX(-2px); }
+                }
+                @keyframes footLeft {
+                    0% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
+                    50% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
+                    100% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
+                }
+                @keyframes footRight {
+                    0% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
+                    50% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
+                    100% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
+                }
+                @keyframes handLeft {
+                    0% { transform: translateY(14px) rotate(20deg) scale(0.8); opacity: 0.7; }
+                    50% { transform: translateY(-14px) rotate(-20deg) scale(1.2); opacity: 1; }
+                    100% { transform: translateY(14px) rotate(20deg) scale(0.8); opacity: 0.7; }
+                }
+                @keyframes handRight {
+                    0% { transform: translateY(-14px) rotate(20deg) scale(1.2); opacity: 1; }
+                    50% { transform: translateY(14px) rotate(-20deg) scale(0.8); opacity: 0.7; }
+                    100% { transform: translateY(-14px) rotate(20deg) scale(1.2); opacity: 1; }
+                }
+                @keyframes bobbing {
+                    0% { transform: scale(1.05); }
+                    25% { transform: scale(0.95); }
+                    50% { transform: scale(1.05); }
+                    75% { transform: scale(0.95); }
+                    100% { transform: scale(1.05); }
+                }
+                .rp { position: absolute; border-radius: 50px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+                .r-hnd { width: 10px; height: 16px; background: #fca5a5; top: 17px; z-index: 9; }
+                .r-ft { width: 12px; height: 22px; background: #0f172a; top: 14px; border-top: 5px solid #fff; }
+                .r-bdy { width: 28px; height: 18px; background: linear-gradient(135deg, #2563eb, #1d4ed8); top: 16px; left: 11px; z-index: 8; animation: runSway ${s1} infinite ease-in-out; }
+                .r-hd { width: 22px; height: 22px; background: #1e293b; top: 14px; left: 14px; z-index: 10; border-top: 6px solid #ef4444; border-radius: 50%; box-sizing: border-box; }
             </style>
-            <div class="r-shdw"></div>
-            <div class="r-man">
-                <!-- Menggunakan animation-delay negatif untuk sinkronisasi silang yang lebih baik -->
-                <div class="r-arm" style="animation: swL 0.5s infinite linear;"></div>
-                <div class="r-leg" style="animation: legR 0.5s infinite linear -0.25s; background: #0f172a;"></div>
-                <div class="r-bd">
-                    <div style="position:absolute; top:2px; left:0; width:100%; height:5px; background:#fff; opacity:0.8;"></div>
-                </div>
-                <div class="r-hd">
-                    <div style="position:absolute; top:2px; left:0; width:100%; height:4px; background:#ef4444;"></div>
-                </div>
-                <div class="r-arm" style="animation: swR 0.5s infinite linear -0.25s;"></div>
-                <div class="r-leg" style="animation: legL 0.5s infinite linear;"></div>
+            
+            <!-- Bayangan Dinamis -->
+            <div style="position: absolute; width: 34px; height: 34px; background: rgba(0,0,0,0.6); filter: blur(4px); border-radius: 50%; top: 8px; left: 8px;"></div>
+            
+            <!-- Kaki Kiri & Kanan (dengan sepatu putih) -->
+            <div class="rp r-ft" style="left: 10px; animation: footLeft ${s1} infinite ease-in-out;"></div>
+            <div class="rp r-ft" style="left: 28px; animation: footRight ${s1} infinite ease-in-out;"></div>
+            
+            <!-- Badan Berayun -->
+            <div style="animation: bobbing ${s1} infinite ease-in-out;">
+                <!-- Tangan Kiri & Kanan -->
+                <div class="rp r-hnd" style="left: 2px; animation: handLeft ${s1} infinite ease-in-out;"></div>
+                <div class="rp r-hnd" style="left: 38px; animation: handRight ${s1} infinite ease-in-out;"></div>
+                
+                <div class="rp r-bdy"></div>
+                <div class="rp r-hd"></div>
             </div>
         </div>`;
         } else {
@@ -583,6 +604,29 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
                                 ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
+                            } else if (type === 'runner') {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 6;
+                                
+                                // Kaki Kiri (Depan)
+                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-12, -18, 8, 14); 
+                                ctx.fillStyle = '#ffffff'; ctx.fillRect(-12, -18, 8, 4); 
+                                
+                                // Kaki Kanan (Belakang)
+                                ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 4, 8, 14);
+                                ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 14, 8, 4); 
+                                
+                                // Tangan Kiri (Belakang)
+                                ctx.fillStyle = '#fca5a5'; ctx.fillRect(-16, 4, 6, 12);
+                                
+                                // Tangan Kanan (Depan)
+                                ctx.fillStyle = '#fca5a5'; ctx.fillRect(10, -14, 6, 12);
+                                
+                                // Badan Baju Biru
+                                ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, 2*Math.PI); ctx.fill();
+                                
+                                // Kepala Hitam (Rambut) dengan Ikat Kepala Merah
+                                ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill();
+                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-10, -8, 20, 6); 
                             } else { 
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
                                 ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
