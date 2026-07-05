@@ -322,34 +322,44 @@ const DroneVideoExporter = ({ road, onClose }) => {
         } else if (type === 'truck') {
             return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
         } else if (type === 'runner') {
+            // UPDATE: Animasi Lari yang Jauh Lebih Realistis & Dinamis
             return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative;">
             <style>
-                .r-man { position: absolute; left: 20px; top: 20px; transform-style: preserve-3d; animation: runBnc 0.4s infinite alternate ease-in-out; transform: rotateX(-90deg) translateZ(10px); }
+                /* Kecepatan animasi dipercepat menjadi 0.25s untuk ritme lari yang cepat */
+                /* Menambahkan rotasi sedikit ke depan (-80deg) agar terlihat condong berlari */
+                .r-man { position: absolute; left: 20px; top: 20px; transform-style: preserve-3d; animation: runBnc 0.25s infinite alternate ease-in-out; transform: rotateX(-80deg) translateZ(10px); }
+                
                 .r-hd { width: 12px; height: 12px; background: #fcd34d; position: absolute; transform: translate3d(-6px, -24px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2); }
                 .r-bd { width: 16px; height: 18px; background: #3b82f6; position: absolute; transform: translate3d(-8px, -10px, 0); border-radius: 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3); }
-                .r-arm { width: 5px; height: 16px; background: #fcd34d; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
-                .r-leg { width: 6px; height: 16px; background: #1e293b; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
+                /* Lengan dan kaki sedikit diperpanjang visualnya agar ayunan lebih terlihat */
+                .r-arm { width: 5px; height: 17px; background: #fcd34d; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
+                .r-leg { width: 6px; height: 18px; background: #1e293b; position: absolute; transform-origin: 50% 2px; border-radius: 3px; }
                 
-                @keyframes runBnc { 0% { transform: rotateX(-90deg) translateZ(10px); } 100% { transform: rotateX(-90deg) translateZ(16px); } }
-                @keyframes swL { 0% { transform: translate3d(-14px, -10px, 0) rotateX(45deg); } 50% { transform: translate3d(-14px, -10px, 0) rotateX(-45deg); } 100% { transform: translate3d(-14px, -10px, 0) rotateX(45deg); } }
-                @keyframes swR { 0% { transform: translate3d(9px, -10px, 0) rotateX(-45deg); } 50% { transform: translate3d(9px, -10px, 0) rotateX(45deg); } 100% { transform: translate3d(9px, -10px, 0) rotateX(-45deg); } }
-                @keyframes legL { 0% { transform: translate3d(-7px, 6px, 0) rotateX(-45deg); } 50% { transform: translate3d(-7px, 6px, 0) rotateX(45deg); } 100% { transform: translate3d(-7px, 6px, 0) rotateX(-45deg); } }
-                @keyframes legR { 0% { transform: translate3d(1px, 6px, 0) rotateX(45deg); } 50% { transform: translate3d(1px, 6px, 0) rotateX(-45deg); } 100% { transform: translate3d(1px, 6px, 0) rotateX(45deg); } }
+                /* Pantulan tubuh lebih tinggi untuk efek "terbang" */
+                @keyframes runBnc { 0% { transform: rotateX(-80deg) translateZ(10px); } 100% { transform: rotateX(-80deg) translateZ(18px); } }
                 
-                .r-shdw { position: absolute; width: 22px; height: 22px; background: rgba(0,0,0,0.6); filter: blur(3px); left: 9px; top: 9px; border-radius: 50%; animation: shdwBnc 0.4s infinite alternate; }
-                @keyframes shdwBnc { 0% { transform: scale(1.2); opacity: 0.8; } 100% { transform: scale(0.8); opacity: 0.4; } }
+                /* Sudut ayunan diperlebar secara ekstrem (±75deg untuk kaki, ±55deg untuk tangan) */
+                @keyframes swL { 0% { transform: translate3d(-14px, -10px, 0) rotateX(55deg); } 100% { transform: translate3d(-14px, -10px, 0) rotateX(-55deg); } }
+                @keyframes swR { 0% { transform: translate3d(9px, -10px, 0) rotateX(-55deg); } 100% { transform: translate3d(9px, -10px, 0) rotateX(55deg); } }
+                @keyframes legL { 0% { transform: translate3d(-7px, 6px, 0) rotateX(-75deg); } 100% { transform: translate3d(-7px, 6px, 0) rotateX(75deg); } }
+                @keyframes legR { 0% { transform: translate3d(1px, 6px, 0) rotateX(75deg); } 100% { transform: translate3d(1px, 6px, 0) rotateX(-75deg); } }
+                
+                /* Bayangan berkedip lebih cepat menyesuaikan ritme lari */
+                .r-shdw { position: absolute; width: 22px; height: 22px; background: rgba(0,0,0,0.6); filter: blur(3px); left: 9px; top: 9px; border-radius: 50%; animation: shdwBnc 0.25s infinite alternate ease-in-out; }
+                @keyframes shdwBnc { 0% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0.7); opacity: 0.3; } }
             </style>
             <div class="r-shdw"></div>
             <div class="r-man">
+                <!-- Menggunakan animation-delay negatif untuk sinkronisasi silang yang lebih baik -->
                 <div class="r-arm" style="animation: swL 0.5s infinite linear;"></div>
-                <div class="r-leg" style="animation: legR 0.5s infinite linear; background: #0f172a;"></div>
+                <div class="r-leg" style="animation: legR 0.5s infinite linear -0.25s; background: #0f172a;"></div>
                 <div class="r-bd">
                     <div style="position:absolute; top:2px; left:0; width:100%; height:5px; background:#fff; opacity:0.8;"></div>
                 </div>
                 <div class="r-hd">
                     <div style="position:absolute; top:2px; left:0; width:100%; height:4px; background:#ef4444;"></div>
                 </div>
-                <div class="r-arm" style="animation: swR 0.5s infinite linear;"></div>
+                <div class="r-arm" style="animation: swR 0.5s infinite linear -0.25s;"></div>
                 <div class="r-leg" style="animation: legL 0.5s infinite linear;"></div>
             </div>
         </div>`;
