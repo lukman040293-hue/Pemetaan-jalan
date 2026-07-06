@@ -2203,7 +2203,7 @@ export default function App() {
                             <div className="w-px h-8 bg-slate-200"></div>
                             <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Speed</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{currentSpeed} <span className="text-[10px] font-medium text-slate-500">km/h</span></div></div>
                             <div className="w-px h-8 bg-slate-200"></div>
-                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div><div className={`text-lg md:text-xl font-black leading-none ${gpsAccuracy === '-' ? 'text-slate-900' : gpsAccuracy < 15 ? 'text-emerald-600' : 'text-amber-500'}`}>{gpsAccuracy} <span className="text-[10px] font-medium text-slate-500">m</span></div></div>
+                            <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Akurasi</div><div className={`text-lg md:text-xl font-black leading-none ${gpsAccuracy === '-' ? 'text-slate-900' : gpsAccuracy <= 25 ? 'text-emerald-600' : 'text-amber-500'}`}>{gpsAccuracy} <span className="text-[10px] font-medium text-slate-500">m</span></div></div>
                         </div>
                     </div>
 
