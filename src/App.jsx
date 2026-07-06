@@ -187,21 +187,12 @@ const getThumbnailUrl = (road) => {
 };
 
 const createPinIconHtml = (conditionColor, thumbnailUrl, size = 'sm') => {
-    // Desain Pin Flat Minimalis & Tipis
     return `
     <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         <svg viewBox="0 0 40 55" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" style="overflow: visible;">
-            
-
-<rect x="18.5" y="20" width="3" height="35" rx="1.5" fill="#64748b" />
-
-            
-
-<circle cx="20" cy="20" r="19" fill="${conditionColor}" />
-            
-            
-
-<circle cx="27" cy="13" r="5.5" fill="rgba(255,255,255,0.35)" />
+            <rect x="18.5" y="20" width="3" height="35" rx="1.5" fill="#64748b" />
+            <circle cx="20" cy="20" r="19" fill="${conditionColor}" />
+            <circle cx="27" cy="13" r="5.5" fill="rgba(255,255,255,0.35)" />
         </svg>
     </div>
     `;
@@ -238,12 +229,10 @@ const compressImage = (file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) =
 };
 
 const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topright') => {
-  // s.t:2 (Sembunyikan Label Tempat POI), s.e:l.i (Sembunyikan Ikon Label secara spesifik)
   const hidePoi = '&apistyle=s.t%3A2%7Cp.v%3Aoff%2Cs.e%3Al.i%7Cp.v%3Aoff';
   
   const baseMaps = {
     "Google Maps (Jalan)": L.tileLayer(`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}${hidePoi}`, { maxZoom: 20 }),
-    // Google Hybrid ditumpuk: Lapisan bawah satelit bersih, Lapisan atas jalan bersih dari ikon
     "Google Hybrid (Satelit)": L.layerGroup([
         L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }),
         L.tileLayer(`https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}${hidePoi}`, { maxZoom: 20 })
@@ -310,12 +299,11 @@ const DroneVideoExporter = ({ road, onClose }) => {
     const [selectedMapStyle, setSelectedMapStyle] = useState('google-hybrid');
     const [isPlaying, setIsPlaying] = useState(true);
     const [speed, setSpeed] = useState(1);
-    const [vehicleType, setVehicleType] = useState('runner'); // Default ke runner
+    const [vehicleType, setVehicleType] = useState('runner'); 
 
     const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null, isPlaying: true, speed: 1, vehicleType: 'runner', status: 'menu' });
 
     const getVehicle3DHtml = (type) => {
-        // Durasi animasi disinkronkan dengan kecepatan putar (speed)
         const s1 = (0.4 / speed).toFixed(2) + 's';
         
         if (type === 'drone') {
@@ -325,7 +313,6 @@ const DroneVideoExporter = ({ road, onClose }) => {
         } else if (type === 'truck') {
             return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
         } else if (type === 'runner') {
-            // UPDATE: Karakter Top-Down dengan pseudo-3D perspective yang sangat mulus dan andal
             return `<div style="width: 50px; height: 50px; position: relative; transform: scale(1.3);">
             <style>
                 @keyframes runSway {
@@ -366,20 +353,12 @@ const DroneVideoExporter = ({ road, onClose }) => {
                 .r-bdy { width: 28px; height: 18px; background: linear-gradient(135deg, #2563eb, #1d4ed8); top: 16px; left: 11px; z-index: 8; animation: runSway ${s1} infinite ease-in-out; }
                 .r-hd { width: 22px; height: 22px; background: #1e293b; top: 14px; left: 14px; z-index: 10; border-top: 6px solid #ef4444; border-radius: 50%; box-sizing: border-box; }
             </style>
-            
-            <!-- Bayangan Dinamis -->
             <div style="position: absolute; width: 34px; height: 34px; background: rgba(0,0,0,0.6); filter: blur(4px); border-radius: 50%; top: 8px; left: 8px;"></div>
-            
-            <!-- Kaki Kiri & Kanan (dengan sepatu putih) -->
             <div class="rp r-ft" style="left: 10px; animation: footLeft ${s1} infinite ease-in-out;"></div>
             <div class="rp r-ft" style="left: 28px; animation: footRight ${s1} infinite ease-in-out;"></div>
-            
-            <!-- Badan Berayun -->
             <div style="animation: bobbing ${s1} infinite ease-in-out;">
-                <!-- Tangan Kiri & Kanan -->
                 <div class="rp r-hnd" style="left: 2px; animation: handLeft ${s1} infinite ease-in-out;"></div>
                 <div class="rp r-hnd" style="left: 38px; animation: handRight ${s1} infinite ease-in-out;"></div>
-                
                 <div class="rp r-bdy"></div>
                 <div class="rp r-hd"></div>
             </div>
@@ -606,25 +585,13 @@ const DroneVideoExporter = ({ road, onClose }) => {
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
                             } else if (type === 'runner') {
                                 ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 6;
-                                
-                                // Kaki Kiri (Depan)
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(-12, -18, 8, 14); 
                                 ctx.fillStyle = '#ffffff'; ctx.fillRect(-12, -18, 8, 4); 
-                                
-                                // Kaki Kanan (Belakang)
                                 ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 4, 8, 14);
                                 ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 14, 8, 4); 
-                                
-                                // Tangan Kiri (Belakang)
                                 ctx.fillStyle = '#fca5a5'; ctx.fillRect(-16, 4, 6, 12);
-                                
-                                // Tangan Kanan (Depan)
                                 ctx.fillStyle = '#fca5a5'; ctx.fillRect(10, -14, 6, 12);
-                                
-                                // Badan Baju Biru
                                 ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, 2*Math.PI); ctx.fill();
-                                
-                                // Kepala Hitam (Rambut) dengan Ikat Kepala Merah
                                 ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill();
                                 ctx.fillStyle = '#ef4444'; ctx.fillRect(-10, -8, 20, 6); 
                             } else { 
@@ -1413,7 +1380,7 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'draw_map' || !isLeafletLoaded || !drawMapContainerRef.current) return;
     const map = window.L.map(drawMapContainerRef.current); drawMapInstanceRef.current = map;
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    initBaseMaps(map, window.L, "OSM Default", 'topright');
     drawMarkersGroupRef.current = window.L.layerGroup().addTo(map);
     drawPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
     if (currentLocation) map.setView([currentLocation.lat, currentLocation.lng], 16); else map.setView([-0.425, 117.185], 14);
@@ -1459,7 +1426,7 @@ export default function App() {
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
     const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    initBaseMaps(map, window.L, "OSM Default", 'topright');
     setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
     if (realGpsPoints.length > 0) {
@@ -1602,7 +1569,8 @@ export default function App() {
   useEffect(() => {
     if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
     const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
-    initBaseMaps(map, window.L, "OSM Default", 'topleft');
+    // Menginisialisasi Peta Live dengan mode layer berada di Kanan Bawah
+    initBaseMaps(map, window.L, "OSM Default", 'bottomright');
     liveMapInstanceRef.current = map;
     liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
     setTimeout(() => map.invalidateSize(), 300);
@@ -2019,6 +1987,9 @@ export default function App() {
         .btn-detail-popup { margin-top: 10px; width: 100%; background-color: #3b82f6; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center; gap: 6px; }
         .btn-detail-popup:hover { background-color: #2563eb; }
         video::-webkit-media-controls-fullscreen-button { display: none !important; } 
+        .record-map .leaflet-top { top: 130px !important; transition: top 0.3s ease; }
+        /* MEMASTIKAN LAYER CONTROL TIDAK TERTUTUP OLEH PANEL BAWAH SAAT MODE RECORD */
+        .record-map .leaflet-bottom.leaflet-right { bottom: 220px !important; right: 10px !important; transition: bottom 0.3s ease; }
         @media print {
           @page { size: A4; margin: 0mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
@@ -2193,7 +2164,7 @@ export default function App() {
             {mobileScreen === 'record' && (
               <div className="flex-1 relative bg-slate-900 text-white overflow-hidden">
                 <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${recordTab === 'camera' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}/>
-                <div className={`absolute inset-0 w-full h-full bg-slate-200 transition-opacity duration-300 ${recordTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><div ref={liveMapContainerRef} className="w-full h-full"></div></div>
+                <div className={`absolute inset-0 w-full h-full bg-slate-200 transition-opacity duration-300 ${recordTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><div ref={liveMapContainerRef} className="w-full h-full record-map"></div></div>
                 <div className="absolute bottom-0 left-0 right-0 h-56 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent z-20 pointer-events-none"></div>
 
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-slate-100/90 backdrop-blur-md rounded-full p-1.5 flex shadow-lg border border-slate-200">
@@ -2601,9 +2572,14 @@ export default function App() {
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                                         <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
-                                        <div className="flex gap-2 mt-1.5 items-center">
-                                           <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
-                                           <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
+                                        <div className="flex flex-col mt-1 gap-0.5">
+                                            <div className="flex gap-2 items-center">
+                                               <span className="w-2 h-2 rounded-full shadow-sm shrink-0" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
+                                               <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 pl-4 font-medium flex items-center gap-1">
+                                               🗓️ {road.date || (road.created_at ? new Date(road.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-')}
+                                            </div>
                                         </div>
                                       </div>
                                     </div>
