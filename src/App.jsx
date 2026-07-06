@@ -2504,8 +2504,8 @@ export default function App() {
                 <div className="px-4 py-3 flex justify-between items-center border-b border-slate-300/40 bg-transparent">
                   <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
                   <div className="flex space-x-2">
-                    <button onClick={() => { setActiveConditions({'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true}); setActiveJenis({'Aspal': true, 'Beton': true, 'Tanah': true}); setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
-                    <button onClick={() => { setActiveConditions({'Baik': false, 'Rusak Ringan': false, 'Rusak Sedang': false, 'Rusak Parah': false}); setActiveJenis({'Aspal': false, 'Beton': false, 'Tanah': false}); setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
+                    <button onClick={() => { setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
+                    <button onClick={() => { setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
                   </div>
                 </div>
 
@@ -2533,66 +2533,6 @@ export default function App() {
                                   </div>
                                   <div className="flex items-center space-x-3">
                                       <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800">{syncedRoads.filter(r => r.kelurahan === kel).length}</span>
-                                  </div>
-                               </div>
-                            ))}
-                         </div>
-                     )}
-                  </div>
-
-                  {/* KONDISI JALAN */}
-                  <div className="border-b border-slate-300/40">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kondisi' ? null : 'kondisi')}>
-                         <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Kondisi Jalan</span>
-                         </div>
-                         <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeConditions).filter(Boolean).length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'kondisi' ? 'rotate-180' : ''}`} />
-                         </div>
-                     </div>
-                     {expandedSection === 'kondisi' && (
-                         <div className="pb-3 bg-white/10">
-                            {['Baik', 'Rusak Ringan', 'Rusak Sedang', 'Rusak Parah'].map(cond => (
-                               <div key={cond} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveConditions(prev => ({...prev, [cond]: !prev[cond]}))}>
-                                  <div className="flex items-center space-x-4 ml-2">
-                                      <LayerToggle active={activeConditions[cond]} color={getConditionColor(cond)} onClick={() => setActiveConditions(prev => ({...prev, [cond]: !prev[cond]}))} />
-                                      <span className={`text-[13px] font-bold drop-shadow-sm ${activeConditions[cond] ? 'text-slate-900' : 'text-slate-700'}`}>{cond}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-3">
-                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[cond === 'Baik' ? 'baik' : cond === 'Rusak Ringan' ? 'rusakRingan' : cond === 'Rusak Sedang' ? 'rusakSedang' : 'rusakParah']}</span>
-                                      <Info className="h-4 w-4 text-slate-600" />
-                                  </div>
-                               </div>
-                            ))}
-                         </div>
-                     )}
-                  </div>
-
-                  {/* MATERIAL JALAN */}
-                  <div className="border-b border-slate-300/40">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'material' ? null : 'material')}>
-                         <div className="flex items-center space-x-3">
-                             <div className="w-2.5 h-2.5 rounded-full bg-[#FBBF24] shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Material Jalan</span>
-                         </div>
-                         <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeJenis).filter(Boolean).length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'material' ? 'rotate-180' : ''}`} />
-                         </div>
-                     </div>
-                     {expandedSection === 'material' && (
-                         <div className="pb-3 bg-white/10">
-                            {['Aspal', 'Beton', 'Tanah'].map(mat => (
-                               <div key={mat} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveJenis(prev => ({...prev, [mat]: !prev[mat]}))}>
-                                  <div className="flex items-center space-x-4 ml-2">
-                                      <LayerToggle active={activeJenis[mat]} color="#3B82F6" onClick={() => setActiveJenis(prev => ({...prev, [mat]: !prev[mat]}))} />
-                                      <span className={`text-[13px] font-bold drop-shadow-sm ${activeJenis[mat] ? 'text-slate-900' : 'text-slate-700'}`}>{mat}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-3">
-                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-800">{adminStats[mat.toLowerCase()]}</span>
-                                      <Info className="h-4 w-4 text-slate-600" />
                                   </div>
                                </div>
                             ))}
@@ -2677,7 +2617,7 @@ export default function App() {
                 </div>
 
                 <div className="p-4 border-t border-slate-300/40 bg-white/20 backdrop-blur-md">
-                    <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeConditions).filter(Boolean).length + Object.values(activeJenis).filter(Boolean).length + Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
+                    <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
                 </div>
               </div>
             </aside>
