@@ -81,16 +81,20 @@ const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
 };
 
 // --- DATA RUJUKAN ---
-const KELURAHAN_LIST = [
-  "Air Hitam", "Air Putih", "Bandara", "Baqa", "Bayur", "Budaya Pampang", "Bugis", "Bukit Pinang", "Bukuan", "Dadi Mulya", 
-  "Gunung Kelua", "Gunung Panjang", "Handil Bakti", "Harapan Baru", "Jawa", "Karang Anyar", "Karang Asam Ilir", 
-  "Karang Asam Ulu", "Karang Mumus", "Lempake", "Loa Bahu", "Loa Bakung", "Loa Buah", "Makroman", "Mangkupalas", 
-  "Mesjid", "Mugirejo", "Pasar Pagi", "Pelabuhan", "Pelita", "Pulau Atas", "Rapak Dalam", "Rawa Makmur", "Sambutan", 
-  "Selili", "Sempaja Barat", "Sempaja Selatan", "Sempaja Timur", "Sempaja Utara", "Sengkotek", "Sidodadi", "Sidodamai", 
-  "Sidomulyo", "Simpang Pasir", "Simpang Tiga", "Sindang Sari", "Sungai Dama", "Sungai Kapih", "Sungai Keledang", 
-  "Sungai Pinang Dalam", "Sungai Pinang Luar", "Sungai Siring", "Tanah Merah", "Tani Aman", "Teluk Lerong Ilir", 
-  "Teluk Lerong Ulu", "Temindung Permai", "Tenun"
-];
+const KECAMATAN_DATA = {
+  "Loa Janan Ilir": ["Harapan Baru", "Rapak Dalam", "Sengkotek", "Simpang Tiga", "Tani Aman"],
+  "Palaran": ["Bantuas", "Bukuan", "Handil Bakti", "Rawa Makmur", "Simpang Pasir"],
+  "Samarinda Ilir": ["Pelita", "Selili", "Sidodamai", "Sidomulyo", "Sungai Dama"],
+  "Samarinda Kota": ["Bugis", "Karang Mumus", "Pasar Pagi", "Pelabuhan", "Sungai Pinang Luar"],
+  "Samarinda Seberang": ["Baqa", "Gunung Panjang", "Mangkupalas", "Mesjid", "Sungai Keledang", "Tenun"],
+  "Samarinda Ulu": ["Air Hitam", "Air Putih", "Bukit Pinang", "Dadi Mulya", "Gunung Kelua", "Jawa", "Sidodadi", "Teluk Lerong Ilir"],
+  "Samarinda Utara": ["Budaya Pampang", "Lempake", "Sempaja Barat", "Sempaja Selatan", "Sempaja Timur", "Sempaja Utara", "Sungai Siring", "Tanah Merah"],
+  "Sambutan": ["Makroman", "Pulau Atas", "Sambutan", "Sindang Sari", "Sungai Kapih"],
+  "Sungai Kunjang": ["Karang Anyar", "Karang Asam Ilir", "Karang Asam Ulu", "Loa Bahu", "Loa Bakung", "Loa Buah", "Teluk Lerong Ulu"],
+  "Sungai Pinang": ["Bandara", "Gunung Lingai", "Mugirejo", "Sungai Pinang Dalam", "Temindung Permai"]
+};
+
+const KELURAHAN_LIST = Object.values(KECAMATAN_DATA).flat().sort();
 
 const getConditionColor = (condition) => {
   switch (condition) {
@@ -958,6 +962,16 @@ export default function App() {
   const [expandedSection, setExpandedSection] = useState(null); 
   const [sortConfig, setSortConfig] = useState('date_desc'); 
 
+  const toggleKecamatan = (kecamatan) => {
+      const kels = KECAMATAN_DATA[kecamatan];
+      const isAllActive = kels.every(k => activeKelurahan[k]);
+      setActiveKelurahan(prev => {
+          const next = { ...prev };
+          kels.forEach(k => next[k] = !isAllActive);
+          return next;
+      });
+  };
+
   const [highlightedRoadId, setHighlightedRoadId] = useState(null);
   const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); 
   
@@ -987,6 +1001,16 @@ export default function App() {
   const adminHighlightLayerGroupRef = useRef(null);
   const hasFittedAdminMapRef = useRef(false);
   const prevAdminSelectionCountRef = useRef(0);
+  
+  // State untuk menyimpan status batas kecamatan OSM
+  const adminKecamatanLayerRef = useRef(null);
+  const [showKecamatan, setShowKecamatan] = useState(false);
+  const [isLoadingKecamatan, setIsLoadingKecamatan] = useState(false);
+
+  // State untuk menyimpan status batas kelurahan OSM
+  const adminKelurahanLayerRef = useRef(null);
+  const [showKelurahan, setShowKelurahan] = useState(false);
+  const [isLoadingKelurahan, setIsLoadingKelurahan] = useState(false);
 
   useEffect(() => {
       if (appRole === 'admin') hasFittedAdminMapRef.current = false;
@@ -1244,6 +1268,117 @@ export default function App() {
   useEffect(() => {
     if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
   }, [isSidebarOpen, appRole]);
+
+  // Efek untuk memuat Layer GeoJSON Batas Kelurahan (METODE STATIS LOKAL)
+  useEffect(() => {
+    if (appRole !== 'admin' || !adminMapInstanceRef.current) return;
+    const map = adminMapInstanceRef.current;
+
+    if (showKelurahan) {
+        if (!adminKelurahanLayerRef.current) {
+            setIsLoadingKelurahan(true);
+            
+            fetch('/data/batas-kelurahan.geojson')
+            .then(res => {
+                if (!res.ok) throw new Error("File batas-kelurahan.geojson tidak ditemukan");
+                return res.json();
+            })
+            .then(data => {
+                const layer = window.L.geoJSON(data, {
+                    style: {
+                        color: '#6366f1', // Warna garis Indigo
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillColor: '#818cf8',
+                        fillOpacity: 0.1,
+                        dashArray: '3, 3'
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN || "Tidak Diketahui";
+                        layer.bindPopup(`<div style="text-align:center;"><b>Kel. ${namaKelurahan}</b><br/><span style="font-size:10px; color:#666;">Sumber: Data Kelurahan</span></div>`);
+                    }
+                }).addTo(map);
+                adminKelurahanLayerRef.current = layer;
+                map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+            })
+            .catch(err => {
+                console.error("Gagal memuat batas kelurahan lokal:", err);
+                showToast("⚠️ Info: Letakkan file batas-kelurahan.geojson di folder public/data/");
+                setShowKelurahan(false);
+            })
+            .finally(() => setIsLoadingKelurahan(false));
+        } else {
+            map.addLayer(adminKelurahanLayerRef.current);
+            map.fitBounds(adminKelurahanLayerRef.current.getBounds(), { padding: [50, 50] });
+        }
+    } else {
+        if (adminKelurahanLayerRef.current && map.hasLayer(adminKelurahanLayerRef.current)) {
+            map.removeLayer(adminKelurahanLayerRef.current);
+        }
+    }
+  }, [showKelurahan, appRole]);
+
+  // Efek untuk memuat Layer GeoJSON Batas Kecamatan (METODE STATIS LOKAL)
+  useEffect(() => {
+    if (appRole !== 'admin' || !adminMapInstanceRef.current) return;
+    const map = adminMapInstanceRef.current;
+
+    if (showKecamatan) {
+        if (!adminKecamatanLayerRef.current) {
+            setIsLoadingKecamatan(true);
+            const fetchKecamatanStatic = async () => {
+                try {
+                    showToast("Memuat file GeoJSON lokal...");
+                    
+                    // Mengambil GeoJSON dari folder lokal project Anda
+                    const response = await fetch('/data/batas-kecamatan.geojson');
+                    
+                    if (!response.ok) {
+                        throw new Error(`File tidak ditemukan (HTTP ${response.status})`);
+                    }
+                    
+                    const geojson = await response.json();
+
+                    // Tambahkan layer ke peta Leaflet
+                    const layer = window.L.geoJSON(geojson, {
+                        style: function(feature) {
+                            return {
+                                color: '#f59e0b', // Oranye
+                                weight: 2,
+                                opacity: 0.9,
+                                fillColor: '#fcd34d',
+                                fillOpacity: 0.15,
+                                dashArray: '4, 4'
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            // Menyesuaikan dengan properti 'name' di dalam GeoJSON
+                            const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN || "Tidak Diketahui";
+                            layer.bindPopup(`<div style="text-align:center;"><b>Kecamatan ${namaKecamatan}</b><br/><span style="font-size:10px; color:#666;">Sumber: Data GeoJSON Lokal</span></div>`);
+                        }
+                    }).addTo(map);
+                    
+                    adminKecamatanLayerRef.current = layer;
+                    map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                } catch (err) {
+                    console.error("GeoJSON Local Fetch Error:", err);
+                    showToast(`⚠️ Info: Letakkan file batas-kecamatan.geojson di folder public/data/`);
+                    setShowKecamatan(false);
+                } finally {
+                    setIsLoadingKecamatan(false);
+                }
+            };
+            fetchKecamatanStatic();
+        } else {
+            map.addLayer(adminKecamatanLayerRef.current);
+            map.fitBounds(adminKecamatanLayerRef.current.getBounds(), { padding: [50, 50] });
+        }
+    } else {
+        if (adminKecamatanLayerRef.current && map.hasLayer(adminKecamatanLayerRef.current)) {
+            map.removeLayer(adminKecamatanLayerRef.current);
+        }
+    }
+  }, [showKecamatan, appRole]);
 
   useEffect(() => {
     let onInteractionStart = null; let onInteractionEnd = null;
@@ -2259,7 +2394,11 @@ export default function App() {
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Kelurahan</label>
                     <select value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-base outline-none focus:ring-2 focus:ring-blue-500">
-                      {KELURAHAN_LIST.map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
+                      {Object.keys(KECAMATAN_DATA).sort().map(kec => (
+                        <optgroup key={kec} label={`Kecamatan ${kec}`}>
+                          {KECAMATAN_DATA[kec].map(k => <option key={k} value={k}>{formatKel(k)}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
 
@@ -2472,41 +2611,83 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="px-4 py-3 flex justify-between items-center border-b border-slate-300/40 bg-transparent">
-                  <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
-                  <div className="flex space-x-2">
-                    <button onClick={() => { setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
-                    <button onClick={() => { setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
+                <div className="px-4 py-3 flex flex-col gap-3 border-b border-slate-300/40 bg-transparent">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
+                    <div className="flex space-x-2">
+                      <button onClick={() => { setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
+                      <button onClick={() => { setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                            🗺️ Batas Kecamatan
+                            {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
+                        </span>
+                        <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                            📍 Batas Kelurahan
+                            {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}
+                        </span>
+                        <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
+                      </div>
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
-                  {/* WILAYAH KELURAHAN */}
+                  {/* WILAYAH KECAMATAN & KELURAHAN (GABUNGAN) */}
                   <div className="border-b border-slate-300/40">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'kelurahan' ? null : 'kelurahan')}>
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'wilayah' ? null : 'wilayah')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Wilayah Kelurahan</span>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Filter Per Wilayah</span>
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeKelurahan).filter(Boolean).length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'kelurahan' ? 'rotate-180' : ''}`} />
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'wilayah' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
-                     {expandedSection === 'kelurahan' && (
-                         <div className="pb-3 bg-white/10 max-h-64 overflow-y-auto custom-scrollbar">
-                            {KELURAHAN_LIST.map(kel => (
-                               <div key={kel} className="flex items-center justify-between px-4 py-2 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
-                                  <div className="flex items-center space-x-4 ml-2">
-                                      <LayerToggle active={activeKelurahan[kel]} color="#8b5cf6" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
-                                      <span className={`text-[12px] font-bold truncate max-w-[150px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-700'}`}>{formatKel(kel)}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-3">
-                                      <span className="bg-white/70 border border-slate-300/50 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800">{syncedRoads.filter(r => r.kelurahan === kel).length}</span>
-                                  </div>
-                               </div>
-                            ))}
+                     {expandedSection === 'wilayah' && (
+                         <div className="pb-3 bg-white/10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                            {Object.keys(KECAMATAN_DATA).sort().map(kec => {
+                                const kels = KECAMATAN_DATA[kec];
+                                const activeCount = kels.filter(k => activeKelurahan[k]).length;
+                                const isAllActive = activeCount === kels.length;
+                                const isSomeActive = activeCount > 0 && !isAllActive;
+
+                                return (
+                                   <div key={kec} className="mb-2">
+                                      {/* Induk Kecamatan */}
+                                      <div className="flex items-center justify-between px-4 py-2 bg-slate-200/50 backdrop-blur-md border-y border-slate-300/30 sticky top-0 z-10 cursor-pointer shadow-sm" onClick={() => toggleKecamatan(kec)}>
+                                          <div className="flex items-center space-x-3">
+                                              <LayerToggle active={isAllActive} color={isSomeActive ? "#a78bfa" : "#8b5cf6"} onClick={() => toggleKecamatan(kec)} />
+                                              <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800' : 'text-slate-500'}`}>Kec. {kec}</span>
+                                          </div>
+                                          <div className="text-[10px] font-bold text-slate-600 bg-white/50 px-1.5 py-0.5 rounded shadow-sm">{activeCount}/{kels.length}</div>
+                                      </div>
+                                      
+                                      {/* Anak Kelurahan */}
+                                      <div className="py-1">
+                                          {kels.map(kel => (
+                                             <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
+                                                <div className="flex items-center space-x-3 ml-7">
+                                                    <LayerToggle active={activeKelurahan[kel]} color="#c4b5fd" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
+                                                    <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-3">
+                                                    <span className="text-[10px] font-bold text-slate-500">{syncedRoads.filter(r => r.kelurahan === kel).length} jln</span>
+                                                </div>
+                                             </div>
+                                          ))}
+                                      </div>
+                                   </div>
+                                );
+                            })}
                          </div>
                      )}
                   </div>
@@ -2516,7 +2697,7 @@ export default function App() {
                      <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Jalan</span>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Data Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
                              <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{searchedRoads.length}</span>
