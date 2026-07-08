@@ -1301,18 +1301,24 @@ export default function App() {
                 // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
                 
-                // 2. FILTER BERDASARKAN SIDEBAR
-                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN;
+                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
+                const props = feature.properties || {};
+                const namaKelurahan = props.name || props.KELURAHAN || props.WADMKD || props.NAMOBJ || props.Desa || "";
+                
                 if (namaKelurahan) {
-                    const norm = namaKelurahan.toLowerCase().replace(/kelurahan|desa/gi, '').trim();
-                    const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm);
-                    if (match) return activeKelurahan[match]; // Munculkan hanya jika di sidebar aktif
+                    const norm = String(namaKelurahan).toLowerCase().replace(/kelurahan|desa|kel\.|ds\./gi, '').trim();
+                    const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
+                    if (match) return activeKelurahan[match] === true; // Munculkan hanya jika di sidebar aktif
                 }
-                return true; 
+                
+                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
+                const isAllActive = Object.values(activeKelurahan).every(v => v === true);
+                return isAllActive; 
             },
             style: { color: '#6366f1', weight: 1.5, opacity: 0.9, fillColor: '#818cf8', fillOpacity: 0.1, dashArray: '3, 3' },
             onEachFeature: function(feature, layer) {
-                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN || "Tidak Diketahui";
+                const props = feature.properties || {};
+                const namaKelurahan = props.name || props.KELURAHAN || props.WADMKD || props.NAMOBJ || "Tidak Diketahui";
                 layer.bindPopup(`<div style="text-align:center;"><b>Kel. ${namaKelurahan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
             }
         }).addTo(map);
@@ -1336,21 +1342,27 @@ export default function App() {
                 // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
                 
-                // 2. FILTER BERDASARKAN SIDEBAR
-                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN;
+                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
+                const props = feature.properties || {};
+                const namaKecamatan = props.name || props.KECAMATAN || props.WADMKC || props.NAMOBJ || props.Kecamatan || "";
+                
                 if (namaKecamatan) {
-                    const norm = namaKecamatan.toLowerCase().replace(/kecamatan/gi, '').trim();
-                    const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm);
+                    const norm = String(namaKecamatan).toLowerCase().replace(/kecamatan|kec\./gi, '').trim();
+                    const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
                     if (match) {
                         // Munculkan batas kecamatan jika ADA kelurahannya yang aktif di sidebar
-                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k]);
+                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k] === true);
                     }
                 }
-                return true;
+                
+                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
+                const isAllActive = Object.values(activeKelurahan).every(v => v === true);
+                return isAllActive;
             },
             style: { color: '#f59e0b', weight: 2.5, opacity: 0.9, fillColor: '#fcd34d', fillOpacity: 0.15, dashArray: '4, 4' },
             onEachFeature: function(feature, layer) {
-                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN || "Tidak Diketahui";
+                const props = feature.properties || {};
+                const namaKecamatan = props.name || props.KECAMATAN || props.WADMKC || props.NAMOBJ || "Tidak Diketahui";
                 layer.bindPopup(`<div style="text-align:center;"><b>Kecamatan ${namaKecamatan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
             }
         }).addTo(map);
@@ -2602,18 +2614,24 @@ export default function App() {
                   </div>
                   <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
-                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
-                            🗺️ Batas Kecamatan
-                            {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                                🗺️ Batas Kecamatan
+                                {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
+                            </span>
+                            <span className="text-[9px] text-slate-500 font-medium">Sesuai area terpilih</span>
+                        </div>
                         <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
                       </div>
                       
                       <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
-                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
-                            📍 Batas Kelurahan
-                            {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                                📍 Batas Kelurahan
+                                {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}
+                            </span>
+                            <span className="text-[9px] text-slate-500 font-medium">Sesuai area terpilih</span>
+                        </div>
                         <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
                       </div>
                   </div>
