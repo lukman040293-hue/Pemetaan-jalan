@@ -2667,22 +2667,26 @@ export default function App() {
                                               <LayerToggle active={isAllActive} color={isSomeActive ? "#a78bfa" : "#8b5cf6"} onClick={() => toggleKecamatan(kec)} />
                                               <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800' : 'text-slate-500'}`}>Kec. {kec}</span>
                                           </div>
-                                          <div className="text-[10px] font-bold text-slate-600 bg-white/50 px-1.5 py-0.5 rounded shadow-sm">{activeCount}/{kels.length}</div>
                                       </div>
                                       
                                       {/* Anak Kelurahan */}
                                       <div className="py-1">
-                                          {kels.map(kel => (
+                                          {kels.map(kel => {
+                                             const roadCount = syncedRoads.filter(r => r.kelurahan === kel).length;
+                                             return (
                                              <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
                                                 <div className="flex items-center space-x-3 ml-7">
                                                     <LayerToggle active={activeKelurahan[kel]} color="#c4b5fd" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
                                                     <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
                                                 </div>
                                                 <div className="flex items-center space-x-3">
-                                                    <span className="text-[10px] font-bold text-slate-500">{syncedRoads.filter(r => r.kelurahan === kel).length} jln</span>
+                                                    {roadCount > 0 && (
+                                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 border border-blue-200/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
+                                                    )}
                                                 </div>
                                              </div>
-                                          ))}
+                                             );
+                                          })}
                                       </div>
                                    </div>
                                 );
