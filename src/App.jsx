@@ -1006,11 +1006,30 @@ export default function App() {
   const adminKecamatanLayerRef = useRef(null);
   const [showKecamatan, setShowKecamatan] = useState(false);
   const [isLoadingKecamatan, setIsLoadingKecamatan] = useState(false);
+  const [kecamatanData, setKecamatanData] = useState(null); // NEW
 
   // State untuk menyimpan status batas kelurahan OSM
   const adminKelurahanLayerRef = useRef(null);
   const [showKelurahan, setShowKelurahan] = useState(false);
   const [isLoadingKelurahan, setIsLoadingKelurahan] = useState(false);
+  const [kelurahanData, setKelurahanData] = useState(null); // NEW
+
+  // --- EFEK FETCH DATA GEOJSON (Hanya sekali saat Admin masuk) ---
+  useEffect(() => {
+      if (appRole === 'admin') {
+          setIsLoadingKecamatan(true);
+          fetch('/data/batas-kecamatan.geojson')
+            .then(res => res.json())
+            .then(data => { setKecamatanData(data); setIsLoadingKecamatan(false); })
+            .catch(() => setIsLoadingKecamatan(false));
+
+          setIsLoadingKelurahan(true);
+          fetch('/data/batas-kelurahan.geojson')
+            .then(res => res.json())
+            .then(data => { setKelurahanData(data); setIsLoadingKelurahan(false); })
+            .catch(() => setIsLoadingKelurahan(false));
+      }
+  }, [appRole]);
 
   useEffect(() => {
       if (appRole === 'admin') hasFittedAdminMapRef.current = false;
@@ -1269,116 +1288,78 @@ export default function App() {
     if (appRole === 'admin' && adminMapInstanceRef.current) setTimeout(() => adminMapInstanceRef.current.invalidateSize(), 300); 
   }, [isSidebarOpen, appRole]);
 
-  // Efek untuk memuat Layer GeoJSON Batas Kelurahan (METODE STATIS LOKAL)
+  // Efek untuk memuat Layer GeoJSON Batas Kelurahan (Reaktif terhadap Filter Wilayah)
   useEffect(() => {
     if (appRole !== 'admin' || !adminMapInstanceRef.current) return;
     const map = adminMapInstanceRef.current;
 
-    if (showKelurahan) {
-        if (!adminKelurahanLayerRef.current) {
-            setIsLoadingKelurahan(true);
-            
-            fetch('/data/batas-kelurahan.geojson')
-            .then(res => {
-                if (!res.ok) throw new Error("File batas-kelurahan.geojson tidak ditemukan");
-                return res.json();
-            })
-            .then(data => {
-                const layer = window.L.geoJSON(data, {
-                    style: {
-                        color: '#6366f1', // Warna garis Indigo
-                        weight: 1.5,
-                        opacity: 0.9,
-                        fillColor: '#818cf8',
-                        fillOpacity: 0.1,
-                        dashArray: '3, 3'
-                    },
-                    onEachFeature: function(feature, layer) {
-                        const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN || "Tidak Diketahui";
-                        layer.bindPopup(`<div style="text-align:center;"><b>Kel. ${namaKelurahan}</b><br/><span style="font-size:10px; color:#666;">Sumber: Data Kelurahan</span></div>`);
-                    }
-                }).addTo(map);
-                adminKelurahanLayerRef.current = layer;
-                map.fitBounds(layer.getBounds(), { padding: [50, 50] });
-            })
-            .catch(err => {
-                console.error("Gagal memuat batas kelurahan lokal:", err);
-                showToast("⚠️ Info: Letakkan file batas-kelurahan.geojson di folder public/data/");
-                setShowKelurahan(false);
-            })
-            .finally(() => setIsLoadingKelurahan(false));
-        } else {
-            map.addLayer(adminKelurahanLayerRef.current);
-            map.fitBounds(adminKelurahanLayerRef.current.getBounds(), { padding: [50, 50] });
-        }
+    if (showKelurahan && kelurahanData) {
+        if (adminKelurahanLayerRef.current) map.removeLayer(adminKelurahanLayerRef.current);
+        
+        adminKelurahanLayerRef.current = window.L.geoJSON(kelurahanData, {
+            filter: (feature) => {
+                // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
+                if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
+                
+                // 2. FILTER BERDASARKAN SIDEBAR
+                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN;
+                if (namaKelurahan) {
+                    const norm = namaKelurahan.toLowerCase().replace(/kelurahan|desa/gi, '').trim();
+                    const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm);
+                    if (match) return activeKelurahan[match]; // Munculkan hanya jika di sidebar aktif
+                }
+                return true; 
+            },
+            style: { color: '#6366f1', weight: 1.5, opacity: 0.9, fillColor: '#818cf8', fillOpacity: 0.1, dashArray: '3, 3' },
+            onEachFeature: function(feature, layer) {
+                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN || "Tidak Diketahui";
+                layer.bindPopup(`<div style="text-align:center;"><b>Kel. ${namaKelurahan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
+            }
+        }).addTo(map);
     } else {
         if (adminKelurahanLayerRef.current && map.hasLayer(adminKelurahanLayerRef.current)) {
             map.removeLayer(adminKelurahanLayerRef.current);
         }
     }
-  }, [showKelurahan, appRole]);
+  }, [showKelurahan, kelurahanData, activeKelurahan, appRole]);
 
-  // Efek untuk memuat Layer GeoJSON Batas Kecamatan (METODE STATIS LOKAL)
+  // Efek untuk memuat Layer GeoJSON Batas Kecamatan (Reaktif terhadap Filter Wilayah)
   useEffect(() => {
     if (appRole !== 'admin' || !adminMapInstanceRef.current) return;
     const map = adminMapInstanceRef.current;
 
-    if (showKecamatan) {
-        if (!adminKecamatanLayerRef.current) {
-            setIsLoadingKecamatan(true);
-            const fetchKecamatanStatic = async () => {
-                try {
-                    showToast("Memuat file GeoJSON lokal...");
-                    
-                    // Mengambil GeoJSON dari folder lokal project Anda
-                    const response = await fetch('/data/batas-kecamatan.geojson');
-                    
-                    if (!response.ok) {
-                        throw new Error(`File tidak ditemukan (HTTP ${response.status})`);
+    if (showKecamatan && kecamatanData) {
+        if (adminKecamatanLayerRef.current) map.removeLayer(adminKecamatanLayerRef.current);
+        
+        adminKecamatanLayerRef.current = window.L.geoJSON(kecamatanData, {
+            filter: (feature) => {
+                // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
+                if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
+                
+                // 2. FILTER BERDASARKAN SIDEBAR
+                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN;
+                if (namaKecamatan) {
+                    const norm = namaKecamatan.toLowerCase().replace(/kecamatan/gi, '').trim();
+                    const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm);
+                    if (match) {
+                        // Munculkan batas kecamatan jika ADA kelurahannya yang aktif di sidebar
+                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k]);
                     }
-                    
-                    const geojson = await response.json();
-
-                    // Tambahkan layer ke peta Leaflet
-                    const layer = window.L.geoJSON(geojson, {
-                        style: function(feature) {
-                            return {
-                                color: '#f59e0b', // Oranye
-                                weight: 2,
-                                opacity: 0.9,
-                                fillColor: '#fcd34d',
-                                fillOpacity: 0.15,
-                                dashArray: '4, 4'
-                            };
-                        },
-                        onEachFeature: function(feature, layer) {
-                            // Menyesuaikan dengan properti 'name' di dalam GeoJSON
-                            const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN || "Tidak Diketahui";
-                            layer.bindPopup(`<div style="text-align:center;"><b>Kecamatan ${namaKecamatan}</b><br/><span style="font-size:10px; color:#666;">Sumber: Data GeoJSON Lokal</span></div>`);
-                        }
-                    }).addTo(map);
-                    
-                    adminKecamatanLayerRef.current = layer;
-                    map.fitBounds(layer.getBounds(), { padding: [50, 50] });
-                } catch (err) {
-                    console.error("GeoJSON Local Fetch Error:", err);
-                    showToast(`⚠️ Info: Letakkan file batas-kecamatan.geojson di folder public/data/`);
-                    setShowKecamatan(false);
-                } finally {
-                    setIsLoadingKecamatan(false);
                 }
-            };
-            fetchKecamatanStatic();
-        } else {
-            map.addLayer(adminKecamatanLayerRef.current);
-            map.fitBounds(adminKecamatanLayerRef.current.getBounds(), { padding: [50, 50] });
-        }
+                return true;
+            },
+            style: { color: '#f59e0b', weight: 2.5, opacity: 0.9, fillColor: '#fcd34d', fillOpacity: 0.15, dashArray: '4, 4' },
+            onEachFeature: function(feature, layer) {
+                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN || "Tidak Diketahui";
+                layer.bindPopup(`<div style="text-align:center;"><b>Kecamatan ${namaKecamatan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
+            }
+        }).addTo(map);
     } else {
         if (adminKecamatanLayerRef.current && map.hasLayer(adminKecamatanLayerRef.current)) {
             map.removeLayer(adminKecamatanLayerRef.current);
         }
     }
-  }, [showKecamatan, appRole]);
+  }, [showKecamatan, kecamatanData, activeKelurahan, appRole]);
 
   useEffect(() => {
     let onInteractionStart = null; let onInteractionEnd = null;
