@@ -962,6 +962,39 @@ export default function App() {
   const [expandedSection, setExpandedSection] = useState(null); 
   const [sortConfig, setSortConfig] = useState('date_desc'); 
 
+  // --- STATE TOOLBAR HEADER (NEW) ---
+  const [selectedToolbarKec, setSelectedToolbarKec] = useState('Semua');
+  const [selectedToolbarKel, setSelectedToolbarKel] = useState('Semua');
+
+  useEffect(() => {
+      const activeKels = Object.keys(activeKelurahan).filter(k => activeKelurahan[k]);
+      if (activeKels.length === KELURAHAN_LIST.length) {
+          setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua');
+      } else if (activeKels.length > 0) {
+          let foundKec = null; let singleKec = true;
+          for(const kel of activeKels) {
+              const kec = Object.keys(KECAMATAN_DATA).find(k => KECAMATAN_DATA[k].includes(kel));
+              if (!foundKec) foundKec = kec; else if (foundKec !== kec) { singleKec = false; break; }
+          }
+          if (singleKec && foundKec) {
+              setSelectedToolbarKec(foundKec); setSelectedToolbarKel(activeKels.length === 1 ? activeKels[0] : 'Semua');
+          } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
+      } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
+  }, [activeKelurahan]);
+
+  const handleToolbarKecChange = (kec) => {
+      setSelectedToolbarKec(kec); setSelectedToolbarKel('Semua');
+      if (kec === 'Semua') setActiveKelurahan(initialKelurahanState);
+      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); KECAMATAN_DATA[kec].forEach(k => newActive[k] = true); setActiveKelurahan(newActive); }
+  };
+
+  const handleToolbarKelChange = (kel) => {
+      setSelectedToolbarKel(kel);
+      if (kel === 'Semua') handleToolbarKecChange(selectedToolbarKec);
+      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); newActive[kel] = true; setActiveKelurahan(newActive); }
+  };
+  // ----------------------------------
+
   const toggleKecamatan = (kecamatan) => {
       const kels = KECAMATAN_DATA[kecamatan];
       const isAllActive = kels.every(k => activeKelurahan[k]);
@@ -2604,39 +2637,6 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="px-4 py-3 flex flex-col gap-3 border-b border-slate-300/40 bg-transparent">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Semua Layer</span>
-                    <div className="flex space-x-2">
-                      <button onClick={() => { setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Aktifkan</button>
-                      <button onClick={() => { setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Nonaktifkan</button>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
-                                🗺️ Batas Kecamatan
-                                {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
-                            </span>
-                            <span className="text-[9px] text-slate-500 font-medium">Sesuai area terpilih</span>
-                        </div>
-                        <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
-                      </div>
-                      
-                      <div className="flex justify-between items-center px-3 py-2 bg-white/40 border border-slate-200/60 rounded-xl shadow-sm">
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
-                                📍 Batas Kelurahan
-                                {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}
-                            </span>
-                            <span className="text-[9px] text-slate-500 font-medium">Sesuai area terpilih</span>
-                        </div>
-                        <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
-                      </div>
-                  </div>
-                </div>
-
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
                   {/* WILAYAH KECAMATAN & KELURAHAN (GABUNGAN) */}
@@ -2793,6 +2793,63 @@ export default function App() {
           </main>
         </div>
 
+        {/* --- FOOTER KONTROL WILAYAH (Dipindah ke bawah) --- */}
+        <div className="bg-slate-50 border-t border-slate-200 px-3 md:px-4 py-3 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-md shrink-0 w-full gap-3 md:gap-4 print-hidden relative pb-[env(safe-area-inset-bottom,10px)]">
+             
+             {/* Kiri: Toggles Batas Wilayah */}
+             <div className="flex items-center gap-2 w-full md:w-1/3 overflow-x-auto hide-scrollbar shrink-0 justify-center md:justify-start order-2 md:order-1">
+                <div 
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    onClick={() => setShowKecamatan(!showKecamatan)}
+                >
+                    <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
+                    <span className={`text-[11px] md:text-xs font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700' : 'text-slate-600'}`}>
+                        Batas Kec. {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
+                    </span>
+                </div>
+                
+                <div 
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    onClick={() => setShowKelurahan(!showKelurahan)}
+                >
+                    <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
+                    <span className={`text-[11px] md:text-xs font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700' : 'text-slate-600'}`}>
+                        Batas Kel. {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />}
+                    </span>
+                </div>
+             </div>
+
+             {/* Tengah: Filter Kecamatan & Kelurahan */}
+             <div className="flex items-center gap-2 w-full md:w-1/3 shrink-0 justify-center order-1 md:order-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block mr-1">Filter</span>
+                <select 
+                   value={selectedToolbarKec}
+                   onChange={(e) => handleToolbarKecChange(e.target.value)}
+                   className="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto"
+                >
+                   <option value="Semua">Semua Kecamatan</option>
+                   {Object.keys(KECAMATAN_DATA).sort().map(kec => (
+                      <option key={kec} value={kec}>{kec}</option>
+                   ))}
+                </select>
+                
+                <select 
+                   value={selectedToolbarKel}
+                   onChange={(e) => handleToolbarKelChange(e.target.value)}
+                   disabled={selectedToolbarKec === 'Semua'}
+                   className="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto"
+                >
+                   <option value="Semua">Semua Kelurahan</option>
+                   {selectedToolbarKec !== 'Semua' && KECAMATAN_DATA[selectedToolbarKec].map(kel => (
+                      <option key={kel} value={kel}>{formatKel(kel)}</option>
+                   ))}
+                </select>
+             </div>
+
+             {/* Kanan: Spacer untuk menyeimbangkan agar elemen tengah tetap persis di tengah pada layar desktop */}
+             <div className="hidden md:block md:w-1/3 order-3"></div>
+          </div>
+
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
           <>
@@ -2874,7 +2931,7 @@ export default function App() {
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
-             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
+             <div className="fixed bottom-[90px] md:bottom-[70px] left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
                  {isAnimControlMinimized ? (
                      <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
