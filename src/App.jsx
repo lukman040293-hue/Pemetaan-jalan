@@ -243,6 +243,7 @@ const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topr
     ]),
     "OSM Default": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
     "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+    "Peta Gelap (Dark)": L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 })
   };
   if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map); 
   else baseMaps["OSM Default"].addTo(map);
@@ -2155,7 +2156,6 @@ export default function App() {
         .record-map .leaflet-top { top: 130px !important; transition: top 0.3s ease; }
         /* MEMASTIKAN LAYER CONTROL TIDAK TERTUTUP OLEH PANEL BAWAH SAAT MODE RECORD */
         .record-map .leaflet-bottom.leaflet-right { bottom: 220px !important; right: 10px !important; transition: bottom 0.3s ease; }
-        .dark-map .leaflet-layer, .dark-map .leaflet-control-zoom-in, .dark-map .leaflet-control-zoom-out, .dark-map .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         @media print {
           @page { size: A4; margin: 0mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
@@ -2578,7 +2578,7 @@ export default function App() {
 
       {/* --- RENDER DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className={`h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root ${isDarkMode ? 'dark' : ''}`}>
+        <div className={`h-full flex flex-col font-sans select-none overflow-hidden relative print-static-root ${isDarkMode ? 'dark bg-[#1e2530]' : 'bg-slate-100'}`}>
           
           {/* --- HEADER MAP AREA --- */}
           <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden transition-colors">
@@ -2794,8 +2794,8 @@ export default function App() {
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
                <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
-                   <div ref={adminMapContainerRef} className={`absolute inset-0 bg-slate-200 dark:bg-slate-800 z-0 ${isDarkMode ? 'dark-map' : ''}`}></div>
-                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
+                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 dark:bg-slate-800 z-0"></div>
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
                </div>
             </div>
           </main>
