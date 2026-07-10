@@ -3,7 +3,7 @@ import {
   Menu, RefreshCw, LogOut, X, Search, ChevronDown, 
   Trash2, Play, Share2, Download, Printer, Map as MapIcon, 
   PenTool, FileText, Undo2, Crosshair, Camera, MapPin, 
-  Pause, Square, Info, Edit, Check, Moon, Sun
+  Pause, Square, Info, Edit, Check
 } from 'lucide-react';
 
 // =========================================================================
@@ -18,7 +18,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KX8WFsYJBgdsCp-Rp9hg1A_YSxStzFR';
 const CLOUDINARY_CLOUD_NAME = 'djntwm7ta'; 
 const CLOUDINARY_UPLOAD_PRESET = 'preset_survey_jalan'; 
 
-// --- FUNGSI PEMUAT LIBRARY SUPER AMAN (ANTI UMD TRAP & CSP SAFE) ---
 const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
   if (window[globalVarName]) return true;
 
@@ -80,7 +79,6 @@ const loadLibrarySafely = async (cssUrl, jsUrls, globalVarName) => {
   return success;
 };
 
-// --- DATA RUJUKAN ---
 const KECAMATAN_DATA = {
   "Loa Janan Ilir": ["Harapan Baru", "Rapak Dalam", "Sengkotek", "Simpang Tiga", "Tani Aman"],
   "Palaran": ["Bantuas", "Bukuan", "Handil Bakti", "Rawa Makmur", "Simpang Pasir"],
@@ -243,912 +241,194 @@ const initBaseMaps = (map, L, defaultLayerName = "OSM Default", position = 'topr
     ]),
     "OSM Default": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
     "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
-    "Peta Gelap (Dark)": L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 })
   };
   if(baseMaps[defaultLayerName]) baseMaps[defaultLayerName].addTo(map); 
   else baseMaps["OSM Default"].addTo(map);
   L.control.layers(baseMaps, null, { position }).addTo(map);
 };
 
-// --- KOMPONEN KECIL ---
-const LockCylinder = ({ digit, idx }) => {
-  const stripRef = useRef(null);
-  const numbers = Array.from({ length: 40 }, (_, i) => i % 10);
-  const targetNum = parseInt(digit, 10);
-  const targetIndex = 30 + targetNum;
-
-  useEffect(() => {
-    if (stripRef.current) {
-      stripRef.current.style.transition = 'none';
-      stripRef.current.style.transform = `translateY(0em)`;
-      void stripRef.current.offsetHeight; 
-      const duration = 2.0 + (idx * 0.4); 
-      stripRef.current.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.2, 1)`;
-      stripRef.current.style.transform = `translateY(-${targetIndex * 1.1}em)`;
-    }
-  }, [digit, idx]);
-
-  return (
-    <span style={{ display: 'inline-block', height: '1.1em', lineHeight: '1.1em', overflow: 'hidden', position: 'relative', background: 'transparent', margin: '0 1px', color: '#0f172a' }}>
-      <span ref={stripRef} style={{ display: 'flex', flexDirection: 'column', willChange: 'transform' }}>
-        {numbers.map((num, i) => <span key={i} style={{ height: '1.1em', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>{num}</span>)}
-      </span>
-    </span>
-  );
-};
-
-const AnimatedNumber = ({ value }) => {
-  const valStr = String(value); 
-  const digits = valStr.split('');
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', margin: '0 -2px' }}>
-      {digits.map((digit, idx) => <LockCylinder key={`${digits.length}-${idx}`} digit={digit} idx={idx} />)}
-    </span>
-  );
-};
+const AnimatedNumber = ({ value }) => <span>{value}</span>;
 
 const LayerToggle = ({ active, color, onClick }) => (
-  <div onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors relative flex items-center shrink-0 border border-black/10 shadow-inner" style={{ backgroundColor: active ? color : '#cbd5e1' }}>
-      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform transform ${active ? 'translate-x-4' : 'translate-x-0'}`}></div>
+  <div onClick={(e) => { e.stopPropagation(); onClick(); }} className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer`} style={{ borderColor: color, backgroundColor: active ? color : 'transparent' }}>
+    {active && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
   </div>
 );
 
-// --- KOMPONEN EXPORT VIDEO DRONE ---
-const DroneVideoExporter = ({ road, onClose }) => {
-    const mapContainerRef = useRef(null);
-    const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState('menu'); 
-    const [errorMessage, setErrorMessage] = useState('');
-    const [downloadUrl, setDownloadUrl] = useState(null);
-    const [is2DMode, setIs2DMode] = useState(false);
-    const [selectedMapStyle, setSelectedMapStyle] = useState('google-hybrid');
-    const [isPlaying, setIsPlaying] = useState(true);
-    const [speed, setSpeed] = useState(1);
-    const [vehicleType, setVehicleType] = useState('runner'); 
+const DroneVideoExporter = ({ road, onClose }) => (
+  <div className="fixed inset-0 z-[3000] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white p-4">
+     <div className="bg-slate-800 rounded-3xl p-8 text-center max-w-sm shadow-2xl border border-slate-700">
+        <Camera className="w-14 h-14 text-indigo-400 mx-auto mb-4 animate-pulse" />
+        <h2 className="text-2xl font-black mb-2">Exporting Drone View</h2>
+        <p className="text-slate-400 text-sm mb-8 leading-relaxed">Mempersiapkan render animasi 3D untuk rute <strong className="text-white">{road.name}</strong>...</p>
+        <button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 w-full rounded-xl transition-colors shadow-lg shadow-indigo-600/30">Batalkan Proses</button>
+     </div>
+  </div>
+);
 
-    const animStateRef = useRef({ isMounted: true, map: null, frameId: null, recorder: null, isPlaying: true, speed: 1, vehicleType: 'runner', status: 'menu' });
-
-    const getVehicle3DHtml = (type) => {
-        const s1 = (0.4 / speed).toFixed(2) + 's';
-        
-        if (type === 'drone') {
-            return `<div style="width: 40px; height: 40px; transform-style: preserve-3d; position: relative; transform: translateZ(30px) rotateX(10deg);"><div style="position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: rgba(0,0,0,0.5); filter: blur(5px); transform: translateZ(-30px);"></div><div style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; background: #e2e8f0; border-radius: 4px; transform: translateZ(2px); border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 14px; top: 10px; width: 12px; height: 4px; background: #ef4444; border-radius: 2px; transform: translateZ(4px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(45deg) translateZ(1px);"></div><div style="position: absolute; left: 0; top: 0; width: 40px; height: 4px; background: #cbd5e1; top: 18px; transform: rotate(-45deg) translateZ(1px);"></div><style>@keyframes spinFast { 100% { transform: rotate(360deg) translateZ(3px); } } .rotor { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(transparent 20%, rgba(0,0,0,0.3) 50%, transparent 80%); animation: spinFast 0.1s linear infinite; transform: translateZ(3px); border: 1px solid rgba(0,0,0,0.1); }</style><div class="rotor" style="left: -4px; top: -4px;"></div><div class="rotor" style="right: -4px; top: -4px;"></div><div class="rotor" style="left: -4px; bottom: -4px;"></div><div class="rotor" style="right: -4px; bottom: -4px;"></div></div>`;
-        } else if (type === 'motorcycle') {
-            return `<div style="width: 12px; height: 32px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(3px); transform: translateZ(0px);"></div><div style="position: absolute; left: 4px; top: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div><div style="position: absolute; left: 4px; bottom: 0px; width: 4px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(2px);"></div><div style="position: absolute; left: 2px; top: 6px; width: 8px; height: 20px; background: #ef4444; border-radius: 3px; transform: translateZ(4px);"></div><div style="position: absolute; left: 2px; top: 10px; width: 8px; height: 10px; background: #b91c1c; border-radius: 2px; transform: translateZ(6px);"></div><div style="position: absolute; left: 4px; top: 5px; width: 4px; height: 3px; background: #fef08a; border-radius: 1px; transform: translateZ(6px); box-shadow: 0 -4px 10px #fef08a;"></div><div style="position: absolute; left: 3px; top: 12px; width: 6px; height: 8px; background: #1e293b; border-radius: 2px; transform: translateZ(8px);"></div><div style="position: absolute; left: 3px; top: 14px; width: 6px; height: 6px; background: #0f172a; border-radius: 50%; transform: translateZ(12px);"></div></div>`;
-        } else if (type === 'truck') {
-            return `<div style="width: 28px; height: 70px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); filter: blur(6px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #334155; transform: translateZ(4px); border-radius: 4px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #94a3b8; transform: translateZ(6px); border-radius: 2px;"></div><div style="position: absolute; left: 2px; bottom: 2px; width: 24px; height: 48px; background: #cbd5e1; transform: translateZ(16px); border-radius: 2px; border: 1px solid #94a3b8;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #eab308; transform: translateZ(6px); border-radius: 4px;"></div><div style="position: absolute; left: 4px; top: 4px; width: 20px; height: 16px; background: #facc15; transform: translateZ(14px); border-radius: 4px;"></div><div style="position: absolute; left: 6px; top: 6px; width: 16px; height: 8px; background: #0f172a; transform: translateZ(15px); border-radius: 2px;"></div><div style="position: absolute; left: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div><div style="position: absolute; right: 6px; top: -2px; width: 6px; height: 4px; background: #fef08a; transform: translateZ(10px); border-radius: 2px; box-shadow: 0 -4px 12px #fef08a;"></div></div>`;
-        } else if (type === 'runner') {
-            return `<div style="width: 50px; height: 50px; position: relative; transform: scale(1.3);">
-            <style>
-                @keyframes runSway {
-                    0% { transform: rotate(-15deg) translateX(-2px); }
-                    50% { transform: rotate(15deg) translateX(2px); }
-                    100% { transform: rotate(-15deg) translateX(-2px); }
-                }
-                @keyframes footLeft {
-                    0% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
-                    50% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
-                    100% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
-                }
-                @keyframes footRight {
-                    0% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
-                    50% { transform: translateY(-16px) scale(1.2); z-index: 5; opacity: 1; }
-                    100% { transform: translateY(12px) scale(0.8); z-index: 1; opacity: 0.6; }
-                }
-                @keyframes handLeft {
-                    0% { transform: translateY(14px) rotate(20deg) scale(0.8); opacity: 0.7; }
-                    50% { transform: translateY(-14px) rotate(-20deg) scale(1.2); opacity: 1; }
-                    100% { transform: translateY(14px) rotate(20deg) scale(0.8); opacity: 0.7; }
-                }
-                @keyframes handRight {
-                    0% { transform: translateY(-14px) rotate(20deg) scale(1.2); opacity: 1; }
-                    50% { transform: translateY(14px) rotate(-20deg) scale(0.8); opacity: 0.7; }
-                    100% { transform: translateY(-14px) rotate(20deg) scale(1.2); opacity: 1; }
-                }
-                @keyframes bobbing {
-                    0% { transform: scale(1.05); }
-                    25% { transform: scale(0.95); }
-                    50% { transform: scale(1.05); }
-                    75% { transform: scale(0.95); }
-                    100% { transform: scale(1.05); }
-                }
-                .rp { position: absolute; border-radius: 50px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-                .r-hnd { width: 10px; height: 16px; background: #fca5a5; top: 17px; z-index: 9; }
-                .r-ft { width: 12px; height: 22px; background: #0f172a; top: 14px; border-top: 5px solid #fff; }
-                .r-bdy { width: 28px; height: 18px; background: linear-gradient(135deg, #2563eb, #1d4ed8); top: 16px; left: 11px; z-index: 8; animation: runSway ${s1} infinite ease-in-out; }
-                .r-hd { width: 22px; height: 22px; background: #1e293b; top: 14px; left: 14px; z-index: 10; border-top: 6px solid #ef4444; border-radius: 50%; box-sizing: border-box; }
-            </style>
-            <div style="position: absolute; width: 34px; height: 34px; background: rgba(0,0,0,0.6); filter: blur(4px); border-radius: 50%; top: 8px; left: 8px;"></div>
-            <div class="rp r-ft" style="left: 10px; animation: footLeft ${s1} infinite ease-in-out;"></div>
-            <div class="rp r-ft" style="left: 28px; animation: footRight ${s1} infinite ease-in-out;"></div>
-            <div style="animation: bobbing ${s1} infinite ease-in-out;">
-                <div class="rp r-hnd" style="left: 2px; animation: handLeft ${s1} infinite ease-in-out;"></div>
-                <div class="rp r-hnd" style="left: 38px; animation: handRight ${s1} infinite ease-in-out;"></div>
-                <div class="rp r-bdy"></div>
-                <div class="rp r-hd"></div>
-            </div>
-        </div>`;
-        } else {
-            return `<div style="width: 24px; height: 48px; transform-style: preserve-3d; position: relative;"><div style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); filter: blur(5px); transform: translateZ(0px);"></div><div style="position: absolute; width: 100%; height: 100%; background: #1e293b; transform: translateZ(2px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #3b82f6; transform: translateZ(4px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #2563eb; transform: translateZ(6px); border-radius: 6px;"></div><div style="position: absolute; width: 100%; height: 100%; background: #1d4ed8; transform: translateZ(8px); border-radius: 6px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(10px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 50%; left: 7%; top: 25%; background: #0f172a; transform: translateZ(12px); border-radius: 4px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #60a5fa; transform: translateZ(14px); border-radius: 3px;"></div><div style="position: absolute; width: 86%; height: 30%; left: 7%; top: 35%; background: #93c5fd; transform: translateZ(16px); border-radius: 3px; box-shadow: inset 0 0 4px rgba(255,255,255,0.5);"></div><div style="position: absolute; left: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; right: 3px; top: -1px; width: 5px; height: 4px; background: #fef08a; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 -3px 10px #fef08a;"></div><div style="position: absolute; left: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div><div style="position: absolute; right: 3px; bottom: -1px; width: 5px; height: 4px; background: #ef4444; transform: translateZ(6px); border-radius: 2px; box-shadow: 0 3px 10px #ef4444;"></div></div>`;
-        }
-    };
-
-    const mapTileUrls = {
-        'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-        'google-street': `https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&apistyle=s.t%3A2%7Cp.v%3Aoff%2Cs.e%3Al.i%7Cp.v%3Aoff`,
-        'google-hybrid': `https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&apistyle=s.t%3A2%7Cp.v%3Aoff%2Cs.e%3Al.i%7Cp.v%3Aoff`,
-        'carto-dark': 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-    };
-
-    useEffect(() => {
-        animStateRef.current.isMounted = true;
-        return () => {
-            animStateRef.current.isMounted = false;
-            if (animStateRef.current.frameId) cancelAnimationFrame(animStateRef.current.frameId);
-            if (animStateRef.current.recorder && animStateRef.current.recorder.state === 'recording') animStateRef.current.recorder.stop();
-            if (animStateRef.current.map) animStateRef.current.map.remove();
-        };
-    }, []);
-
-    useEffect(() => {
-        animStateRef.current.isPlaying = isPlaying;
-        animStateRef.current.speed = speed;
-        animStateRef.current.vehicleType = vehicleType;
-        animStateRef.current.status = status;
-        
-        const iconDiv = document.getElementById('maplibre-vehicle-icon') || document.getElementById('leaflet-vehicle-icon');
-        if (iconDiv) {
-            iconDiv.innerHTML = getVehicle3DHtml(vehicleType);
-        }
-    }, [isPlaying, speed, vehicleType, status]);
-
-    const stopAnimation = () => {
-        if (animStateRef.current.frameId) cancelAnimationFrame(animStateRef.current.frameId);
-        if (animStateRef.current.recorder && animStateRef.current.recorder.state === 'recording') animStateRef.current.recorder.stop();
-        if (animStateRef.current.map) {
-            animStateRef.current.map.remove();
-            animStateRef.current.map = null;
-        }
-        setStatus('menu');
-        setProgress(0);
-        setIsPlaying(true);
-    };
-
-    const start3DProcess = async (mode) => {
-        if (!road || !road.realGps || road.realGps.length < 2) { 
-            setStatus('error'); setErrorMessage('Data rute GPS tidak valid atau kurang dari 2 titik.'); return; 
-        }
-
-        setStatus('loading');
-        setProgress(0);
-        setIsPlaying(mode === 'auto');
-
-        const points = road.realGps;
-        let cumulativeDistances = [0];
-        let totalDist = 0;
-        for (let i = 1; i < points.length; i++) {
-            totalDist += getDistanceMeters(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
-            cumulativeDistances.push(totalDist);
-        }
-
-        let isMapLibreLoaded = !!window.maplibregl;
-        if (!isMapLibreLoaded) {
-            try {
-                if (!document.querySelector('link[href*="maplibre-gl.css"]')) {
-                    const link = document.createElement('link'); link.rel = 'stylesheet'; 
-                    link.href = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css'; 
-                    document.head.appendChild(link);
-                }
-                isMapLibreLoaded = await new Promise(resolve => {
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js';
-                    script.onload = () => resolve(true);
-                    script.onerror = () => {
-                        const script2 = document.createElement('script');
-                        script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.js';
-                        script2.onload = () => resolve(true);
-                        script2.onerror = () => resolve(false);
-                        document.head.appendChild(script2);
-                    };
-                    document.head.appendChild(script);
-                });
-            } catch (e) { isMapLibreLoaded = false; }
-        }
-
-        if (!animStateRef.current.isMounted) return;
-
-        if (!isMapLibreLoaded || !window.maplibregl) {
-            if (mode === 'auto') {
-                setStatus('error'); setErrorMessage('Mode Otomatis (.webm) butuh 3D Engine. Silakan pilih Mode Sinematik untuk tampilan Darurat 2D.'); return;
-            }
-            if (!window.L) {
-                setStatus('error'); setErrorMessage('Sistem peta utama gagal dimuat. Periksa internet Anda.'); return;
-            }
-
-            setIs2DMode(true);
-            setStatus('presenting');
-            
-            const map = window.L.map(mapContainerRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([points[0].lat, points[0].lng], 18);
-            window.L.tileLayer(mapTileUrls[selectedMapStyle], { maxZoom: 22, maxNativeZoom: 20 }).addTo(map);
-            
-            const latlngs = points.map(p => [p.lat, p.lng]);
-            window.L.polyline(latlngs, { color: getConditionColor(road.condition), weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-            animStateRef.current.map = map;
-
-            let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-            
-            const fallbackIcon = window.L.divIcon({
-                className: 'fallback-vehicle',
-                html: `<div id="leaflet-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-            const fallbackMarker = window.L.marker([points[0].lat, points[0].lng], { icon: fallbackIcon, zIndexOffset: 1000 }).addTo(map);
-
-            let lastTime = null;
-            let currentProgress = 0;
-            const animateFallback = (timestamp) => {
-                if (!lastTime) lastTime = timestamp;
-                const dt = timestamp - lastTime;
-                lastTime = timestamp;
-
-                if (!animStateRef.current.isMounted || animStateRef.current.status !== 'presenting') return;
-
-                if (animStateRef.current.isPlaying) {
-                    const baseDuration = Math.min(30000, Math.max(10000, totalDist * 15));
-                    const actualDuration = baseDuration / animStateRef.current.speed;
-                    currentProgress += dt / actualDuration;
-                    
-                    if (currentProgress > 1) currentProgress = 1;
-                    setProgress(Math.round(currentProgress * 100));
-
-                    const targetDist = currentProgress * totalDist;
-                    let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                    const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
-                    const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
-                    const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                    
-                    const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; 
-                    const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
-                    
-                    if (i < points.length - 1) {
-                        let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
-                        if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                        currentSmoothBearing += diff * 0.08; 
-                    }
-
-                    map.setView([currentLat, currentLng], 18.5, { animate: false });
-                    fallbackMarker.setLatLng([currentLat, currentLng]);
-                    const iconDiv = document.getElementById('leaflet-vehicle-icon');
-                    if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
-                }
-                
-                if (currentProgress < 1) { 
-                    animStateRef.current.frameId = requestAnimationFrame(animateFallback); 
-                } else { 
-                    setTimeout(() => { if(animStateRef.current.isMounted) setIsPlaying(false); }, 500); 
-                }
-            };
-            setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animateFallback); }, 500);
-            return;
-        }
-
-        try {
-            const map = new window.maplibregl.Map({
-                container: mapContainerRef.current,
-                style: {
-                    version: 8,
-                    sources: { 'satellite': { type: 'raster', tiles: [mapTileUrls[selectedMapStyle]], tileSize: 256, maxzoom: 20 } },
-                    layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 24 }]
-                },
-                center: [points[0].lng, points[0].lat],
-                zoom: 18.5, pitch: 70, 
-                bearing: getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng),
-                interactive: false, preserveDrawingBuffer: mode === 'auto'
-            });
-
-            animStateRef.current.map = map;
-
-            map.on('load', () => {
-                if (!animStateRef.current.isMounted) return;
-                map.addSource('route', { 'type': 'geojson', 'data': { 'type': 'Feature', 'properties': {}, 'geometry': { 'type': 'LineString', 'coordinates': points.map(p => [p.lng, p.lat]) } } });
-                map.addLayer({ 'id': 'route', 'type': 'line', 'source': 'route', 'layout': { 'line-join': 'round', 'line-cap': 'round' }, 'paint': { 'line-color': getConditionColor(road.condition), 'line-width': mode === 'presenting' ? 16 : 12, 'line-opacity': 0.8 } });
-
-                let recordedChunks = [];
-                let lastTimeAuto = null; let currentProgressAuto = 0;
-                const duration = Math.min(30000, Math.max(10000, totalDist * 15)); 
-                let currentSmoothBearing = getBearing(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
-                let vehicleMarker = null;
-
-                if (mode === 'auto') {
-                    try {
-                        const createVehicleImage = (type) => {
-                            const size = 80;
-                            const canvas = document.createElement('canvas');
-                            canvas.width = size;
-                            canvas.height = size;
-                            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                            ctx.translate(size / 2, size / 2);
-                            
-                            if (type === 'car') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
-                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-10, -18, 20, 36); 
-                                ctx.fillStyle = '#2563eb'; ctx.fillRect(-8, -16, 16, 32); 
-                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-6, -8, 12, 16); 
-                                ctx.fillStyle = '#fef08a'; ctx.fillRect(-8, -17, 4, 3); ctx.fillRect(4, -17, 4, 3); 
-                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-8, 14, 4, 3); ctx.fillRect(4, 14, 4, 3); 
-                            } else if (type === 'motorcycle') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
-                                ctx.fillStyle = '#1e293b'; ctx.fillRect(-4, -12, 8, 24);
-                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-2, -6, 4, 12);
-                                ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(0, -10, 3, 0, 2*Math.PI); ctx.fill();
-                            } else if (type === 'truck') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
-                                ctx.fillStyle = '#334155'; ctx.fillRect(-14, -28, 28, 56);
-                                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-12, -10, 24, 36);
-                                ctx.fillStyle = '#eab308'; ctx.fillRect(-12, -26, 24, 14);
-                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, -20, 20, 6);
-                            } else if (type === 'runner') {
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 6;
-                                ctx.fillStyle = '#0f172a'; ctx.fillRect(-12, -18, 8, 14); 
-                                ctx.fillStyle = '#ffffff'; ctx.fillRect(-12, -18, 8, 4); 
-                                ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 4, 8, 14);
-                                ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 14, 8, 4); 
-                                ctx.fillStyle = '#fca5a5'; ctx.fillRect(-16, 4, 6, 12);
-                                ctx.fillStyle = '#fca5a5'; ctx.fillRect(10, -14, 6, 12);
-                                ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, 2*Math.PI); ctx.fill();
-                                ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2*Math.PI); ctx.fill();
-                                ctx.fillStyle = '#ef4444'; ctx.fillRect(-10, -8, 20, 6); 
-                            } else { 
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
-                                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-2, -16, 4, 32); ctx.fillRect(-16, -2, 32, 4);
-                                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2*Math.PI); ctx.fill();
-                                ctx.fillStyle = '#0f172a';
-                                [[-16,-16], [16,-16], [-16,16], [16,16]].forEach(([dx,dy]) => {
-                                    ctx.beginPath(); ctx.arc(dx, dy, 7, 0, 2*Math.PI); ctx.fill();
-                                    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle = '#0f172a';
-                                });
-                            }
-                            
-                            const imageData = ctx.getImageData(0, 0, size, size);
-                            return { width: size, height: size, data: new Uint8Array(imageData.data.buffer) };
-                        };
-
-                        map.addImage('vehicle-icon', createVehicleImage(animStateRef.current.vehicleType));
-                        map.addSource('vehicle', {
-                            type: 'geojson',
-                            data: { type: 'Feature', properties: { bearing: currentSmoothBearing }, geometry: { type: 'Point', coordinates: [points[0].lng, points[0].lat] } }
-                        });
-                        map.addLayer({
-                            id: 'vehicle-layer',
-                            type: 'symbol',
-                            source: 'vehicle',
-                            layout: {
-                                'icon-image': 'vehicle-icon',
-                                'icon-size': 1.5,
-                                'icon-rotation-alignment': 'map',
-                                'icon-rotate': ['get', 'bearing'],
-                                'icon-allow-overlap': true,
-                                'icon-ignore-placement': true
-                            }
-                        });
-
-                        const outCanvas = document.createElement('canvas'); outCanvas.width = 1920; outCanvas.height = 1080; 
-                        const ctx = outCanvas.getContext('2d'); const mapCanvas = map.getCanvas();
-                        const stream = outCanvas.captureStream ? outCanvas.captureStream(30) : (outCanvas.mozCaptureStream ? outCanvas.mozCaptureStream(30) : null);
-                        if (!stream) throw new Error("Browser tidak mendukung tangkapan layar internal.");
-                        const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm; codecs=vp9') ? 'video/webm; codecs=vp9' : 'video/webm' });
-                        animStateRef.current.recorder = recorder;
-
-                        recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                        recorder.onstop = () => {
-                            if (!animStateRef.current.isMounted) return;
-                            if (recordedChunks.length === 0) { setStatus('error'); setErrorMessage('Video kosong (0 bytes). Browser memblokir penyimpanan.'); return; }
-                            const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
-                            setDownloadUrl(url); setStatus('finished');
-                            const a = document.createElement('a'); a.href = url; a.download = `DroneView_${road.name.replace(/\s+/g, '_')}.webm`; 
-                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        };
-
-                        recorder.start(); setStatus('recording');
-
-                        const animateAuto = (timestamp) => {
-                            if (!lastTimeAuto) lastTimeAuto = timestamp;
-                            const dt = timestamp - lastTimeAuto; lastTimeAuto = timestamp;
-                            if (!animStateRef.current.isMounted) return;
-
-                            const actualDuration = duration / animStateRef.current.speed;
-                            currentProgressAuto += dt / actualDuration;
-                            if (currentProgressAuto > 1) currentProgressAuto = 1;
-                            setProgress(Math.round(currentProgressAuto * 100));
-
-                            const targetDist = currentProgressAuto * totalDist;
-                            let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                            const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
-                            const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
-                            const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                            const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
-                            
-                            if (i < points.length - 1) {
-                                let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
-                                if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                                currentSmoothBearing += diff * 0.08; 
-                            }
-
-                            let pitch = 70; let zoom = 19;
-                            if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
-                            
-                            map.getSource('vehicle').setData({
-                                type: 'Feature',
-                                properties: { bearing: currentSmoothBearing },
-                                geometry: { type: 'Point', coordinates: [currentLng, currentLat] }
-                            });
-                            
-                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
-                            
-                            try {
-                                ctx.drawImage(mapCanvas, 0, 0, 1920, 1080);
-                                const grad = ctx.createLinearGradient(0, 750, 0, 1080); 
-                                grad.addColorStop(0, 'transparent'); 
-                                grad.addColorStop(1, 'rgba(15,23,42,0.95)'); 
-                                ctx.fillStyle = grad; 
-                                ctx.fillRect(0, 750, 1920, 330);
-                                
-                                ctx.fillStyle = '#ffffff'; 
-                                ctx.font = 'bold 64px sans-serif'; 
-                                ctx.fillText(`${road.name.toUpperCase()}`, 75, 945);
-                                
-                                ctx.font = '36px sans-serif'; 
-                                ctx.fillStyle = '#cbd5e1'; 
-                                ctx.fillText(`Kondisi: ${road.condition} • Panjang: ${(totalDist/1000).toFixed(2)} km`, 75, 1012);
-                                
-                                ctx.fillStyle = getConditionColor(road.condition); 
-                                ctx.fillRect(0, 1065, 1920 * currentProgressAuto, 15);
-                            } catch (err) { throw new Error("Browser memblokir render visual (Tainted Canvas)."); }
-
-                            if (currentProgressAuto < 1) { animStateRef.current.frameId = requestAnimationFrame(animateAuto); } 
-                            else { setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 1000); }
-                        };
-                        animStateRef.current.frameId = requestAnimationFrame(animateAuto);
-                    } catch (err) { setStatus('error'); setErrorMessage(err.message + " Gunakan Mode Sinematik untuk kepastian 100%."); }
-                } else {
-                    const el = document.createElement('div'); el.style.width = '40px'; el.style.height = '40px';
-                    el.innerHTML = `<div id="maplibre-vehicle-icon" style="width: 100%; height: 100%; transform-origin: center center; transition: transform 0.1s linear; transform: rotate(${currentSmoothBearing}deg);">${getVehicle3DHtml(animStateRef.current.vehicleType)}</div>`;
-                    vehicleMarker = new window.maplibregl.Marker({ element: el, pitchAlignment: 'map', rotationAlignment: 'map' }).setLngLat([points[0].lng, points[0].lat]).addTo(map);
-
-                    setStatus('presenting');
-                    let lastTime = null; let currentProgress = 0;
-                    const animatePresent = (timestamp) => {
-                        if (!lastTime) lastTime = timestamp;
-                        const dt = timestamp - lastTime; lastTime = timestamp;
-                        if (!animStateRef.current.isMounted || animStateRef.current.status !== 'presenting') return;
-
-                        if (animStateRef.current.isPlaying) {
-                            const baseDuration = Math.min(30000, Math.max(10000, totalDist * 15));
-                            const actualDuration = baseDuration / animStateRef.current.speed;
-                            currentProgress += dt / actualDuration;
-                            if (currentProgress > 1) currentProgress = 1;
-                            setProgress(Math.round(currentProgress * 100));
-
-                            const targetDist = currentProgress * totalDist;
-                            let i = 0; while (i < cumulativeDistances.length - 1 && cumulativeDistances[i + 1] < targetDist) { i++; }
-                            const p1 = points[i]; const p2 = points[Math.min(i + 1, points.length - 1)];
-                            const segDist = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
-                            const segProgress = segDist === 0 ? 0 : (targetDist - cumulativeDistances[i]) / segDist;
-                            const currentLat = p1.lat + (p2.lat - p1.lat) * segProgress; const currentLng = p1.lng + (p2.lng - p1.lng) * segProgress;
-                            
-                            if (i < points.length - 1) {
-                                let diff = getBearing(p1.lat, p1.lng, p2.lat, p2.lng) - currentSmoothBearing;
-                                if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-                                currentSmoothBearing += diff * 0.08; 
-                            }
-
-                            let pitch = 70; let zoom = 19;
-                            if (animStateRef.current.vehicleType === 'drone') { pitch = 60; zoom = 18.5; }
-                            map.jumpTo({ center: [currentLng, currentLat], bearing: currentSmoothBearing, pitch: pitch, zoom: zoom });
-                            vehicleMarker.setLngLat([currentLng, currentLat]);
-                            const iconDiv = document.getElementById('maplibre-vehicle-icon');
-                            if (iconDiv) iconDiv.style.transform = `rotate(${currentSmoothBearing}deg)`;
-                        }
-
-                        if (currentProgress < 1) { animStateRef.current.frameId = requestAnimationFrame(animatePresent); } 
-                        else { setTimeout(() => { if(animStateRef.current.isMounted) setIsPlaying(false); }, 500); }
-                    };
-                    setTimeout(() => { if(animStateRef.current.isMounted) animStateRef.current.frameId = requestAnimationFrame(animatePresent); }, 500);
-                }
-            });
-        } catch (err) { setStatus('error'); setErrorMessage('Terjadi kesalahan saat memuat peta 3D.'); }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-            <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${status === 'presenting' || status === 'recording' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <div ref={mapContainerRef} className="w-full h-full bg-black"></div>
-                {status === 'presenting' && (
-                    <>
-                        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/80 to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-2 md:gap-4 bg-black/60 backdrop-blur-md px-4 py-2 md:px-6 md:py-3 rounded-full border border-white/20 shadow-2xl transition-opacity duration-300">
-                            <button onClick={() => setIsPlaying(!isPlaying)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white transition-colors ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
-                                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
-                            </button>
-                            <button onClick={stopAnimation} className="w-10 h-10 flex items-center justify-center rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-sm" title="Stop & Kembali">
-                                <Square className="w-5 h-5" fill="currentColor" />
-                            </button>
-                            <div className="w-px h-8 bg-white/20 mx-1"></div>
-                            <select value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold outline-none cursor-pointer rounded-lg px-2 py-1.5 border border-white/10 appearance-none text-center">
-                                <option value="0.5" className="text-black">🐢 0.5x</option>
-                                <option value="1" className="text-black">▶️ 1.0x</option>
-                                <option value="2" className="text-black">🐇 2.0x</option>
-                                <option value="3" className="text-black">⚡ 3.0x</option>
-                            </select>
-                            <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className="bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold outline-none cursor-pointer rounded-lg px-2 py-1.5 border border-white/10 appearance-none text-center">
-                                <option value="car" className="text-black">🚗 Mobil 3D</option>
-                                <option value="motorcycle" className="text-black">🏍️ Motor 3D</option>
-                                <option value="truck" className="text-black">🚛 Truk 3D</option>
-                                <option value="runner" className="text-black">🏃 Pelari 3D</option>
-                                <option value="drone" className="text-black">🚁 Drone 3D</option>
-                            </select>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/70 to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none">
-                            <div>
-                                <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mb-2 uppercase">{road.name}</h2>
-                                <div className="flex gap-4 items-center">
-                                    <span className="px-3 py-1 rounded-full text-white text-sm font-bold shadow-lg" style={{backgroundColor: getConditionColor(road.condition)}}>{road.condition}</span>
-                                    <span className="text-white text-lg font-bold drop-shadow-md">{formatKel(road.kelurahan)} • {(road.length || 0)} km</span>
-                                    {is2DMode && <span className="bg-slate-700 text-white px-2 py-0.5 rounded text-xs opacity-70">Top-Down 2D Mode</span>}
-                                </div>
-                            </div>
-                            <div className="w-full md:w-1/3 max-w-sm pointer-events-auto">
-                                <div className="flex justify-between text-xs text-slate-300 font-bold mb-1"><span>Titik Awal</span><span>Tujuan</span></div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700"><div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, backgroundColor: getConditionColor(road.condition) }}></div></div>
-                            </div>
-                        </div>
-
-                        <button onClick={() => { stopAnimation(); onClose(); }} className="absolute top-6 right-6 z-30 bg-black/50 hover:bg-rose-600 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-colors shadow-lg">
-                            <X className="w-6 h-6" strokeWidth={2.5}/>
-                        </button>
-                    </>
-                )}
-            </div>
-
-            {status !== 'presenting' && (
-                <div className="relative z-50 bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-fade-in-up m-4">
-                    {status === 'menu' && (
-                        <div className="p-8">
-                            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Camera className="w-8 h-8" strokeWidth={2} />
-                            </div>
-                            
-                            <div className="mb-5">
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">Pilihan Peta Dasar</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => setSelectedMapStyle('google-satellite')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-satellite' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🌍 Satelit</button>
-                                    <button onClick={() => setSelectedMapStyle('google-street')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-street' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🗺️ Jalan (Map)</button>
-                                    <button onClick={() => setSelectedMapStyle('google-hybrid')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'google-hybrid' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🏷️ Satelit + Label</button>
-                                    <button onClick={() => setSelectedMapStyle('carto-dark')} className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${selectedMapStyle === 'carto-dark' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>🌙 Mode Gelap</button>
-                                </div>
-                            </div>
-
-                            <p className="text-slate-500 text-center text-[13px] mb-4 leading-relaxed">Sistem akan secara otomatis menjalankan Mode Animasi. Jika 3D dicegat oleh browser Anda, sistem akan memutar mode Cinematic 2D yang elegan.</p>
-                            
-                            <div className="space-y-3">
-                                <button onClick={() => start3DProcess('presenting')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl text-left flex items-start gap-4 transition-all shadow-md group">
-                                    <div className="bg-white/20 p-2 rounded-xl group-hover:scale-110 transition-transform">📺</div>
-                                    <div>
-                                        <div className="font-bold text-sm md:text-base">Mode Sinematik (Paling Aman)</div>
-                                        <div className="text-xs text-indigo-200 mt-1 font-medium">Animasi diputar otomatis layar penuh. Aktifkan Perekam Layar (Screen Record) HP/Laptop Anda.</div>
-                                    </div>
-                                </button>
-                                <button onClick={() => start3DProcess('auto')} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 p-4 rounded-2xl text-left flex items-start gap-4 border border-slate-300 transition-all group">
-                                    <div className="bg-white p-2 rounded-xl shadow-sm group-hover:scale-110 transition-transform text-slate-500">⚙️</div>
-                                    <div>
-                                        <div className="font-bold text-sm md:text-base">Coba Simpan Otomatis (.webm)</div>
-                                        <div className="text-xs text-slate-500 mt-1">Sistem mencoba membuat video internal. Terkadang gagal akibat restriksi izin perekaman browser.</div>
-                                    </div>
-                                </button>
-                            </div>
-                            <button onClick={onClose} className="w-full mt-4 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-colors">Batal</button>
-                        </div>
-                    )}
-
-                    {(status === 'loading' || status === 'recording') && (
-                        <div className="p-10 flex flex-col items-center justify-center">
-                            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
-                            <h2 className="text-xl font-black text-slate-900 mb-2">{status === 'loading' ? 'Menyiapkan Peta Cinematic...' : 'Merekam Video Internal...'}</h2>
-                            {status === 'recording' && (
-                                <div className="w-full max-w-xs mt-4">
-                                    <div className="flex justify-between text-xs text-slate-500 font-bold mb-1"><span>Proses Render</span><span>{progress}%</span></div>
-                                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200"><div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${progress}%` }}></div></div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {status === 'finished' && (
-                        <div className="p-10 text-center">
-                            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Check className="w-10 h-10" strokeWidth={3} />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 mb-2">Selesai!</h2>
-                            <p className="text-slate-500 mb-6 font-medium text-sm">Proses animasi telah berakhir.</p>
-                            <div className="flex gap-3 justify-center">
-                                {downloadUrl && <a href={downloadUrl} download={`DroneView_${road.name.replace(/\s+/g, '_')}.webm`} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-md">Unduh Video</a>}
-                                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition-colors">Kembali</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {status === 'error' && (
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Info className="w-8 h-8" strokeWidth={2.5} />
-                            </div>
-                            <h2 className="text-xl font-black text-slate-900 mb-2">Gagal Merekam Internal</h2>
-                            <p className="text-slate-600 mb-6 text-sm bg-rose-50 p-3 rounded-lg border border-rose-100 inline-block">{errorMessage}</p>
-                            <div className="flex flex-col gap-3">
-                                <button onClick={() => start3DProcess('presenting')} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2">📺 Gunakan Mode Sinematik Saja</button>
-                                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition-colors">Batal</button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
 
 export default function App() {
+  // Navigation & Screen States
   const [appRole, setAppRole] = useState(null); 
   const [mobileScreen, setMobileScreen] = useState('home'); 
-  const [selectedRoad, setSelectedRoad] = useState(null);
+  
+  // UI States
+  const [toastMessage, setToastMessage] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', actionLabel: '', onConfirm: null, isDanger: false });
+  
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // Database & Map Data
   const [supabase, setSupabase] = useState(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', actionLabel: '', onConfirm: null, isDanger: true });
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const showToast = (message) => { setToastMessage(String(message)); setTimeout(() => setToastMessage(null), 4000); };
-
-  useEffect(() => {
-      const handleHashChange = () => {
-          const hash = window.location.hash;
-          if (hash === '#/' || hash === '') setAppRole(null);
-          else if (hash === '#/admin') { setAppRole('admin'); setSelectedRoad(null); } 
-          else if (hash === '#/admin/detail') setAppRole('admin');
-          else if (hash.startsWith('#/surveyor')) { setAppRole('surveyor'); setMobileScreen(hash.replace('#/surveyor/', '') || 'home'); }
-      };
-      window.addEventListener('hashchange', handleHashChange);
-      if (!window.location.hash) window.location.hash = '#/';
-      else handleHashChange();
-      return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  useEffect(() => {
-    let metaViewport = document.querySelector('meta[name="viewport"]');
-    if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
-    metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { darkMode: 'class' };
-
-    if (!document.getElementById('tailwind-cdn')) {
-      const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
-    }
-
-    if (SUPABASE_ANON_KEY.includes('PASTE_KUNCI')) return; 
-
-    const initSupabase = () => { try { setSupabase(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)); } catch (err) { console.warn(err); } };
-    if (window.supabase) { initSupabase(); return; }
-
-    const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; script.id = 'supabase-js';
-    script.onload = initSupabase; document.head.appendChild(script);
-  }, []);
-
-  const [syncedRoads, setSyncedRoads] = useState([]); 
-  const [drafts, setDrafts] = useState([]); 
-  const [videoSnapshot, setVideoSnapshot] = useState([]); 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncedRoads, setSyncedRoads] = useState([]);
+  const [filteredRoads, setFilteredRoads] = useState([]);
+  const [sortedRoads, setSortedRoads] = useState([]);
+  const [searchedRoads, setSearchedRoads] = useState([]);
+  
+  // Surveyor Form & Drafts
+  const [drafts, setDrafts] = useState([]);
+  const [selectedDraftIds, setSelectedDraftIds] = useState([]);
+  const [draftDateFilter, setDraftDateFilter] = useState('Semua');
+  const [formData, setFormData] = useState({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
+  const [editingDraftId, setEditingDraftId] = useState(null); 
+  
+  // Hardware & Perekaman
+  const [realGpsPoints, setRealGpsPoints] = useState([]);
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingStatus, setRecordingStatus] = useState('idle');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordTab, setRecordTab] = useState('map');
+  const [gpsAccuracy, setGpsAccuracy] = useState('-');
+  const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  
+  // Drawing & Pin Mapping
+  const [manualDrawnPoints, setManualDrawnPoints] = useState([]);
+  const [pinLocation, setPinLocation] = useState(null);
+  
+  // Upload Media
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
+  const [uploadedVideoFile, setUploadedVideoFile] = useState(null);
+  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
+  const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
   const [syncMessage, setSyncMessage] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  useEffect(() => {
-    try { const savedDrafts = localStorage.getItem('rmap_drafts'); if (savedDrafts) setDrafts(JSON.parse(savedDrafts)); } catch (e) {}
-  }, []);
-
-  useEffect(() => {
-    try { const draftsToSave = drafts.map(({ videoFile, photoFiles, ...safeDraft }) => safeDraft); localStorage.setItem('rmap_drafts', JSON.stringify(draftsToSave)); } catch (e) {}
-  }, [drafts]);
-
-  const initialKelurahanState = KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = true; return acc; }, {});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeKelurahan, setActiveKelurahan] = useState(initialKelurahanState);
-  const [activeConditions, setActiveConditions] = useState({ 'Baik': true, 'Rusak Ringan': true, 'Rusak Sedang': true, 'Rusak Parah': true });
-  const [activeJenis, setActiveJenis] = useState({ 'Aspal': true, 'Beton': true, 'Tanah': true });
-  const [expandedSection, setExpandedSection] = useState(null); 
-  const [sortConfig, setSortConfig] = useState('date_desc'); 
-
-  // --- STATE TOOLBAR HEADER (NEW) ---
+  // Admin Filtering & Layout
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeKelurahan, setActiveKelurahan] = useState(KELURAHAN_LIST.reduce((acc, kel) => ({...acc, [kel]: true}), {}));
+  const [showKelurahan, setShowKelurahan] = useState(false);
+  const [showKecamatan, setShowKecamatan] = useState(false);
+  const [kecamatanData, setKecamatanData] = useState(null);
+  const [kelurahanData, setKelurahanData] = useState(null);
+  const [isLoadingKecamatan, setIsLoadingKecamatan] = useState(false);
+  const [isLoadingKelurahan, setIsLoadingKelurahan] = useState(false);
+  const [expandedSection, setExpandedSection] = useState('rute');
+  const [sortConfig, setSortConfig] = useState('date_desc');
   const [selectedToolbarKec, setSelectedToolbarKec] = useState('Semua');
   const [selectedToolbarKel, setSelectedToolbarKel] = useState('Semua');
+  const [adminStats, setAdminStats] = useState({ baik: 0, rusakRingan: 0, rusakSedang: 0, rusakParah: 0 });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  useEffect(() => {
-      const activeKels = Object.keys(activeKelurahan).filter(k => activeKelurahan[k]);
-      if (activeKels.length === KELURAHAN_LIST.length) {
-          setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua');
-      } else if (activeKels.length > 0) {
-          let foundKec = null; let singleKec = true;
-          for(const kel of activeKels) {
-              const kec = Object.keys(KECAMATAN_DATA).find(k => KECAMATAN_DATA[k].includes(kel));
-              if (!foundKec) foundKec = kec; else if (foundKec !== kec) { singleKec = false; break; }
-          }
-          if (singleKec && foundKec) {
-              setSelectedToolbarKec(foundKec); setSelectedToolbarKel(activeKels.length === 1 ? activeKels[0] : 'Semua');
-          } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
-      } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
-  }, [activeKelurahan]);
-
-  const handleToolbarKecChange = (kec) => {
-      setSelectedToolbarKec(kec); setSelectedToolbarKel('Semua');
-      if (kec === 'Semua') setActiveKelurahan(initialKelurahanState);
-      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); KECAMATAN_DATA[kec].forEach(k => newActive[k] = true); setActiveKelurahan(newActive); }
-  };
-
-  const handleToolbarKelChange = (kel) => {
-      setSelectedToolbarKel(kel);
-      if (kel === 'Semua') handleToolbarKecChange(selectedToolbarKec);
-      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); newActive[kel] = true; setActiveKelurahan(newActive); }
-  };
-  // ----------------------------------
-
-  const toggleKecamatan = (kecamatan) => {
-      const kels = KECAMATAN_DATA[kecamatan];
-      const isAllActive = kels.every(k => activeKelurahan[k]);
-      setActiveKelurahan(prev => {
-          const next = { ...prev };
-          kels.forEach(k => next[k] = !isAllActive);
-          return next;
-      });
-  };
-
-  const [highlightedRoadId, setHighlightedRoadId] = useState(null);
-  const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]); 
-  
+  // Animation Controls
   const [isAnimatingMap, setIsAnimatingMap] = useState(false);
-  const [animatingRoadsList, setAnimatingRoadsList] = useState([]); 
-  const [isAnimPaused, setIsAnimPaused] = useState(false);
-  const isAnimPausedRef = useRef(false);
-  const [isAnimFinished, setIsAnimFinished] = useState(false); 
-  const [isAnimControlMinimized, setIsAnimControlMinimized] = useState(false);
-  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
-  const animationSpeedRef = useRef(1.0);
-  const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
-  const [showSpeedControl, setShowSpeedControl] = useState(false);
-  const [animIconType, setAnimIconType] = useState('car'); 
-
+  const [animatingRoadsList, setAnimatingRoadsList] = useState([]);
   const [isExportingDroneVideo, setIsExportingDroneVideo] = useState(false);
-  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false); 
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [animIconType, setAnimIconType] = useState('car');
+  const [isAnimPaused, setIsAnimPaused] = useState(false);
+  const [isAnimFinished, setIsAnimFinished] = useState(false);
+  const [isAnimControlMinimized, setIsAnimControlMinimized] = useState(false);
+  const [showSpeedControl, setShowSpeedControl] = useState(false);
+  const [animationSpeedMultiplier, setAnimationSpeedMultiplier] = useState(1.0);
+  const [currentAnimDistance, setCurrentAnimDistance] = useState(0);
+  
+  // Selection
+  const [selectedAdminRouteIds, setSelectedAdminRouteIds] = useState([]);
+  const [highlightedRoadId, setHighlightedRoadId] = useState(null);
+  const [selectedRoad, setSelectedRoad] = useState(null);
+  const [videoSnapshot, setVideoSnapshot] = useState([]);
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
 
-  useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
-  useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
+  // Reference hooks
+  const videoRef = useRef(null); 
+  const streamRef = useRef(null); 
+  const watchIdRef = useRef(null);
+  const locatingTimeoutRef = useRef(null); 
+  const isGpsForcedRef = useRef(false);
+  const lastMoveTimeRef = useRef(Date.now());
+  const recordingStatusRef = useRef('idle');
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // <--- INI BAGIAN YANG DIUBAH
-
-  const adminMapContainerRef = useRef(null);
-  const adminMapInstanceRef = useRef(null);
+  const adminMapContainerRef = useRef(null); 
+  const adminMapInstanceRef = useRef(null); 
   const adminLayerGroupRef = useRef(null);
   const adminHighlightLayerGroupRef = useRef(null);
   const hasFittedAdminMapRef = useRef(false);
   const prevAdminSelectionCountRef = useRef(0);
-  
-  // State untuk menyimpan status batas kecamatan OSM
-  const adminKecamatanLayerRef = useRef(null);
-  const [showKecamatan, setShowKecamatan] = useState(false);
-  const [isLoadingKecamatan, setIsLoadingKecamatan] = useState(false);
-  const [kecamatanData, setKecamatanData] = useState(null); // NEW
-
-  // State untuk menyimpan status batas kelurahan OSM
   const adminKelurahanLayerRef = useRef(null);
-  const [showKelurahan, setShowKelurahan] = useState(false);
-  const [isLoadingKelurahan, setIsLoadingKelurahan] = useState(false);
-  const [kelurahanData, setKelurahanData] = useState(null); // NEW
+  const adminKecamatanLayerRef = useRef(null);
 
-  // --- EFEK FETCH DATA GEOJSON (Hanya sekali saat Admin masuk) ---
-  useEffect(() => {
-      if (appRole === 'admin') {
-          setIsLoadingKecamatan(true);
-          fetch('/data/batas-kecamatan.geojson')
-            .then(res => res.json())
-            .then(data => { setKecamatanData(data); setIsLoadingKecamatan(false); })
-            .catch(() => setIsLoadingKecamatan(false));
-
-          setIsLoadingKelurahan(true);
-          fetch('/data/batas-kelurahan.geojson')
-            .then(res => res.json())
-            .then(data => { setKelurahanData(data); setIsLoadingKelurahan(false); })
-            .catch(() => setIsLoadingKelurahan(false));
-      }
-  }, [appRole]);
-
-  useEffect(() => {
-      if (appRole === 'admin') hasFittedAdminMapRef.current = false;
-  }, [appRole, searchQuery, activeKelurahan, activeConditions, activeJenis]);
-
-  useEffect(() => {
-    if (!selectedRoad) {
-      setHighlightedRoadId(null); 
-      setIsVideoFullscreen(false); 
-      if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup();
-    } else {
-      setHighlightedRoadId(selectedRoad.id || selectedRoad.dbId); 
-    }
-  }, [selectedRoad]);
-
-  const toggleAdminRouteSelection = (id) => { setSelectedAdminRouteIds(prev => prev.includes(id) ? prev.filter(rId => rId !== id) : [...prev, id]); };
-  const closeAdminModal = () => { setIsVideoFullscreen(false); if (window.location.hash === '#/admin/detail') window.history.back(); else setSelectedRoad(null); };
-
-  const filteredRoads = syncedRoads.filter(road => {
-    const matchKel = road.kelurahan ? activeKelurahan[road.kelurahan] !== false : true;
-    const matchCond = activeConditions[road.condition] !== false;
-    const matchJenis = activeJenis[road.jenisJalan || 'Aspal'] !== false;
-    const matchSearch = road.name.toLowerCase().includes(searchQuery.toLowerCase()) || (road.kelurahan && road.kelurahan.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchKel && matchCond && matchJenis && matchSearch;
-  });
-
-  const searchedRoads = syncedRoads.filter(road => {
-    return road.name.toLowerCase().includes(searchQuery.toLowerCase()) || (road.kelurahan && road.kelurahan.toLowerCase().includes(searchQuery.toLowerCase()));
-  });
-
-  const sortedRoads = [...searchedRoads].sort((a, b) => {
-      if (sortConfig === 'name_asc') return a.name.localeCompare(b.name);
-      if (sortConfig === 'name_desc') return b.name.localeCompare(a.name);
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      if (sortConfig === 'date_asc') return dateA - dateB;
-      return dateB - dateA;
-  });
-
-  const adminStats = {
-    total: filteredRoads.length,
-    baik: filteredRoads.filter(r => r.condition === 'Baik').length,
-    rusakRingan: filteredRoads.filter(r => r.condition === 'Rusak Ringan').length,
-    rusakSedang: filteredRoads.filter(r => r.condition === 'Rusak Sedang').length,
-    rusakParah: filteredRoads.filter(r => r.condition === 'Rusak Parah').length,
-    aspal: filteredRoads.filter(r => r.jenisJalan === 'Aspal' || !r.jenisJalan).length,
-    beton: filteredRoads.filter(r => r.jenisJalan === 'Beton').length,
-    tanah: filteredRoads.filter(r => r.jenisJalan === 'Tanah').length,
-  };
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [realGpsPoints, setRealGpsPoints] = useState([]);
-  const [manualDrawnPoints, setManualDrawnPoints] = useState([]);
-  const [gpsAccuracy, setGpsAccuracy] = useState('-');
-  const [currentSpeed, setCurrentSpeed] = useState(0);
-  const [totalDistance, setTotalDistance] = useState(0);
-  const [pinLocation, setPinLocation] = useState(null); 
-  const [currentLocation, setCurrentLocation] = useState(null); 
-  const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
-  const [uploadedVideoFile, setUploadedVideoFile] = useState(null); 
-  const [uploadedPhotoFiles, setUploadedPhotoFiles] = useState([]);
-  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState([]);
-  const [recordingStatus, setRecordingStatus] = useState('idle'); 
-  const recordingStatusRef = useRef('idle');
-  const lastMoveTimeRef = useRef(Date.now());
-  const [recordTab, setRecordTab] = useState('camera'); 
-  const [recordingDuration, setRecordingDuration] = useState(0);
+  const surveyorMapContainerRef = useRef(null); 
+  const surveyorMapInstanceRef = useRef(null); 
+  const surveyorMarkerRef = useRef(null); 
+  const currentLocationMarkerRef = useRef(null); 
 
   const liveMapContainerRef = useRef(null);
   const liveMapInstanceRef = useRef(null);
-  const liveMapMarkerRef = useRef(null);
   const liveMapPolylineRef = useRef(null);
+  const liveMapMarkerRef = useRef(null);
+
   const drawMapContainerRef = useRef(null);
   const drawMapInstanceRef = useRef(null);
   const drawPolylineRef = useRef(null);
   const drawMarkersGroupRef = useRef(null);
   const drawMapCurrentLocMarkerRef = useRef(null);
 
-  useEffect(() => { recordingStatusRef.current = recordingStatus; }, [recordingStatus]);
-  useEffect(() => { let interval; if (recordingStatus === 'recording') { interval = setInterval(() => { setRecordingDuration(prev => prev + 1); }, 1000); } return () => clearInterval(interval); }, [recordingStatus]);
+  const animationSpeedRef = useRef(1.0);
+  const isAnimPausedRef = useRef(false);
 
+  const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
+
+  useEffect(() => { recordingStatusRef.current = recordingStatus; }, [recordingStatus]);
+  useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
+  useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
+
+  useEffect(() => {
+    let interval; 
+    if (recordingStatus === 'recording') { interval = setInterval(() => { setRecordingDuration(prev => prev + 1); }, 1000); } 
+    return () => clearInterval(interval); 
+  }, [recordingStatus]);
+
+  // Handle route hashing
+  useEffect(() => {
+      const handleHashChange = () => {
+          const hash = window.location.hash;
+          if (hash.startsWith('#/surveyor')) {
+              setAppRole('surveyor');
+              if (hash.includes('record')) setMobileScreen('record');
+              else if (hash.includes('draw_map')) setMobileScreen('draw_map');
+              else if (hash.includes('pin_map')) setMobileScreen('pin_map');
+              else if (hash.includes('form')) setMobileScreen('form');
+              else if (hash.includes('drafts')) setMobileScreen('drafts');
+              else setMobileScreen('home');
+          } else if (hash.startsWith('#/admin')) {
+              setAppRole('admin');
+              if (!hash.includes('detail')) { setSelectedRoad(null); }
+          } else {
+              setAppRole(null);
+          }
+      };
+      
+      window.addEventListener('hashchange', handleHashChange);
+      handleHashChange();
+      return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Memaksa Hentikan Hardware bila tiba-tiba keluar mode surveyor record
   useEffect(() => {
      if (mobileScreen !== 'record' && isRecording) {
          if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
@@ -1158,31 +438,23 @@ export default function App() {
      }
   }, [mobileScreen, isRecording]);
 
-  const [selectedDraftIds, setSelectedDraftIds] = useState([]);
-  const [formData, setFormData] = useState({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
-  const [editingDraftId, setEditingDraftId] = useState(null); 
-  const videoRef = useRef(null); const streamRef = useRef(null); const watchIdRef = useRef(null);
-  const surveyorMapContainerRef = useRef(null); const surveyorMapInstanceRef = useRef(null); const surveyorMarkerRef = useRef(null); const currentLocationMarkerRef = useRef(null); 
-  const locatingTimeoutRef = useRef(null); const isGpsForcedRef = useRef(false);
-
-  const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
+  useEffect(() => {
+      if (typeof window !== 'undefined' && window.supabase) {
+          setSupabase(window.supabase);
+      } else {
+          // Dummy mock supabase for initial load to avoid breaking 
+          setSupabase({ from: () => ({ select: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }), insert: async () => ({ error: null }), delete: () => ({ eq: async () => ({ error: null }) }) }) });
+      }
+  }, []);
 
   useEffect(() => {
     const initLeaflet = async () => {
-        const success = await loadLibrarySafely(
-            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
-            [
-                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
-                'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-            ],
-            'L'
-        );
+        const success = await loadLibrarySafely('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css', ['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js', 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'], 'L');
         if (success) setIsLeafletLoaded(true);
-        else console.error("Leaflet gagal diinisialisasi");
     };
     initLeaflet();
   }, []);
+
 
   const formatRoadData = (road) => {
     let parsedGps = road.realGps; let parsedPin = road.pinLocation; let parsedPhotos = road.photoUrls;
@@ -1201,10 +473,84 @@ export default function App() {
       const formattedData = (data || []).map(formatRoadData);
       setSyncedRoads(prev => JSON.stringify(prev) === JSON.stringify(formattedData) ? prev : formattedData);
       setIsDbConnected(true);
-    } catch (error) { setIsDbConnected(false); if (error.message.includes("Failed to fetch")) showToast("Gagal menyambung ke database."); }
+    } catch (error) { setIsDbConnected(false); }
   };
 
   useEffect(() => { if (!supabase) return; fetchRoads(); const intervalId = setInterval(() => { fetchRoads(); }, 15000); return () => clearInterval(intervalId); }, [supabase]);
+
+  useEffect(() => {
+      const activeKels = Object.keys(activeKelurahan).filter(k => activeKelurahan[k]);
+      let filtered = syncedRoads.filter(r => activeKels.includes(r.kelurahan));
+      
+      if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter(r => r.name.toLowerCase().includes(q) || r.kelurahan.toLowerCase().includes(q));
+      }
+      
+      setFilteredRoads(filtered);
+      setSearchedRoads(filtered);
+      
+      const stats = { baik: 0, rusakRingan: 0, rusakSedang: 0, rusakParah: 0 };
+      filtered.forEach(r => {
+          if (r.condition === 'Baik') stats.baik++;
+          else if (r.condition === 'Rusak Ringan') stats.rusakRingan++;
+          else if (r.condition === 'Rusak Sedang') stats.rusakSedang++;
+          else if (r.condition === 'Rusak Parah') stats.rusakParah++;
+      });
+      setAdminStats(stats);
+      
+      let sorted = [...filtered];
+      if (sortConfig === 'date_desc') sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      else if (sortConfig === 'date_asc') sorted.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+      else if (sortConfig === 'name_asc') sorted.sort((a, b) => a.name.localeCompare(b.name));
+      else if (sortConfig === 'name_desc') sorted.sort((a, b) => b.name.localeCompare(a.name));
+      setSortedRoads(sorted);
+  }, [syncedRoads, activeKelurahan, searchQuery, sortConfig]);
+
+  const handleToolbarKecChange = (kec) => {
+     setSelectedToolbarKec(kec);
+     if (kec === 'Semua') {
+         setSelectedToolbarKel('Semua');
+         setActiveKelurahan(KELURAHAN_LIST.reduce((acc, k) => ({...acc, [k]: true}), {}));
+     } else {
+         setSelectedToolbarKel('Semua');
+         const activeMap = KELURAHAN_LIST.reduce((acc, k) => ({...acc, [k]: false}), {});
+         KECAMATAN_DATA[kec].forEach(k => activeMap[k] = true);
+         setActiveKelurahan(activeMap);
+     }
+  };
+
+  const handleToolbarKelChange = (kel) => {
+      setSelectedToolbarKel(kel);
+      if (kel === 'Semua') {
+          handleToolbarKecChange(selectedToolbarKec);
+      } else {
+          const activeMap = KELURAHAN_LIST.reduce((acc, k) => ({...acc, [k]: false}), {});
+          activeMap[kel] = true;
+          setActiveKelurahan(activeMap);
+      }
+  };
+
+  const toggleKecamatan = (kec) => {
+      const kels = KECAMATAN_DATA[kec];
+      const allActive = kels.every(k => activeKelurahan[k]);
+      setActiveKelurahan(prev => {
+          const next = { ...prev };
+          kels.forEach(k => next[k] = !allActive);
+          return next;
+      });
+  };
+
+  const toggleAdminRouteSelection = (id) => {
+      setSelectedAdminRouteIds(prev => prev.includes(id) ? prev.filter(rid => rid !== id) : [...prev, id]);
+  };
+  
+  const closeAdminModal = () => {
+      setSelectedRoad(null);
+      setVideoSnapshot([]);
+      window.location.hash = '#/admin';
+  };
+
 
   useEffect(() => {
     if (appRole !== 'admin' || !isLeafletLoaded || !adminMapContainerRef.current) return;
@@ -1304,7 +650,7 @@ export default function App() {
           }
       }, 350);
     }
-  }, [appRole, syncedRoads, activeKelurahan, activeConditions, activeJenis, searchQuery, selectedAdminRouteIds]);
+  }, [appRole, syncedRoads, activeKelurahan, searchQuery, selectedAdminRouteIds]);
 
   useEffect(() => {
     if (appRole !== 'admin' || !adminHighlightLayerGroupRef.current) return;
@@ -1336,20 +682,15 @@ export default function App() {
         
         adminKelurahanLayerRef.current = window.L.geoJSON(kelurahanData, {
             filter: (feature) => {
-                // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
-                
-                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
                 const props = feature.properties || {};
                 const namaKelurahan = props.name || props.KELURAHAN || props.WADMKD || props.NAMOBJ || props.Desa || "";
                 
                 if (namaKelurahan) {
                     const norm = String(namaKelurahan).toLowerCase().replace(/kelurahan|desa|kel\.|ds\./gi, '').trim();
                     const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
-                    if (match) return activeKelurahan[match] === true; // Munculkan hanya jika di sidebar aktif
+                    if (match) return activeKelurahan[match] === true; 
                 }
-                
-                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
                 const isAllActive = Object.values(activeKelurahan).every(v => v === true);
                 return isAllActive; 
             },
@@ -1361,9 +702,7 @@ export default function App() {
             }
         }).addTo(map);
     } else {
-        if (adminKelurahanLayerRef.current && map.hasLayer(adminKelurahanLayerRef.current)) {
-            map.removeLayer(adminKelurahanLayerRef.current);
-        }
+        if (adminKelurahanLayerRef.current && map.hasLayer(adminKelurahanLayerRef.current)) map.removeLayer(adminKelurahanLayerRef.current);
     }
   }, [showKelurahan, kelurahanData, activeKelurahan, appRole]);
 
@@ -1377,23 +716,15 @@ export default function App() {
         
         adminKecamatanLayerRef.current = window.L.geoJSON(kecamatanData, {
             filter: (feature) => {
-                // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
-                
-                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
                 const props = feature.properties || {};
                 const namaKecamatan = props.name || props.KECAMATAN || props.WADMKC || props.NAMOBJ || props.Kecamatan || "";
                 
                 if (namaKecamatan) {
                     const norm = String(namaKecamatan).toLowerCase().replace(/kecamatan|kec\./gi, '').trim();
                     const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
-                    if (match) {
-                        // Munculkan batas kecamatan jika ADA kelurahannya yang aktif di sidebar
-                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k] === true);
-                    }
+                    if (match) return KECAMATAN_DATA[match].some(k => activeKelurahan[k] === true);
                 }
-                
-                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
                 const isAllActive = Object.values(activeKelurahan).every(v => v === true);
                 return isAllActive;
             },
@@ -1405,9 +736,7 @@ export default function App() {
             }
         }).addTo(map);
     } else {
-        if (adminKecamatanLayerRef.current && map.hasLayer(adminKecamatanLayerRef.current)) {
-            map.removeLayer(adminKecamatanLayerRef.current);
-        }
+        if (adminKecamatanLayerRef.current && map.hasLayer(adminKecamatanLayerRef.current)) map.removeLayer(adminKecamatanLayerRef.current);
     }
   }, [showKecamatan, kecamatanData, activeKelurahan, appRole]);
 
@@ -1591,9 +920,10 @@ export default function App() {
 
   useEffect(() => {
     if (appRole !== 'surveyor' || mobileScreen !== 'pin_map' || !isLeafletLoaded || !surveyorMapContainerRef.current) return;
-    const map = window.L.map(surveyorMapContainerRef.current); surveyorMapInstanceRef.current = map;
+    const map = window.L.map(surveyorMapContainerRef.current, { zoomControl: false });
+    surveyorMapInstanceRef.current = map;
+    window.L.control.zoom({ position: 'topright' }).addTo(map);
     initBaseMaps(map, window.L, "OSM Default", 'topright');
-    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 200);
 
     if (realGpsPoints.length > 0) {
       const latlngs = realGpsPoints.map(pt => [pt.lat, pt.lng]);
@@ -1619,6 +949,8 @@ export default function App() {
       } catch (err) {}
     });
 
+    setTimeout(() => { map.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 300);
+
     return () => { map.remove(); surveyorMapInstanceRef.current = null; surveyorMarkerRef.current = null; currentLocationMarkerRef.current = null; };
   }, [appRole, mobileScreen, isLeafletLoaded, realGpsPoints, formData.condition]);
 
@@ -1639,6 +971,39 @@ export default function App() {
         }
     }
   }, [appRole, mobileScreen, pinLocation, currentLocation, formData]);
+
+  useEffect(() => {
+    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
+    const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
+    initBaseMaps(map, window.L, "OSM Default", 'bottomright');
+    liveMapInstanceRef.current = map;
+    liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 300);
+    return () => { map.remove(); liveMapInstanceRef.current = null; liveMapPolylineRef.current = null; liveMapMarkerRef.current = null; };
+  }, [mobileScreen, isLeafletLoaded]);
+
+  useEffect(() => {
+    if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
+    const map = liveMapInstanceRef.current;
+    if (currentLocation) {
+       if (liveMapMarkerRef.current) liveMapMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
+       else {
+          const icon = window.L.divIcon({ className: 'live-location-dot', html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+          liveMapMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+          map.setView([currentLocation.lat, currentLocation.lng], 17);
+       }
+       if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
+    }
+    if (liveMapPolylineRef.current) liveMapPolylineRef.current.setLatLngs(realGpsPoints.map(pt => [pt.lat, pt.lng]));
+  }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
+
+  useEffect(() => {
+     if (recordTab === 'map' && liveMapInstanceRef.current) {
+        liveMapInstanceRef.current.invalidateSize();
+        const timers = [100, 300].map(time => setTimeout(() => { if (liveMapInstanceRef.current) liveMapInstanceRef.current.invalidateSize(true); }, time));
+        return () => timers.forEach(clearTimeout);
+     }
+  }, [recordTab]);
 
   const startRealHardware = async () => {
     setMobileScreen('record'); 
@@ -1692,8 +1057,7 @@ export default function App() {
   };
 
   const startManualDrawing = () => {
-    setMobileScreen('draw_map');
-    window.location.hash = '#/surveyor/draw_map';
+    setMobileScreen('draw_map'); window.location.hash = '#/surveyor/draw_map';
     setManualDrawnPoints([]); setRealGpsPoints([]); setTotalDistance(0); setUploadedVideoUrl(null); setUploadedVideoFile(null); 
     setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); 
   };
@@ -1709,68 +1073,26 @@ export default function App() {
 
   const finishManualDrawing = () => {
     if (manualDrawnPoints.length < 2) return showToast("Gambarkan minimal 2 titik!");
-    setRealGpsPoints(manualDrawnPoints); 
-    setMobileScreen('form');
-    window.location.hash = '#/surveyor/form';
+    setRealGpsPoints(manualDrawnPoints); setMobileScreen('form'); window.location.hash = '#/surveyor/form';
   };
 
   const stopRealHardware = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); 
-    setMobileScreen('form');
-    window.location.hash = '#/surveyor/form';
+    setIsRecording(false); setRecordingStatus('idle'); setMobileScreen('form'); window.location.hash = '#/surveyor/form';
   };
 
   const cancelRecording = () => {
     if (locatingTimeoutRef.current) clearTimeout(locatingTimeoutRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-    setIsRecording(false); setRecordingStatus('idle'); 
-    setMobileScreen('home');
-    window.location.hash = '#/surveyor/home';
+    setIsRecording(false); setRecordingStatus('idle'); setMobileScreen('home'); window.location.hash = '#/surveyor/home';
   };
 
-  useEffect(() => {
-    if (mobileScreen !== 'record' || !liveMapContainerRef.current || !isLeafletLoaded || liveMapInstanceRef.current) return;
-    const map = window.L.map(liveMapContainerRef.current, { zoomControl: false }).setView([-0.425, 117.185], 16);
-    // Menginisialisasi Peta Live dengan mode layer berada di Kanan Bawah
-    initBaseMaps(map, window.L, "OSM Default", 'bottomright');
-    liveMapInstanceRef.current = map;
-    liveMapPolylineRef.current = window.L.polyline([], { color: '#3B82F6', weight: 6, opacity: 0.9 }).addTo(map);
-    setTimeout(() => map.invalidateSize(), 300);
-    return () => { map.remove(); liveMapInstanceRef.current = null; liveMapPolylineRef.current = null; liveMapMarkerRef.current = null; };
-  }, [mobileScreen, isLeafletLoaded]);
-
-  useEffect(() => {
-    if (!liveMapInstanceRef.current || mobileScreen !== 'record') return;
-    const map = liveMapInstanceRef.current;
-    if (currentLocation) {
-       if (liveMapMarkerRef.current) liveMapMarkerRef.current.setLatLng([currentLocation.lat, currentLocation.lng]);
-       else {
-          const icon = window.L.divIcon({ className: 'live-location-dot', html: `<div style="width: 16px; height: 16px; background-color: #3B82F6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-          liveMapMarkerRef.current = window.L.marker([currentLocation.lat, currentLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
-          map.setView([currentLocation.lat, currentLocation.lng], 17);
-       }
-       if (recordTab === 'map' && (recordingStatus === 'recording' || recordingStatus === 'ready')) map.panTo([currentLocation.lat, currentLocation.lng], {animate: true, duration: 0.5});
-    }
-    if (liveMapPolylineRef.current) liveMapPolylineRef.current.setLatLngs(realGpsPoints.map(pt => [pt.lat, pt.lng]));
-  }, [currentLocation, realGpsPoints, mobileScreen, recordTab, recordingStatus]);
-
-  useEffect(() => {
-     if (recordTab === 'map' && liveMapInstanceRef.current) {
-        liveMapInstanceRef.current.invalidateSize();
-        const timers = [100, 300].map(time => setTimeout(() => { if (liveMapInstanceRef.current) liveMapInstanceRef.current.invalidateSize(true); }, time));
-        return () => timers.forEach(clearTimeout);
-     }
-  }, [recordTab]);
-
   const handlePhotoChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    const allowedCount = 4 - uploadedPhotoFiles.length;
-    const newFilesToProcess = files.slice(0, allowedCount);
+    const files = Array.from(e.target.files); if (files.length === 0) return;
+    const allowedCount = 4 - uploadedPhotoFiles.length; const newFilesToProcess = files.slice(0, allowedCount);
     if (files.length > allowedCount) showToast(`Maks 4 foto. Hanya ${allowedCount} ditambahkan.`);
     showToast("⏳ Mengompresi foto...");
     try {
@@ -1786,7 +1108,6 @@ export default function App() {
   };
 
   const toggleDraftSelection = (id) => setSelectedDraftIds(prev => prev.includes(id) ? prev.filter(draftId => draftId !== id) : [...prev, id]);
-  const selectAllDrafts = () => setSelectedDraftIds(selectedDraftIds.length === drafts.length ? [] : drafts.map(d => d.id));
 
   const editDraft = (draft) => {
     setFormData({ name: draft.name, kelurahan: draft.kelurahan, jenisJalan: draft.jenisJalan || 'Aspal', condition: draft.condition, notes: draft.notes });
@@ -1797,97 +1118,42 @@ export default function App() {
 
   const handleShareDraft = (draft) => {
     const shareText = `📍 Draft Survei: ${draft.name}\nKelurahan: ${formatKel(draft.kelurahan)}\nKondisi: ${draft.condition}\nPanjang: ${draft.length || 0} km\nCatatan: ${draft.notes || '-'}${draft.pinLocation ? `\nMap: https://www.google.com/maps?q=${draft.pinLocation.lat},${draft.pinLocation.lng}` : ''}`;
-    
-    if (navigator.share) {
-      navigator.share({ title: `Draft: ${draft.name}`, text: shareText }).catch(()=>{});
+    if (navigator.share) { navigator.share({ title: `Draft: ${draft.name}`, text: shareText }).catch(()=>{});
     } else {
       const textArea = document.createElement("textarea"); textArea.value = shareText; document.body.appendChild(textArea); textArea.select();
-      try { document.execCommand('copy'); showToast("Detail draft disalin ke clipboard!"); } catch (err) { showToast("Gagal menyalin."); } document.body.removeChild(textArea);
+      try { document.execCommand('copy'); showToast("Detail draft disalin ke clipboard!"); } catch (err) {} document.body.removeChild(textArea);
     }
   };
 
   const handleExportDraftJSON = (draft) => {
-    const exportData = {
-      app: "WebGIS_Surveyor",
-      version: "1.0",
-      draft: {
-        ...draft,
-        videoFile: undefined, 
-        photoFiles: undefined,
-        localVideoUrl: undefined,
-        localPhotoUrls: undefined
-      }
-    };
-    
+    const exportData = { app: "WebGIS_Surveyor", version: "1.0", draft: { ...draft, videoFile: undefined, photoFiles: undefined, localVideoUrl: undefined, localPhotoUrls: undefined } };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `Draft_${draft.name.replace(/\s+/g, '_')}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-    
-    showToast("File JSON diunduh. Kirim file ini ke teman Anda.");
+    const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `Draft_${draft.name.replace(/\s+/g, '_')}.json`);
+    document.body.appendChild(a); a.click(); a.remove(); showToast("File JSON diunduh.");
   };
 
   const handleImportDraftJSON = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const importedData = JSON.parse(event.target.result);
         if (importedData.app === "WebGIS_Surveyor" && importedData.draft) {
-          const newDraft = importedData.draft;
-          newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
-          newDraft.isUploaded = false; 
-          setDrafts(prev => [...prev, newDraft]);
-          showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
-        } else {
-          showToast("❌ Format file JSON tidak dikenali.");
-        }
-      } catch (err) {
-        showToast("❌ Gagal membaca file JSON.");
-      }
+          const newDraft = importedData.draft; newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000); newDraft.isUploaded = false; 
+          setDrafts(prev => [...prev, newDraft]); showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
+        } else showToast("❌ Format file JSON tidak dikenali.");
+      } catch (err) { showToast("❌ Gagal membaca file JSON."); }
     };
-    reader.readAsText(file);
-    e.target.value = ''; 
-  };
-
-  const executeDeleteDraft = (id) => {
-      setDrafts(prev => prev.filter(d => d.id !== id));
-      setSelectedDraftIds(prev => prev.filter(selId => selId !== id)); 
-      showToast("Draft dihapus.");
-  };
-
-  const deleteDraft = (id) => {
-      setConfirmModal({
-          isOpen: true,
-          title: 'Hapus Draft',
-          message: 'Hapus draft offline ini secara permanen?',
-          actionLabel: 'Hapus',
-          onConfirm: () => executeDeleteDraft(id),
-          isDanger: true
-      });
+    reader.readAsText(file); e.target.value = ''; 
   };
 
   const executeDeleteSelectedDrafts = () => {
-      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id))); 
-      setSelectedDraftIds([]); 
-      showToast("Draft terpilih dihapus.");
+      setDrafts(prev => prev.filter(d => !selectedDraftIds.includes(d.id))); setSelectedDraftIds([]); showToast("Draft terpilih dihapus.");
   };
 
   const deleteSelectedDrafts = () => {
       if (selectedDraftIds.length === 0) return;
-      setConfirmModal({
-          isOpen: true,
-          title: 'Hapus Draft Terpilih',
-          message: `Anda yakin ingin menghapus ${selectedDraftIds.length} draft yang dipilih?`,
-          actionLabel: 'Hapus',
-          onConfirm: () => executeDeleteSelectedDrafts(),
-          isDanger: true
-      });
+      setConfirmModal({ isOpen: true, title: 'Hapus Draft Terpilih', message: `Yakin hapus ${selectedDraftIds.length} draft?`, actionLabel: 'Hapus', onConfirm: () => executeDeleteSelectedDrafts(), isDanger: true });
   };
 
   const saveDraft = (e) => {
@@ -1918,58 +1184,27 @@ export default function App() {
   const uploadVideoInChunks = async (file) => {
       const chunkSize = 5 * 1024 * 1024; 
       const uniqueUploadId = Math.random().toString(36).substring(2) + Date.now();
-      const totalChunks = Math.ceil(file.size / chunkSize);
-      let secureUrl = null;
+      const totalChunks = Math.ceil(file.size / chunkSize); let secureUrl = null;
 
       for (let i = 0; i < totalChunks; i++) {
           setSyncMessage(`Mengunggah Video... (${Math.round(((i) / totalChunks) * 100)}%)`);
-          const start = i * chunkSize;
-          const end = Math.min(start + chunkSize - 1, file.size - 1);
-          const chunk = file.slice(start, end + 1);
-
-          let chunkSuccess = false;
-          let lastError = null;
+          const start = i * chunkSize; const end = Math.min(start + chunkSize - 1, file.size - 1); const chunk = file.slice(start, end + 1);
+          let chunkSuccess = false; let lastError = null;
 
           for (let retry = 0; retry < 3; retry++) {
               try {
-                  const formData = new FormData();
-                  formData.append('file', chunk);
-                  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
+                  const formData = new FormData(); formData.append('file', chunk); formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
                   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
-                      method: 'POST',
-                      headers: {
-                          'X-Unique-Upload-Id': uniqueUploadId,
-                          'Content-Range': `bytes ${start}-${end}/${file.size}`
-                      },
-                      body: formData
+                      method: 'POST', headers: { 'X-Unique-Upload-Id': uniqueUploadId, 'Content-Range': `bytes ${start}-${end}/${file.size}` }, body: formData
                   });
-
-                  if (!res.ok) {
-                      const data = await res.json().catch(() => ({}));
-                      throw new Error(data.error?.message || `Gagal dari server (Kode: ${res.status})`);
-                  }
-
-                  const data = await res.json();
-                  if (data.secure_url) secureUrl = data.secure_url; 
-                  
-                  chunkSuccess = true;
-                  break; 
+                  if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error?.message || `Gagal dari server (Kode: ${res.status})`); }
+                  const data = await res.json(); if (data.secure_url) secureUrl = data.secure_url; 
+                  chunkSuccess = true; break; 
               } catch (err) {
-                  lastError = err;
-                  console.warn(`Chunk ${i} gagal (Percobaan ${retry + 1}/3):`, err);
-                  if (retry < 2) {
-                      setSyncMessage(`Koneksi goyah. Mencoba ulang (${retry + 1}/3)...`);
-                      await new Promise(r => setTimeout(r, 2500)); 
-                  }
+                  lastError = err; if (retry < 2) { setSyncMessage(`Koneksi goyah. Mencoba ulang (${retry + 1}/3)...`); await new Promise(r => setTimeout(r, 2500)); }
               }
           }
-
-          if (!chunkSuccess) {
-              throw new Error(lastError.message === 'Failed to fetch' 
-                  ? 'Koneksi internet terputus permanen oleh browser HP. Silakan coba lagi.' 
-                  : lastError.message);
-          }
+          if (!chunkSuccess) throw new Error(lastError.message === 'Failed to fetch' ? 'Koneksi internet terputus.' : lastError.message);
       }
       return secureUrl;
   };
@@ -1985,15 +1220,7 @@ export default function App() {
       let uploadCount = 0;
       for (let i = 0; i < draftsToUpload.length; i++) {
         const draft = draftsToUpload[i]; let finalVideoUrl = null; let finalPhotoUrls = [];
-
-        if (draft.videoFile) {
-          try {
-             finalVideoUrl = await uploadVideoInChunks(draft.videoFile);
-             setSyncMessage(`Video rute ${i+1} selesai diunggah.`);
-          } catch (e) { 
-             throw new Error(`Upload video "${draft.name}" gagal: ${e.message}. Silakan coba lagi nanti.`); 
-          }
-        }
+        if (draft.videoFile) { try { finalVideoUrl = await uploadVideoInChunks(draft.videoFile); setSyncMessage(`Video rute ${i+1} selesai diunggah.`); } catch (e) { throw new Error(`Upload video gagal: ${e.message}`); } }
 
         if (draft.photoFiles && draft.photoFiles.length > 0) {
           setSyncMessage(`Mengunggah Foto... (Rute ${i+1}/${draftsToUpload.length})`);
@@ -2013,8 +1240,7 @@ export default function App() {
         dataToUpload.videoUrl = finalVideoUrl; dataToUpload.photoUrls = JSON.stringify(finalPhotoUrls); 
         
         const { error: dbError } = await supabase.from('mapped_roads').insert([dataToUpload]);
-        if (dbError) throw dbError;
-        uploadCount++;
+        if (dbError) throw dbError; uploadCount++;
       }
       
       setSyncMessage("Selesai!"); showToast(`${uploadCount} Rute Diunggah ke Server!`);
@@ -2024,41 +1250,21 @@ export default function App() {
   };
 
   const executeHapusDataCloud = async (dbId) => {
-     if(!supabase) {
-         showToast("Koneksi Supabase belum diatur!");
-         return;
-     }
-     
+     if(!supabase) { showToast("Koneksi Supabase belum diatur!"); return; }
      try {
         setSyncedRoads(prev => prev.filter(r => (r.id || r.dbId) !== dbId));
-        
         const { error } = await supabase.from('mapped_roads').delete().eq('id', dbId);
-        if(error) {
-            fetchRoads(); 
-            throw error;
-        }
-        
+        if(error) { fetchRoads(); throw error; }
         showToast("✅ Rute berhasil dihapus.");
-        
         if (selectedRoad && (selectedRoad.id === dbId || selectedRoad.dbId === dbId)) {
             if (window.location.hash === '#/admin/detail') window.history.back();
             else setSelectedRoad(null);
         }
-     } catch (err) { 
-        console.error("Error Hapus Supabase:", err);
-        showToast(`❌ Gagal menghapus: ${err.message || 'Periksa izin RLS'}`); 
-     }
+     } catch (err) { showToast(`❌ Gagal menghapus: ${err.message}`); }
   };
 
   const hapusDataCloud = (dbId, roadName) => {
-      setConfirmModal({
-          isOpen: true,
-          title: `Hapus Jalur "${roadName}"`,
-          message: 'Hapus rute ini dari database pusat secara permanen?',
-          actionLabel: 'Hapus',
-          onConfirm: () => executeHapusDataCloud(dbId),
-          isDanger: true
-      });
+      setConfirmModal({ isOpen: true, title: `Hapus Jalur "${roadName}"`, message: 'Hapus rute ini dari database pusat secara permanen?', actionLabel: 'Hapus', onConfirm: () => executeHapusDataCloud(dbId), isDanger: true });
   };
 
   const handleExportKML = () => {
@@ -2067,7 +1273,6 @@ export default function App() {
     let colorHex = getConditionColor(selectedRoad.condition).replace('#', '');
     let kmlColor = colorHex.length === 6 ? `ff${colorHex.substring(4,6)}${colorHex.substring(2,4)}${colorHex.substring(0,2)}` : 'ffff0000';
     let pinPlacemark = selectedRoad.pinLocation && selectedRoad.pinLocation.lat ? `<Placemark><name>Pin</name><Point><coordinates>${selectedRoad.pinLocation.lng},${selectedRoad.pinLocation.lat},0</coordinates></Point></Placemark>` : '';
-
     const kmlContent = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${selectedRoad.name}</name><Style id="routeStyle"><LineStyle><color>${kmlColor}</color><width>5</width></LineStyle></Style><Placemark><styleUrl>#routeStyle</styleUrl><LineString><tessellate>1</tessellate><coordinates>${coordinates}</coordinates></LineString></Placemark>${pinPlacemark}</Document></kml>`;
     const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Rute_${selectedRoad.name.replace(/\s+/g, '_')}.kml`;
@@ -2086,14 +1291,10 @@ export default function App() {
 
   const handlePrint = async () => {
     if (!selectedRoad) return;
-
-    const originalTitle = document.title;
-    document.title = "Laporan_Survei_Jalan"; 
+    const originalTitle = document.title; document.title = "Laporan_Survei_Jalan"; 
 
     if (!selectedRoad.videoUrl || videoSnapshot.length > 0) {
-       window.print();
-       document.title = originalTitle;
-       return;
+       window.print(); document.title = originalTitle; return;
     }
 
     showToast("Mengekstrak frame video untuk cetak...");
@@ -2122,11 +1323,9 @@ export default function App() {
     } catch (err) {}
     
     setVideoSnapshot(snapshots); 
-    setTimeout(() => { 
-        window.print(); 
-        document.title = originalTitle;
-    }, 400); 
+    setTimeout(() => { window.print(); document.title = originalTitle; }, 400); 
   };
+
 
   return (
     <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
@@ -2154,7 +1353,6 @@ export default function App() {
         .btn-detail-popup:hover { background-color: #2563eb; }
         video::-webkit-media-controls-fullscreen-button { display: none !important; } 
         .record-map .leaflet-top { top: 130px !important; transition: top 0.3s ease; }
-        /* MEMASTIKAN LAYER CONTROL TIDAK TERTUTUP OLEH PANEL BAWAH SAAT MODE RECORD */
         .record-map .leaflet-bottom.leaflet-right { bottom: 220px !important; right: 10px !important; transition: bottom 0.3s ease; }
         @media print {
           @page { size: A4; margin: 0mm; } 
@@ -2165,6 +1363,7 @@ export default function App() {
         }
       `}} />
 
+      {/* --- OVERLAYS --- */}
       {isExportingDroneVideo && animatingRoadsList.length === 1 && (
           <DroneVideoExporter road={animatingRoadsList[0]} onClose={() => setIsExportingDroneVideo(false)} />
       )}
@@ -2193,6 +1392,7 @@ export default function App() {
         </div>
       )}
 
+      {/* --- MENU UTAMA --- */}
       {!appRole && (
         <div className="h-full flex items-center justify-center p-4 bg-slate-900 print-hidden overflow-y-auto">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-4 border-slate-800">
@@ -2233,6 +1433,7 @@ export default function App() {
         </div>
       )}
 
+      {/* --- APLIKASI SURVEYOR --- */}
       {appRole === 'surveyor' && (
         <div className="h-full bg-slate-50 flex flex-col md:max-w-md md:mx-auto md:shadow-2xl md:border-x border-slate-200 relative print-hidden">
           
@@ -2290,9 +1491,7 @@ export default function App() {
                    <div ref={drawMapContainerRef} className="absolute inset-0 bg-slate-200 cursor-crosshair"></div>
                    {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
                 </div>
-
                 <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-slate-900/70 to-transparent z-10 pointer-events-none"></div>
-                
                 <div className="absolute bottom-[220px] right-4 z-20">
                      <button onClick={() => {
                              if (drawMapInstanceRef.current && currentLocation) drawMapInstanceRef.current.flyTo([currentLocation.lat, currentLocation.lng], 17, { duration: 0.6 });
@@ -2303,7 +1502,6 @@ export default function App() {
                         <Crosshair className="w-5 h-5" />
                      </button>
                 </div>
-
                 <div className="absolute bottom-6 left-4 right-4 z-20 flex flex-col gap-3">
                      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-4 flex justify-between items-center">
                          <div>
@@ -2316,7 +1514,6 @@ export default function App() {
                             <Undo2 className="w-5 h-5" />
                          </button>
                      </div>
-
                      <div className="w-full flex space-x-3">
                          <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="w-1/3 bg-slate-800/80 backdrop-blur-md border border-white/10 text-white rounded-2xl py-3.5 font-bold text-sm shadow-lg">Batal</button>
                          <button onClick={finishManualDrawing} disabled={manualDrawnPoints.length < 2} className={`w-2/3 py-3.5 rounded-2xl font-black text-sm shadow-xl flex justify-center items-center space-x-2 border ${manualDrawnPoints.length >= 2 ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-600' : 'bg-slate-800/95 backdrop-blur-md text-slate-400 border-white/5 cursor-not-allowed scale-95'}`}>
@@ -2353,15 +1550,12 @@ export default function App() {
                   </div>
                 )}
 
-                {/* AREA KONTROL BAWAH */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-30 flex flex-col gap-4">
-                    
                     <div className="bg-white/95 backdrop-blur-xl p-3.5 rounded-3xl border border-slate-200 shadow-2xl flex flex-col gap-3">
                         <div className="flex justify-between items-center text-[10px] bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
                             <span className="text-blue-600 font-bold flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>Log: {realGpsPoints.length}</span>
                             <span className="text-emerald-600 font-mono tracking-tight font-bold">{realGpsPoints.length > 0 ? `${realGpsPoints[realGpsPoints.length-1].lat.toFixed(5)}, ${realGpsPoints[realGpsPoints.length-1].lng.toFixed(5)}` : 'Satelit...'}</span>
                         </div>
-
                         <div className="flex justify-between items-center px-1">
                             <div className="text-center w-1/4"><div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-0.5">Waktu</div><div className="text-lg md:text-xl font-black text-slate-900 leading-none">{formatDuration(recordingDuration)}</div></div>
                             <div className="w-px h-8 bg-slate-200"></div>
@@ -2518,149 +1712,171 @@ export default function App() {
 
             {mobileScreen === 'drafts' && (
               <div className="absolute inset-0 flex flex-col bg-slate-100 text-left z-20">
-                <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
-                  <div className="flex justify-between items-center mb-3">
-                    <button onClick={() => document.getElementById('import-draft-input').click()} className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-emerald-100 transition-colors">
-                        <Download className="w-4 h-4" />
-                        Import (.json)
-                    </button>
-                    <input type="file" accept=".json" id="import-draft-input" className="hidden" onChange={handleImportDraftJSON} />
-                    
-                    <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-xs">Tutup</button>
-                  </div>
-                  {drafts.length > 0 && (
-                     <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
-                       <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
-                       <div className={`w-5 h-5 rounded-full border-2 ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div>
-                     </div>
-                  )}
-                </div>
-
-                <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pb-4 custom-scrollbar">
-                  {drafts.length === 0 ? (<div className="text-center text-slate-400 mt-10 p-8 border-2 border-dashed border-slate-300 rounded-2xl">Belum ada survei tersimpan.</div>) : (
-                    drafts.map(d => {
-                      const isSelected = selectedDraftIds.includes(d.id);
-                      return (
-                      <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`px-3 py-2.5 rounded-2xl border shadow-sm flex items-center cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'bg-white'}`}>
-                        <div className="pl-1.5 pr-3"><div className={`w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div></div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center">
-                             <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
-                             <div className="flex space-x-1.5">
-                               <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan Info (Teks)">
-                                 <Share2 className="w-4 h-4" />
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(d); }} className="bg-amber-50 text-amber-600 p-1.5 rounded-xl transition-colors hover:bg-amber-100" title="Download File (.json)">
-                                 <Download className="w-4 h-4" />
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
-                             </div>
-                          </div>
-                          <div className="text-[10px] text-slate-500 mt-1">{d.isUploaded ? '✅ Terunggah' : 'Menunggu Unggah'}</div>
-                        </div>
+                {(() => {
+                  const filteredDrafts = draftDateFilter === 'Semua' ? drafts : drafts.filter(d => d.date === draftDateFilter);
+                  const isAllFilteredSelected = filteredDrafts.length > 0 && filteredDrafts.every(d => selectedDraftIds.includes(d.id));
+                  const handleSelectAllFiltered = () => {
+                      if (isAllFilteredSelected) {
+                          const filteredIds = filteredDrafts.map(d => d.id);
+                          setSelectedDraftIds(prev => prev.filter(id => !filteredIds.includes(id)));
+                      } else {
+                          const newIds = filteredDrafts.map(d => d.id);
+                          setSelectedDraftIds(prev => [...new Set([...prev, ...newIds])]);
+                      }
+                  };
+                  return (
+                    <>
+                    <div className="px-6 pt-4 pb-2 flex-shrink-0 bg-slate-100 z-10">
+                      <div className="flex justify-between items-center mb-3">
+                        <button onClick={() => document.getElementById('import-draft-input').click()} className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-emerald-100 transition-colors">
+                            <Download className="w-4 h-4" />
+                            Import (.json)
+                        </button>
+                        <input type="file" accept=".json" id="import-draft-input" className="hidden" onChange={handleImportDraftJSON} />
+                        
+                        <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-xs">Tutup</button>
                       </div>
-                      );
-                    })
-                  )}
-                </div>
 
-                {drafts.length > 0 && (
-                  <div className="p-4 bg-white border-t border-slate-200 flex space-x-3">
-                    <button onClick={deleteSelectedDrafts} disabled={selectedDraftIds.length === 0} className={`w-1/3 py-4 rounded-2xl font-black text-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>HAPUS</button>
-                    <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-2/3 py-4 rounded-2xl text-white font-black text-sm ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600' : 'bg-slate-400'}`}>UNGGAH ({selectedDraftIds.length})</button>
-                  </div>
-                )}
+                      {drafts.length > 0 && (
+                         <div className="mb-3">
+                            <select value={draftDateFilter} onChange={(e) => setDraftDateFilter(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-2.5 outline-none shadow-sm cursor-pointer">
+                               <option value="Semua">Semua Tanggal</option>
+                               {[...new Set(drafts.map(d => d.date))].filter(Boolean).map(date => (
+                                  <option key={date} value={date}>{date}</option>
+                               ))}
+                            </select>
+                         </div>
+                      )}
+
+                      {filteredDrafts.length > 0 && (
+                         <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={handleSelectAllFiltered}>
+                           <span className="text-sm font-bold text-slate-700">Pilih Semua ({filteredDrafts.length})</span>
+                           <div className={`w-5 h-5 rounded-full border-2 ${isAllFilteredSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div>
+                         </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pb-4 custom-scrollbar">
+                      {filteredDrafts.length === 0 ? (<div className="text-center text-slate-400 mt-10 p-8 border-2 border-dashed border-slate-300 rounded-2xl">Belum ada survei tersimpan untuk filter ini.</div>) : (
+                        filteredDrafts.map(d => {
+                          const isSelected = selectedDraftIds.includes(d.id);
+                          return (
+                          <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`px-3 py-2.5 rounded-2xl border shadow-sm flex items-center cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'bg-white'}`}>
+                            <div className="pl-1.5 pr-3"><div className={`w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div></div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center">
+                                 <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
+                                 <div className="flex space-x-1.5">
+                                   <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan Info (Teks)">
+                                     <Share2 className="w-4 h-4" />
+                                   </button>
+                                   <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(d); }} className="bg-amber-50 text-amber-600 p-1.5 rounded-xl transition-colors hover:bg-amber-100" title="Download File (.json)">
+                                     <Download className="w-4 h-4" />
+                                   </button>
+                                   <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
+                                 </div>
+                              </div>
+                              <div className="flex justify-between mt-1 items-center">
+                                  <div className="text-[10px] text-slate-500 font-medium">{d.date || '-'}</div>
+                                  <div className="text-[10px] text-slate-500">{d.isUploaded ? '✅ Terunggah' : 'Menunggu Unggah'}</div>
+                              </div>
+                            </div>
+                          </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {filteredDrafts.length > 0 && (
+                      <div className="p-4 bg-white border-t border-slate-200 flex space-x-3">
+                        <button onClick={deleteSelectedDrafts} disabled={selectedDraftIds.length === 0} className={`w-1/3 py-4 rounded-2xl font-black text-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>HAPUS</button>
+                        <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-2/3 py-4 rounded-2xl text-white font-black text-sm ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600' : 'bg-slate-400'}`}>UNGGAH ({selectedDraftIds.length})</button>
+                      </div>
+                    )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* --- RENDER DASBOR ADMIN --- */}
+      {/* --- DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className={`h-full flex flex-col font-sans select-none overflow-hidden relative print-static-root ${isDarkMode ? 'dark bg-[#1e2530]' : 'bg-slate-100'}`}>
+        <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
-          {/* --- HEADER MAP AREA --- */}
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden transition-colors">
+          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <Menu className="w-5 h-5" />
               </button>
               <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><MapIcon className="w-5 h-5"/></div>
             </div>
 
-            {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
-              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.baik} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#FACC15]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FACC15]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Sedang</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Parah</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2 rounded-lg transition-colors shadow-sm" title="Mode Gelap">
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-              <button onClick={() => fetchRoads()} className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
+              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
                 <RefreshCw className="w-5 h-5" />
               </button>
-              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
+              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
           </header>
 
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
-            
-            {/* Overlay Layar Gelap Mobile */}
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
-            {/* --- SIDEBAR KIRI --- */}
-            <aside className={`bg-white/50 dark:bg-slate-900/90 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 dark:border-slate-700 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
-              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900 dark:text-slate-100">
+            <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
+              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
                 
-                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 dark:border-slate-700/50 bg-white/30 dark:bg-slate-800/30">
-                  <h3 className="font-black text-slate-900 dark:text-slate-100 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
-                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 dark:border-slate-600 hover:bg-white/60 dark:hover:bg-slate-700 bg-white/40 dark:bg-slate-800/40 rounded-md p-1.5 text-slate-800 dark:text-slate-300 transition-colors shadow-sm">
+                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
+                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                <div className="px-4 py-4 border-b border-slate-300/40 dark:border-slate-700/50 bg-transparent">
-                  <div className="bg-white/50 dark:bg-slate-800/50 border border-slate-300/50 dark:border-slate-600 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
-                    <Search className="w-4 h-4 text-slate-800 dark:text-slate-300" />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 dark:text-white ml-2 placeholder-slate-700 dark:placeholder-slate-400 font-bold" />
+                <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
+                  <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
+                    <Search className="w-4 h-4 text-slate-800" />
+                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
-                  
-                  {/* WILAYAH KECAMATAN & KELURAHAN (GABUNGAN) */}
-                  <div className="border-b border-slate-300/40 dark:border-slate-700/50">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'wilayah' ? null : 'wilayah')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'wilayah' ? null : 'wilayah')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div>
-                             <span className="font-bold text-slate-900 dark:text-slate-100 text-[13px] drop-shadow-sm">Filter Per Wilayah</span>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Filter Per Wilayah</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 dark:bg-slate-800/70 border border-slate-300/50 dark:border-slate-600 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900 dark:text-slate-200">{Object.values(activeKelurahan).filter(Boolean).length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 dark:text-slate-300 transition-transform ${expandedSection === 'wilayah' ? 'rotate-180' : ''}`} />
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeKelurahan).filter(Boolean).length}</span>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'wilayah' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'wilayah' && (
-                         <div className="pb-3 bg-white/10 dark:bg-slate-900/30 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                         <div className="pb-3 bg-white/10 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {Object.keys(KECAMATAN_DATA).sort().map(kec => {
                                 const kels = KECAMATAN_DATA[kec];
                                 const activeCount = kels.filter(k => activeKelurahan[k]).length;
@@ -2669,27 +1885,24 @@ export default function App() {
 
                                 return (
                                    <div key={kec} className="mb-2">
-                                      {/* Induk Kecamatan */}
-                                      <div className="flex items-center justify-between px-4 py-2 bg-slate-200/50 dark:bg-slate-800/80 backdrop-blur-md border-y border-slate-300/30 dark:border-slate-700/50 sticky top-0 z-10 cursor-pointer shadow-sm" onClick={() => toggleKecamatan(kec)}>
+                                      <div className="flex items-center justify-between px-4 py-2 bg-slate-200/50 backdrop-blur-md border-y border-slate-300/30 sticky top-0 z-10 cursor-pointer shadow-sm" onClick={() => toggleKecamatan(kec)}>
                                           <div className="flex items-center space-x-3">
                                               <LayerToggle active={isAllActive} color={isSomeActive ? "#a78bfa" : "#8b5cf6"} onClick={() => toggleKecamatan(kec)} />
-                                              <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>Kec. {kec}</span>
+                                              <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800' : 'text-slate-500'}`}>Kec. {kec}</span>
                                           </div>
                                       </div>
-                                      
-                                      {/* Anak Kelurahan */}
                                       <div className="py-1">
                                           {kels.map(kel => {
                                              const roadCount = syncedRoads.filter(r => r.kelurahan === kel).length;
                                              return (
-                                             <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
+                                             <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
                                                 <div className="flex items-center space-x-3 ml-7">
                                                     <LayerToggle active={activeKelurahan[kel]} color="#c4b5fd" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
-                                                    <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>{formatKel(kel)}</span>
+                                                    <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
                                                 </div>
                                                 <div className="flex items-center space-x-3">
                                                     {roadCount > 0 && (
-                                                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/40 border border-blue-200/50 dark:border-blue-700/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
+                                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 border border-blue-200/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
                                                     )}
                                                 </div>
                                              </div>
@@ -2703,22 +1916,21 @@ export default function App() {
                      )}
                   </div>
 
-                  {/* DAFTAR RUTE AKTIF */}
-                  <div className="border-b border-slate-300/40 dark:border-slate-700/50">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
+                  <div className="border-b border-slate-300/40">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                             <span className="font-bold text-slate-900 dark:text-slate-100 text-[13px] drop-shadow-sm">Data Jalan</span>
+                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Data Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 dark:bg-slate-800/70 border border-slate-300/50 dark:border-slate-600 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900 dark:text-slate-200">{searchedRoads.length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 dark:text-slate-300 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} />
+                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{searchedRoads.length}</span>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'rute' && (
-                         <div className="pb-3 px-3 space-y-2 bg-white/10 dark:bg-slate-900/30 pt-2">
+                         <div className="pb-3 px-3 space-y-2 bg-white/10 pt-2">
                              <div className="flex gap-2 mb-3">
-                                 <select value={sortConfig} onChange={e => setSortConfig(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300/50 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm cursor-pointer">
+                                 <select value={sortConfig} onChange={e => setSortConfig(e.target.value)} className="w-full bg-white border border-slate-300/50 text-slate-700 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm cursor-pointer">
                                      <option value="date_desc">📅 Terkini (Baru - Lama)</option>
                                      <option value="date_asc">📅 Terlama (Lama - Baru)</option>
                                      <option value="name_asc">🔤 Nama Jalan (A - Z)</option>
@@ -2726,7 +1938,7 @@ export default function App() {
                                  </select>
                              </div>
                              <button onClick={() => {
-                                 let validRoads = selectedAdminRouteIds.length > 0 ? syncedRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : sortedRoads.filter(r => r.realGps && r.realGps.length > 1);
+                                 let validRoads = selectedAdminRouteIds.length > 0 ? filteredRoads.filter(r => selectedAdminRouteIds.includes(r.id || r.dbId)).filter(r => r.realGps && r.realGps.length > 1) : sortedRoads.filter(r => r.realGps && r.realGps.length > 1);
                                  if(validRoads.length === 0) return showToast("Tidak ada rute valid.");
                                  setAnimatingRoadsList(validRoads); setIsAnimatingMap(true); setIsAnimPaused(true); setAnimationSpeedMultiplier(1.0); setIsAnimFinished(false); setIsAnimControlMinimized(false);
                                  if(window.innerWidth < 768) setIsSidebarOpen(false);
@@ -2738,9 +1950,9 @@ export default function App() {
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
                                   return (
                                   <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
-                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 dark:bg-slate-800/70 border-slate-300/50 dark:border-slate-700 hover:bg-white/90 dark:hover:bg-slate-800 shadow-sm'}`}>
+                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
                                     
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 dark:bg-slate-700 border-slate-400 dark:border-slate-500 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
                                         {isSelectedAdmin && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                                     </div>
 
@@ -2748,28 +1960,28 @@ export default function App() {
                                         type="button"
                                         onPointerDown={(e) => e.stopPropagation()} 
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId, road.name); }} 
-                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-800 hover:bg-rose-500 dark:hover:bg-rose-600 text-rose-500 dark:text-rose-400 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
+                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
                                         title="Hapus Rute"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
 
                                     <div className="flex gap-3 pr-8">
-                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 dark:bg-slate-700/50 shrink-0 border border-slate-300/50 dark:border-slate-600 flex items-center justify-center">
+                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 shrink-0 border border-slate-300/50 flex items-center justify-center">
                                         {getThumbnailUrl(road) ? (
-                                            <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200 dark:bg-slate-700" alt="thumb" />
+                                            <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200" alt="thumb" />
                                         ) : (
-                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 font-bold text-center leading-tight">No<br/>Media</span>
+                                            <span className="text-[8px] text-slate-500 font-bold text-center leading-tight">No<br/>Media</span>
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate pr-4 leading-tight">{road.name}</h4>
+                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
                                         <div className="flex flex-col mt-1 gap-0.5">
                                             <div className="flex gap-2 items-center">
                                                <span className="w-2 h-2 rounded-full shadow-sm shrink-0" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
-                                               <span className="text-[11px] font-medium text-slate-800 dark:text-slate-300 truncate">{formatKel(road.kelurahan)}</span>
+                                               <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
                                             </div>
-                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 pl-4 font-medium flex items-center gap-1">
+                                            <div className="text-[10px] text-slate-500 pl-4 font-medium flex items-center gap-1">
                                                🗓️ {road.date || (road.created_at ? new Date(road.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-')}
                                             </div>
                                         </div>
@@ -2781,59 +1993,53 @@ export default function App() {
                          </div>
                      )}
                   </div>
-
                 </div>
 
-                <div className="p-4 border-t border-slate-300/40 dark:border-slate-700/50 bg-white/20 dark:bg-slate-800/30 backdrop-blur-md">
-                    <div className="text-[11px] font-bold text-blue-800 dark:text-blue-300 tracking-wider drop-shadow-sm">{Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
+                <div className="p-4 border-t border-slate-300/40 bg-white/20 backdrop-blur-md">
+                    <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
                 </div>
               </div>
             </aside>
 
-            {/* --- MAIN MAP AREA --- */}
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
                <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
-                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 dark:bg-slate-800 z-0"></div>
-                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
+                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
                </div>
             </div>
           </main>
         </div>
 
-        {/* --- FOOTER KONTROL WILAYAH --- */}
-        <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-3 md:px-4 py-1.5 md:py-2 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-2 print-hidden relative pb-[calc(2px+env(safe-area-inset-bottom,0px))] transition-colors">
-             
-             {/* Kiri Ujung: Toggles Batas Wilayah */}
+        <div className="bg-white border-t border-slate-200 px-3 md:px-4 py-1.5 md:py-2 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-2 print-hidden relative pb-[calc(2px+env(safe-area-inset-bottom,0px))]">
              <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-1/3 overflow-x-auto hide-scrollbar shrink-0 order-2 md:order-1">
                 <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`} 
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
                     onClick={() => setShowKecamatan(!showKecamatan)}
                 >
                     <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700' : 'text-slate-600'}`}>
                         Batas Kec. {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
                     </span>
                 </div>
                 
                 <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700/50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`} 
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
                     onClick={() => setShowKelurahan(!showKelurahan)}
                 >
                     <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700' : 'text-slate-600'}`}>
                         Batas Kel. {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />}
                     </span>
                 </div>
              </div>
 
-             {/* Tengah: Filter Kecamatan & Kelurahan */}
              <div className="flex items-center justify-center gap-2 w-full md:w-1/3 shrink-0 order-1 md:order-2">
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:block mr-1">Filter:</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:block mr-1">Filter:</span>
                 <select 
                    value={selectedToolbarKec}
                    onChange={(e) => handleToolbarKecChange(e.target.value)}
-                   className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto h-7"
+                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto h-7"
                 >
                    <option value="Semua">Semua Kecamatan</option>
                    {Object.keys(KECAMATAN_DATA).sort().map(kec => (
@@ -2845,7 +2051,7 @@ export default function App() {
                    value={selectedToolbarKel}
                    onChange={(e) => handleToolbarKelChange(e.target.value)}
                    disabled={selectedToolbarKec === 'Semua'}
-                   className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:dark:bg-slate-900 disabled:text-slate-400 disabled:border-slate-100 disabled:dark:border-slate-800 w-1/2 md:w-auto h-7"
+                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto h-7"
                 >
                    <option value="Semua">Semua Kelurahan</option>
                    {selectedToolbarKec !== 'Semua' && KECAMATAN_DATA[selectedToolbarKec].map(kel => (
@@ -2853,12 +2059,9 @@ export default function App() {
                    ))}
                 </select>
              </div>
-
-             {/* Kanan: Spacer untuk menjaga elemen filter tetap di tengah (Desktop only) */}
              <div className="hidden md:block md:w-1/3 order-3"></div>
           </div>
 
-        {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
           <>
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
@@ -2894,7 +2097,6 @@ export default function App() {
                       <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
                   
-                  {/* --- WATERMARK OVERLAY --- */}
                   {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
                        <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
@@ -2937,7 +2139,6 @@ export default function App() {
           </>
         )}
 
-        {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
              <div className="fixed bottom-[90px] md:bottom-[70px] left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
@@ -2998,7 +2199,6 @@ export default function App() {
                              </div>
                          </div>
 
-                         {/* --- KONTROL SPEED --- */}
                          {showSpeedControl && (
                              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
                                  <div className="flex items-center space-x-2 md:space-x-3 mb-3">
@@ -3014,12 +2214,10 @@ export default function App() {
                              </div>
                          )}
 
-                         {/* --- NEW: TOMBOL 3D & RECORDING TERPISAH --- */}
                          {animatingRoadsList.length === 1 && (
                             <div className="flex gap-2 w-full items-stretch pt-1">
                                 <button onClick={() => setIsExportingDroneVideo(true)} className={`w-full py-3.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700`}>
-                                    <Camera className="w-5 h-5"/>
-                                    Export Video 3D (Drone View)
+                                    <Camera className="w-5 h-5"/> Export Video 3D (Drone View)
                                 </button>
                             </div>
                          )}
@@ -3030,7 +2228,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- AREA CETAK PDF --- */}
       {appRole === 'admin' && selectedRoad && (
         <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
            <div className="text-center border-b-4 border-black pb-4 mb-6 relative">
@@ -3050,7 +2247,6 @@ export default function App() {
               </tbody>
            </table>
 
-           {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
            <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
               <h3 className="font-bold text-[16px] border-b-2 border-black mb-4 pb-1 text-black">Lampiran Visual Lapangan</h3>
               {videoSnapshot.length > 0 ? (
