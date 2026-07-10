@@ -3,7 +3,7 @@ import {
   Menu, RefreshCw, LogOut, X, Search, ChevronDown, 
   Trash2, Play, Share2, Download, Printer, Map as MapIcon, 
   PenTool, FileText, Undo2, Crosshair, Camera, MapPin, 
-  Pause, Square, Info, Edit, Check
+  Pause, Square, Info, Edit, Check, Moon, Sun
 } from 'lucide-react';
 
 // =========================================================================
@@ -927,6 +927,9 @@ export default function App() {
     if (!metaViewport) { metaViewport = document.createElement('meta'); metaViewport.name = 'viewport'; document.head.appendChild(metaViewport); }
     metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { darkMode: 'class' };
+
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script'); script.id = 'tailwind-cdn'; script.src = 'https://cdn.tailwindcss.com'; document.head.appendChild(script);
     }
@@ -1022,6 +1025,7 @@ export default function App() {
 
   const [isExportingDroneVideo, setIsExportingDroneVideo] = useState(false);
   const [isVideoFullscreen, setIsVideoFullscreen] = useState(false); 
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
@@ -2151,6 +2155,7 @@ export default function App() {
         .record-map .leaflet-top { top: 130px !important; transition: top 0.3s ease; }
         /* MEMASTIKAN LAYER CONTROL TIDAK TERTUTUP OLEH PANEL BAWAH SAAT MODE RECORD */
         .record-map .leaflet-bottom.leaflet-right { bottom: 220px !important; right: 10px !important; transition: bottom 0.3s ease; }
+        .dark-map .leaflet-layer, .dark-map .leaflet-control-zoom-in, .dark-map .leaflet-control-zoom-out, .dark-map .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         @media print {
           @page { size: A4; margin: 0mm; } 
           html, body { height: auto !important; min-height: 100% !important; overflow: visible !important; background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
@@ -2573,12 +2578,12 @@ export default function App() {
 
       {/* --- RENDER DASBOR ADMIN --- */}
       {appRole === 'admin' && (
-        <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
+        <div className={`h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root ${isDarkMode ? 'dark' : ''}`}>
           
           {/* --- HEADER MAP AREA --- */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
+          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden transition-colors">
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                 <Menu className="w-5 h-5" />
               </button>
               <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><MapIcon className="w-5 h-5"/></div>
@@ -2586,29 +2591,32 @@ export default function App() {
 
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
             <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Baik</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.baik} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FACC15]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#FACC15]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Ringan</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Sedang</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
               </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
+              <div className="flex items-stretch rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden h-9 md:h-10 shrink-0 bg-white dark:bg-slate-800 shadow-sm transition-colors">
+                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200 dark:border-slate-700"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Rsk Parah</span></div>
+                 <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800 dark:text-white"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2 rounded-lg transition-colors shadow-sm" title="Mode Gelap">
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              <button onClick={() => fetchRoads()} className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
                 <RefreshCw className="w-5 h-5" />
               </button>
-              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
+              <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
@@ -2620,39 +2628,39 @@ export default function App() {
             {isSidebarOpen && <div className="md:hidden absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[900]" onClick={() => setIsSidebarOpen(false)}></div>}
 
             {/* --- SIDEBAR KIRI --- */}
-            <aside className={`bg-white/50 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
-              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900">
+            <aside className={`bg-white/50 dark:bg-slate-900/90 backdrop-blur-[4px] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.1)] md:shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out overflow-hidden z-[1000] absolute top-0 left-0 h-full border-r border-white/40 dark:border-slate-700 md:top-4 md:bottom-4 md:h-[calc(100%-2rem)] md:border md:rounded-3xl ${isSidebarOpen ? 'w-[85vw] md:w-[340px] md:left-4' : 'w-0 md:left-0 md:border-transparent opacity-0 md:opacity-100'}`}>
+              <div className="w-[85vw] md:w-[340px] flex flex-col h-full flex-shrink-0 text-slate-900 dark:text-slate-100">
                 
-                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 bg-white/30">
-                  <h3 className="font-black text-slate-900 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
-                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 hover:bg-white/60 bg-white/40 rounded-md p-1.5 text-slate-800 transition-colors shadow-sm">
+                <div className="p-4 flex justify-between items-center border-b border-slate-300/40 dark:border-slate-700/50 bg-white/30 dark:bg-slate-800/30">
+                  <h3 className="font-black text-slate-900 dark:text-slate-100 text-xs md:text-sm tracking-[0.15em] uppercase drop-shadow-md">Daftar Layer</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="border border-slate-300/50 dark:border-slate-600 hover:bg-white/60 dark:hover:bg-slate-700 bg-white/40 dark:bg-slate-800/40 rounded-md p-1.5 text-slate-800 dark:text-slate-300 transition-colors shadow-sm">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                <div className="px-4 py-4 border-b border-slate-300/40 bg-transparent">
-                  <div className="bg-white/50 border border-slate-300/50 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
-                    <Search className="w-4 h-4 text-slate-800" />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 ml-2 placeholder-slate-700 font-bold" />
+                <div className="px-4 py-4 border-b border-slate-300/40 dark:border-slate-700/50 bg-transparent">
+                  <div className="bg-white/50 dark:bg-slate-800/50 border border-slate-300/50 dark:border-slate-600 rounded-lg flex items-center px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-inner backdrop-blur-md">
+                    <Search className="w-4 h-4 text-slate-800 dark:text-slate-300" />
+                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari rute atau wilayah..." className="bg-transparent border-none outline-none w-full text-sm text-slate-900 dark:text-white ml-2 placeholder-slate-700 dark:placeholder-slate-400 font-bold" />
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
                   {/* WILAYAH KECAMATAN & KELURAHAN (GABUNGAN) */}
-                  <div className="border-b border-slate-300/40">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'wilayah' ? null : 'wilayah')}>
+                  <div className="border-b border-slate-300/40 dark:border-slate-700/50">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'wilayah' ? null : 'wilayah')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Filter Per Wilayah</span>
+                             <span className="font-bold text-slate-900 dark:text-slate-100 text-[13px] drop-shadow-sm">Filter Per Wilayah</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{Object.values(activeKelurahan).filter(Boolean).length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'wilayah' ? 'rotate-180' : ''}`} />
+                             <span className="bg-white/70 dark:bg-slate-800/70 border border-slate-300/50 dark:border-slate-600 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900 dark:text-slate-200">{Object.values(activeKelurahan).filter(Boolean).length}</span>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 dark:text-slate-300 transition-transform ${expandedSection === 'wilayah' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'wilayah' && (
-                         <div className="pb-3 bg-white/10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                         <div className="pb-3 bg-white/10 dark:bg-slate-900/30 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {Object.keys(KECAMATAN_DATA).sort().map(kec => {
                                 const kels = KECAMATAN_DATA[kec];
                                 const activeCount = kels.filter(k => activeKelurahan[k]).length;
@@ -2662,10 +2670,10 @@ export default function App() {
                                 return (
                                    <div key={kec} className="mb-2">
                                       {/* Induk Kecamatan */}
-                                      <div className="flex items-center justify-between px-4 py-2 bg-slate-200/50 backdrop-blur-md border-y border-slate-300/30 sticky top-0 z-10 cursor-pointer shadow-sm" onClick={() => toggleKecamatan(kec)}>
+                                      <div className="flex items-center justify-between px-4 py-2 bg-slate-200/50 dark:bg-slate-800/80 backdrop-blur-md border-y border-slate-300/30 dark:border-slate-700/50 sticky top-0 z-10 cursor-pointer shadow-sm" onClick={() => toggleKecamatan(kec)}>
                                           <div className="flex items-center space-x-3">
                                               <LayerToggle active={isAllActive} color={isSomeActive ? "#a78bfa" : "#8b5cf6"} onClick={() => toggleKecamatan(kec)} />
-                                              <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800' : 'text-slate-500'}`}>Kec. {kec}</span>
+                                              <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>Kec. {kec}</span>
                                           </div>
                                       </div>
                                       
@@ -2674,14 +2682,14 @@ export default function App() {
                                           {kels.map(kel => {
                                              const roadCount = syncedRoads.filter(r => r.kelurahan === kel).length;
                                              return (
-                                             <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
+                                             <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
                                                 <div className="flex items-center space-x-3 ml-7">
                                                     <LayerToggle active={activeKelurahan[kel]} color="#c4b5fd" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
-                                                    <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
+                                                    <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>{formatKel(kel)}</span>
                                                 </div>
                                                 <div className="flex items-center space-x-3">
                                                     {roadCount > 0 && (
-                                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 border border-blue-200/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
+                                                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/40 border border-blue-200/50 dark:border-blue-700/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
                                                     )}
                                                 </div>
                                              </div>
@@ -2696,21 +2704,21 @@ export default function App() {
                   </div>
 
                   {/* DAFTAR RUTE AKTIF */}
-                  <div className="border-b border-slate-300/40">
-                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
+                  <div className="border-b border-slate-300/40 dark:border-slate-700/50">
+                     <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setExpandedSection(expandedSection === 'rute' ? null : 'rute')}>
                          <div className="flex items-center space-x-3">
                              <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                             <span className="font-bold text-slate-900 text-[13px] drop-shadow-sm">Data Jalan</span>
+                             <span className="font-bold text-slate-900 dark:text-slate-100 text-[13px] drop-shadow-sm">Data Jalan</span>
                          </div>
                          <div className="flex items-center space-x-3">
-                             <span className="bg-white/70 border border-slate-300/50 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900">{searchedRoads.length}</span>
-                             <ChevronDown className={`h-4 w-4 text-slate-800 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} />
+                             <span className="bg-white/70 dark:bg-slate-800/70 border border-slate-300/50 dark:border-slate-600 shadow-sm px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-900 dark:text-slate-200">{searchedRoads.length}</span>
+                             <ChevronDown className={`h-4 w-4 text-slate-800 dark:text-slate-300 transition-transform ${expandedSection === 'rute' ? 'rotate-180' : ''}`} />
                          </div>
                      </div>
                      {expandedSection === 'rute' && (
-                         <div className="pb-3 px-3 space-y-2 bg-white/10 pt-2">
+                         <div className="pb-3 px-3 space-y-2 bg-white/10 dark:bg-slate-900/30 pt-2">
                              <div className="flex gap-2 mb-3">
-                                 <select value={sortConfig} onChange={e => setSortConfig(e.target.value)} className="w-full bg-white border border-slate-300/50 text-slate-700 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm cursor-pointer">
+                                 <select value={sortConfig} onChange={e => setSortConfig(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300/50 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm cursor-pointer">
                                      <option value="date_desc">📅 Terkini (Baru - Lama)</option>
                                      <option value="date_asc">📅 Terlama (Lama - Baru)</option>
                                      <option value="name_asc">🔤 Nama Jalan (A - Z)</option>
@@ -2730,9 +2738,9 @@ export default function App() {
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
                                   return (
                                   <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
-                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
+                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 dark:bg-slate-800/70 border-slate-300/50 dark:border-slate-700 hover:bg-white/90 dark:hover:bg-slate-800 shadow-sm'}`}>
                                     
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 dark:bg-slate-700 border-slate-400 dark:border-slate-500 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
                                         {isSelectedAdmin && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                                     </div>
 
@@ -2740,28 +2748,28 @@ export default function App() {
                                         type="button"
                                         onPointerDown={(e) => e.stopPropagation()} 
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId, road.name); }} 
-                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
+                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-800 hover:bg-rose-500 dark:hover:bg-rose-600 text-rose-500 dark:text-rose-400 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
                                         title="Hapus Rute"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
 
                                     <div className="flex gap-3 pr-8">
-                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 shrink-0 border border-slate-300/50 flex items-center justify-center">
+                                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 dark:bg-slate-700/50 shrink-0 border border-slate-300/50 dark:border-slate-600 flex items-center justify-center">
                                         {getThumbnailUrl(road) ? (
-                                            <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200" alt="thumb" />
+                                            <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200 dark:bg-slate-700" alt="thumb" />
                                         ) : (
-                                            <span className="text-[8px] text-slate-500 font-bold text-center leading-tight">No<br/>Media</span>
+                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 font-bold text-center leading-tight">No<br/>Media</span>
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
+                                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate pr-4 leading-tight">{road.name}</h4>
                                         <div className="flex flex-col mt-1 gap-0.5">
                                             <div className="flex gap-2 items-center">
                                                <span className="w-2 h-2 rounded-full shadow-sm shrink-0" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
-                                               <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
+                                               <span className="text-[11px] font-medium text-slate-800 dark:text-slate-300 truncate">{formatKel(road.kelurahan)}</span>
                                             </div>
-                                            <div className="text-[10px] text-slate-500 pl-4 font-medium flex items-center gap-1">
+                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 pl-4 font-medium flex items-center gap-1">
                                                🗓️ {road.date || (road.created_at ? new Date(road.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-')}
                                             </div>
                                         </div>
@@ -2776,8 +2784,8 @@ export default function App() {
 
                 </div>
 
-                <div className="p-4 border-t border-slate-300/40 bg-white/20 backdrop-blur-md">
-                    <div className="text-[11px] font-bold text-blue-800 tracking-wider drop-shadow-sm">{Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
+                <div className="p-4 border-t border-slate-300/40 dark:border-slate-700/50 bg-white/20 dark:bg-slate-800/30 backdrop-blur-md">
+                    <div className="text-[11px] font-bold text-blue-800 dark:text-blue-300 tracking-wider drop-shadow-sm">{Object.values(activeKelurahan).filter(Boolean).length} Layer Aktif</div>
                 </div>
               </div>
             </aside>
@@ -2786,7 +2794,7 @@ export default function App() {
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
                <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
-                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
+                   <div ref={adminMapContainerRef} className={`absolute inset-0 bg-slate-200 dark:bg-slate-800 z-0 ${isDarkMode ? 'dark-map' : ''}`}></div>
                    {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
                </div>
             </div>
@@ -2794,26 +2802,26 @@ export default function App() {
         </div>
 
         {/* --- FOOTER KONTROL WILAYAH --- */}
-        <div className="bg-white border-t border-slate-200 px-3 md:px-4 py-1.5 md:py-2 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-2 print-hidden relative pb-[calc(2px+env(safe-area-inset-bottom,0px))]">
+        <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-3 md:px-4 py-1.5 md:py-2 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-2 print-hidden relative pb-[calc(2px+env(safe-area-inset-bottom,0px))] transition-colors">
              
              {/* Kiri Ujung: Toggles Batas Wilayah */}
              <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-1/3 overflow-x-auto hide-scrollbar shrink-0 order-2 md:order-1">
                 <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`} 
                     onClick={() => setShowKecamatan(!showKecamatan)}
                 >
                     <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700' : 'text-slate-600'}`}>
+                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
                         Batas Kec. {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
                     </span>
                 </div>
                 
                 <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700/50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`} 
                     onClick={() => setShowKelurahan(!showKelurahan)}
                 >
                     <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700' : 'text-slate-600'}`}>
+                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`}>
                         Batas Kel. {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />}
                     </span>
                 </div>
@@ -2821,11 +2829,11 @@ export default function App() {
 
              {/* Tengah: Filter Kecamatan & Kelurahan */}
              <div className="flex items-center justify-center gap-2 w-full md:w-1/3 shrink-0 order-1 md:order-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:block mr-1">Filter:</span>
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:block mr-1">Filter:</span>
                 <select 
                    value={selectedToolbarKec}
                    onChange={(e) => handleToolbarKecChange(e.target.value)}
-                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto h-7"
+                   className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto h-7"
                 >
                    <option value="Semua">Semua Kecamatan</option>
                    {Object.keys(KECAMATAN_DATA).sort().map(kec => (
@@ -2837,7 +2845,7 @@ export default function App() {
                    value={selectedToolbarKel}
                    onChange={(e) => handleToolbarKelChange(e.target.value)}
                    disabled={selectedToolbarKec === 'Semua'}
-                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto h-7"
+                   className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:dark:bg-slate-900 disabled:text-slate-400 disabled:border-slate-100 disabled:dark:border-slate-800 w-1/2 md:w-auto h-7"
                 >
                    <option value="Semua">Semua Kelurahan</option>
                    {selectedToolbarKec !== 'Semua' && KECAMATAN_DATA[selectedToolbarKec].map(kel => (
