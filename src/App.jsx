@@ -1026,7 +1026,7 @@ export default function App() {
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // <--- INI BAGIAN YANG DIUBAH
 
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
