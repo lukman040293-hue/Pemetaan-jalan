@@ -2793,13 +2793,13 @@ export default function App() {
           </main>
         </div>
 
-        {/* --- FOOTER KONTROL WILAYAH (Dipindah ke bawah) --- */}
-        <div className="bg-slate-50 border-t border-slate-200 px-3 md:px-4 py-3 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-md shrink-0 w-full gap-3 md:gap-4 print-hidden relative pb-[env(safe-area-inset-bottom,10px)]">
+        {/* --- FOOTER KONTROL WILAYAH (Tengah & Tidak Mepet Bawah) --- */}
+        <div className="bg-white border-t border-slate-200 px-4 py-4 md:py-5 flex flex-col md:flex-row items-center justify-center z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-3 md:gap-5 print-hidden relative pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
              
-             {/* Kiri: Toggles Batas Wilayah */}
-             <div className="flex items-center gap-2 w-full md:w-1/3 overflow-x-auto hide-scrollbar shrink-0 justify-center md:justify-start order-2 md:order-1">
+             {/* Toggles Batas Wilayah */}
+             <div className="flex items-center justify-center gap-3 w-full md:w-auto overflow-x-auto hide-scrollbar shrink-0">
                 <div 
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
                     onClick={() => setShowKecamatan(!showKecamatan)}
                 >
                     <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
@@ -2809,7 +2809,7 @@ export default function App() {
                 </div>
                 
                 <div 
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
                     onClick={() => setShowKelurahan(!showKelurahan)}
                 >
                     <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
@@ -2819,13 +2819,16 @@ export default function App() {
                 </div>
              </div>
 
-             {/* Tengah: Filter Kecamatan & Kelurahan */}
-             <div className="flex items-center gap-2 w-full md:w-1/3 shrink-0 justify-center order-1 md:order-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block mr-1">Filter</span>
+             {/* Garis Pemisah Desktop */}
+             <div className="hidden md:block w-px h-8 bg-slate-200"></div>
+
+             {/* Filter Kecamatan & Kelurahan */}
+             <div className="flex items-center justify-center gap-2 w-full md:w-auto shrink-0">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block mr-2">Filter:</span>
                 <select 
                    value={selectedToolbarKec}
                    onChange={(e) => handleToolbarKecChange(e.target.value)}
-                   className="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto"
+                   className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto"
                 >
                    <option value="Semua">Semua Kecamatan</option>
                    {Object.keys(KECAMATAN_DATA).sort().map(kec => (
@@ -2837,7 +2840,7 @@ export default function App() {
                    value={selectedToolbarKel}
                    onChange={(e) => handleToolbarKelChange(e.target.value)}
                    disabled={selectedToolbarKec === 'Semua'}
-                   className="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto"
+                   className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto"
                 >
                    <option value="Semua">Semua Kelurahan</option>
                    {selectedToolbarKec !== 'Semua' && KECAMATAN_DATA[selectedToolbarKec].map(kel => (
@@ -2845,9 +2848,6 @@ export default function App() {
                    ))}
                 </select>
              </div>
-
-             {/* Kanan: Spacer untuk menyeimbangkan agar elemen tengah tetap persis di tengah pada layar desktop */}
-             <div className="hidden md:block md:w-1/3 order-3"></div>
           </div>
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
