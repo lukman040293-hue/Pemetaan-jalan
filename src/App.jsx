@@ -2685,9 +2685,9 @@ export default function App() {
                           <div className="flex justify-between items-center mt-1 border-t border-slate-100 pt-3">
                             <span className="text-[10px] font-bold text-slate-400">{draft.date}</span>
                             <div className="flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); editDraft(draft); }} className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors"><Edit className="w-4 h-4"/></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(draft); }} className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded-lg transition-colors"><Download className="w-4 h-4"/></button>
-                              <button onClick={(e) => { e.stopPropagation(); deleteDraft(draft.id); }} className="text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>
+                              <button onClick={(e) => { e.stopPropagation(); editDraft(draft); }} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors text-[10px] font-bold flex items-center gap-1.5">
+                                 <Edit className="w-3.5 h-3.5"/> Edit Draft
+                              </button>
                             </div>
                           </div>
                         </div>
