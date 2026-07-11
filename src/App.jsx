@@ -2948,7 +2948,7 @@ export default function App() {
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             
             {/* --- KOTAK STATISTIK MOBILE (MENGAMBANG DI ATAS PETA) --- */}
-            <div className="md:hidden absolute top-2 left-[52px] right-[50px] z-[1050] pointer-events-none print-hidden flex justify-start">
+            <div className={`md:hidden absolute top-2 left-[52px] right-[50px] z-[850] pointer-events-none print-hidden flex justify-start transition-opacity duration-300 ${isSidebarOpen ? 'opacity-0' : 'opacity-100'}`}>
               <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-lg px-2.5 py-1.5 flex flex-wrap items-center justify-start gap-x-2.5 gap-y-1 shadow-md pointer-events-auto">
                 <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
