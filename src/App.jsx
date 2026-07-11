@@ -2255,7 +2255,7 @@ export default function App() {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .custom-scrollbar { -webkit-overflow-scrolling: touch; }
-        @media screen and (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+        @media screen and (max-width: 768px) { input, select, textarea { font-size: 12px !important; } }
         .leaflet-left { transition: left 0.3s ease-in-out; }
         .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
         .leaflet-touch .leaflet-control-layers-toggle { width: 34px !important; height: 34px !important; background-size: 18px !important; }
