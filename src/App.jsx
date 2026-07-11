@@ -2763,28 +2763,6 @@ export default function App() {
             </div>
           </header>
 
-          {/* --- KOTAK STATISTIK MOBILE (Terpisah di bawah header dengan celah) --- */}
-          <div className="md:hidden w-full px-2 mt-1.5 z-[1090] shrink-0 print-hidden">
-            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 shadow-sm">
-              <div className="flex items-center gap-1 shrink-0 text-[9px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
-                <span className="text-slate-600 font-medium">Baik: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.baik} /></span></span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 text-[9px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-                <span className="text-slate-600 font-medium">R.Ringan: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 text-[9px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EC8533]"></span>
-                <span className="text-slate-600 font-medium">R.Sedang: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 text-[9px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span>
-                <span className="text-slate-600 font-medium">R.Parah: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
-              </div>
-            </div>
-          </div>
-
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
             
             {/* Overlay Layar Gelap Mobile */}
@@ -2969,6 +2947,28 @@ export default function App() {
             {/* --- MAIN MAP AREA --- */}
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             
+            {/* --- KOTAK STATISTIK MOBILE (MENGAMBANG DI ATAS PETA) --- */}
+            <div className="md:hidden absolute top-3 left-[60px] right-3 z-[1050] pointer-events-none print-hidden flex justify-center">
+              <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-lg px-2 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 shadow-md pointer-events-auto w-full max-w-full">
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                  <span className="text-slate-600 font-medium">Baik: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.baik} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
+                  <span className="text-slate-600 font-medium">R.Ringan: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#EC8533]"></span>
+                  <span className="text-slate-600 font-medium">R.Sedang: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span>
+                  <span className="text-slate-600 font-medium">R.Parah: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
+                </div>
+              </div>
+            </div>
+
             {/* Tombol Toggle Sidebar Mengambang (Pojok Kiri Atas Peta) */}
             {!isSidebarOpen && (
                <button 
