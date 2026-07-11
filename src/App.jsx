@@ -2948,8 +2948,8 @@ export default function App() {
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             
             {/* --- KOTAK STATISTIK MOBILE (MENGAMBANG DI ATAS PETA) --- */}
-            <div className="md:hidden absolute top-1 left-[60px] right-3 z-[1050] pointer-events-none print-hidden flex justify-center">
-              <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-lg px-2 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 shadow-md pointer-events-auto w-full max-w-full">
+            <div className="md:hidden absolute top-2 left-[52px] right-[50px] z-[1050] pointer-events-none print-hidden flex justify-start">
+              <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-lg px-2.5 py-1.5 flex flex-wrap items-center justify-start gap-x-2.5 gap-y-1 shadow-md pointer-events-auto">
                 <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
                   <span className="text-slate-600 font-medium">Baik: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.baik} /></span></span>
@@ -2973,10 +2973,10 @@ export default function App() {
             {!isSidebarOpen && (
                <button 
                   onClick={() => setIsSidebarOpen(true)} 
-                  className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
+                  className="absolute top-[48px] left-2 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
                   title="Buka Daftar Layer"
                >
-                  <Menu className="w-6 h-6" strokeWidth={2.5} />
+                  <Menu className="w-5 h-5" strokeWidth={2.5} />
                </button>
             )}
 
