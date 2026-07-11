@@ -3,7 +3,7 @@ import {
   Menu, RefreshCw, LogOut, X, Search, ChevronDown, 
   Trash2, Play, Share2, Download, Printer, Map as MapIcon, 
   PenTool, FileText, Undo2, Crosshair, Camera, MapPin, 
-  Pause, Square, Info, Edit, Check
+  Pause, Square, Info, Edit, Check, Maximize
 } from 'lucide-react';
 
 // =========================================================================
@@ -946,6 +946,10 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
 
+  const [draftDateFilter, setDraftDateFilter] = useState('');
+  const uniqueDraftDates = [...new Set(drafts.map(d => d.date))].filter(Boolean).reverse();
+  const filteredDrafts = draftDateFilter ? drafts.filter(d => d.date === draftDateFilter) : drafts;
+
   useEffect(() => {
     try { const savedDrafts = localStorage.getItem('rmap_drafts'); if (savedDrafts) setDrafts(JSON.parse(savedDrafts)); } catch (e) {}
   }, []);
@@ -993,7 +997,84 @@ export default function App() {
   useEffect(() => { animationSpeedRef.current = animationSpeedMultiplier; }, [animationSpeedMultiplier]);
   useEffect(() => { isAnimPausedRef.current = isAnimPaused; }, [isAnimPaused]);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // =========================================================================
+  // 🟢 PULL-TO-REFRESH STATE & LOGIC
+  // =========================================================================
+  const [pullY, setPullY] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const isPullingRef = useRef(false);
+
+  const handleTouchStart = (e) => {
+      // Hanya izinkan refresh di Beranda Utama, Dasbor Admin, dan Drafts Surveyor. (Layar Record & Form dilarang agar data aman).
+      const allowed = !appRole || appRole === 'admin' || (appRole === 'surveyor' && ['home', 'drafts'].includes(mobileScreen));
+      if (!allowed) return;
+      
+      // Jangan aktifkan jika user sedang menyentuh Peta atau Video Popup
+      if (e.target.closest('.leaflet-container') || e.target.closest('#admin-vid-player') || isVideoFullscreen) return;
+
+      // Cek apakah area yang disentuh sedang di posisi paling atas (scrollTop = 0)
+      let target = e.target;
+      let isAtTop = true;
+      while (target && target !== document.body && target !== document.documentElement) {
+          if (target.scrollTop > 0) { isAtTop = false; break; }
+          target = target.parentNode;
+      }
+
+      if (isAtTop) {
+          touchStartY.current = e.touches[0].clientY;
+          isPullingRef.current = true;
+      } else {
+          isPullingRef.current = false;
+      }
+  };
+
+  const handleTouchMove = (e) => {
+      if (!isPullingRef.current || isRefreshing) return;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - touchStartY.current;
+
+      // Jika di tarik ke bawah
+      if (diff > 0) {
+          const easeDiff = Math.min(diff * 0.4, 80); // Perlambat dan batasi tarikan max 80px
+          setPullY(easeDiff);
+      } else {
+          setPullY(0);
+      }
+  };
+
+  const handleTouchEnd = () => {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+
+      // Jika ditarik cukup jauh (lebih dari 50px), jalankan Refresh!
+      if (pullY >= 50) {
+          setIsRefreshing(true);
+          setPullY(60); 
+          refreshAppAction();
+      } else {
+          setPullY(0);
+      }
+  };
+
+  const refreshAppAction = async () => {
+      if (appRole === 'admin') {
+          await fetchRoads(); // Admin hanya merefresh data dari database (tanpa reload halaman)
+          setTimeout(() => {
+              setIsRefreshing(false);
+              setPullY(0);
+              showToast("Data rute diperbarui!");
+          }, 800);
+      } else {
+          // Surveyor (Home/Draft) mereload aplikasi agar lebih fresh
+          setTimeout(() => {
+              window.location.reload();
+          }, 500);
+      }
+  };
+  // =========================================================================
 
   const adminMapContainerRef = useRef(null);
   const adminMapInstanceRef = useRef(null);
@@ -1736,7 +1817,15 @@ export default function App() {
   };
 
   const toggleDraftSelection = (id) => setSelectedDraftIds(prev => prev.includes(id) ? prev.filter(draftId => draftId !== id) : [...prev, id]);
-  const selectAllDrafts = () => setSelectedDraftIds(selectedDraftIds.length === drafts.length ? [] : drafts.map(d => d.id));
+  const selectAllDrafts = () => {
+    const visibleIds = filteredDrafts.map(d => d.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedDraftIds.includes(id));
+    if (allSelected) {
+        setSelectedDraftIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+        setSelectedDraftIds(prev => [...new Set([...prev, ...visibleIds])]);
+    }
+  };
 
   const editDraft = (draft) => {
     setFormData({ name: draft.name, kelurahan: draft.kelurahan, jenisJalan: draft.jenisJalan || 'Aspal', condition: draft.condition, notes: draft.notes });
@@ -1780,6 +1869,21 @@ export default function App() {
     showToast("File JSON diunduh. Kirim file ini ke teman Anda.");
   };
 
+  const handleExportSelectedJSON = () => {
+    if (selectedDraftIds.length === 0) return showToast("Pilih draft yang ingin diexport!");
+    const draftsToExport = drafts.filter(d => selectedDraftIds.includes(d.id)).map(draft => ({
+        ...draft, videoFile: undefined, photoFiles: undefined, localVideoUrl: undefined, localPhotoUrls: undefined
+    }));
+
+    const exportData = { app: "WebGIS_Surveyor", version: "1.1", drafts: draftsToExport };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData));
+    const downloadNode = document.createElement('a'); downloadNode.setAttribute("href", dataStr);
+    downloadNode.setAttribute("download", `Drafts_Backup_${new Date().getTime()}.json`);
+    document.body.appendChild(downloadNode); downloadNode.click(); downloadNode.remove();
+    
+    showToast(`${draftsToExport.length} Draft berhasil diexport.`);
+  };
+
   const handleImportDraftJSON = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1788,14 +1892,24 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const importedData = JSON.parse(event.target.result);
-        if (importedData.app === "WebGIS_Surveyor" && importedData.draft) {
-          const newDraft = importedData.draft;
-          newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
-          newDraft.isUploaded = false; 
-          setDrafts(prev => [...prev, newDraft]);
-          showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
+        if (importedData.app === "WebGIS_Surveyor") {
+          if (importedData.drafts && Array.isArray(importedData.drafts)) {
+              // Jika import data massal (banyak draft sekaligus)
+              const newDrafts = importedData.drafts.map(d => ({ ...d, id: "DRAFT-" + Math.floor(Math.random() * 1000000), isUploaded: false }));
+              setDrafts(prev => [...prev, ...newDrafts]);
+              showToast(`✅ ${newDrafts.length} Draft berhasil diimpor!`);
+          } else if (importedData.draft) {
+              // Jika import 1 data satuan
+              const newDraft = importedData.draft;
+              newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
+              newDraft.isUploaded = false; 
+              setDrafts(prev => [...prev, newDraft]);
+              showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
+          } else {
+              showToast("❌ Format file JSON tidak dikenali.");
+          }
         } else {
-          showToast("❌ Format file JSON tidak dikenali.");
+          showToast("❌ Format file JSON bukan dari aplikasi ini.");
         }
       } catch (err) {
         showToast("❌ Gagal membaca file JSON.");
@@ -2046,36 +2160,30 @@ export default function App() {
        return;
     }
 
-    showToast("Mengekstrak frame video untuk cetak...");
-    let snapshots = [];
-    try {
-      const videoEl = document.getElementById('admin-vid-player');
-      if (videoEl && videoEl.readyState >= 2 && videoEl.duration > 0) { 
-        const originalTime = videoEl.currentTime; const isPaused = videoEl.paused; const duration = videoEl.duration;
-        for (let t of [duration * 0.1, duration * 0.35, duration * 0.6, duration * 0.85]) {
-           await new Promise(resolve => {
-              const onSeeked = () => {
-                 videoEl.removeEventListener('seeked', onSeeked); clearTimeout(fallback); 
-                 try {
-                   const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight;
-                   canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-                   snapshots.push(canvas.toDataURL('image/jpeg', 0.8));
-                 } catch(e) {}
-                 resolve();
-              };
-              const fallback = setTimeout(() => { videoEl.removeEventListener('seeked', onSeeked); resolve(); }, 1500); 
-              videoEl.addEventListener('seeked', onSeeked); videoEl.currentTime = t; 
-           });
-        }
-        videoEl.currentTime = originalTime; if (!isPaused) videoEl.play();
-      }
-    } catch (err) {}
-    
-    setVideoSnapshot(snapshots); 
+    showToast("Menyiapkan dokumen untuk dicetak...");
     setTimeout(() => { 
         window.print(); 
         document.title = originalTitle;
     }, 400); 
+  };
+
+  const resetMapView = () => {
+    if (!adminMapInstanceRef.current) return;
+    
+    // Cari rute mana saja yang sedang tampil saat ini (termasuk hasil filter wilayah)
+    const roadsToDisplay = selectedAdminRouteIds.length > 0 
+        ? filteredRoads.filter(road => selectedAdminRouteIds.includes(road.id || road.dbId))
+        : filteredRoads;
+
+    const allLatLngs = roadsToDisplay.flatMap(r => (r.realGps || []).map(pt => [pt.lat, pt.lng]));
+    
+    // Zoom dan arahkan peta agar pas menampung seluruh rute tersebut
+    if (allLatLngs.length > 0) {
+        adminMapInstanceRef.current.flyToBounds(window.L.latLngBounds(allLatLngs), { padding: [50, 50], maxZoom: 16, duration: 0.6 });
+    } else {
+        // Jika tidak ada data yang tampil, kembali ke tengah kota secara default
+        adminMapInstanceRef.current.flyTo([-0.425, 117.185], 13, { duration: 0.6 });
+    }
   };
 
   // --- LOGIKA SINKRONISASI FILTER FOOTER & SIDEBAR ---
@@ -2128,7 +2236,12 @@ export default function App() {
   };
 
   return (
-    <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
+    <div 
+      className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <style dangerouslySetInnerHTML={{__html: `
         .leaflet-container { width: 100%; height: 100%; min-height: 100%; z-index: 10; touch-action: none; }
         .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -2140,7 +2253,8 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 10px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .custom-scrollbar { -webkit-overflow-scrolling: touch; }
         @media screen and (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
         .leaflet-left { transition: left 0.3s ease-in-out; }
         .leaflet-control-layers-toggle { width: 30px !important; height: 30px !important; background-size: 16px !important; }
@@ -2163,6 +2277,14 @@ export default function App() {
           .print-show { display: block !important; position: static !important; width: 100% !important; margin: 0; padding: 15mm !important; box-sizing: border-box; }
         }
       `}} />
+
+      {/* --- PULL-TO-REFRESH INDICATOR (IKON MUTER) --- */}
+      <div 
+        style={{ transform: `translateY(${pullY}px) translateX(-50%)`, opacity: pullY > 10 ? 1 : 0, transition: isPullingRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease' }} 
+        className="fixed top-[-40px] left-1/2 z-[9999] bg-white rounded-full p-2.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center border border-slate-100 pointer-events-none"
+      >
+        <RefreshCw className={`w-5 h-5 text-blue-600 ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullY * 4}deg)` }} />
+      </div>
 
       {isExportingDroneVideo && animatingRoadsList.length === 1 && (
           <DroneVideoExporter road={animatingRoadsList[0]} onClose={() => setIsExportingDroneVideo(false)} />
@@ -2527,46 +2649,70 @@ export default function App() {
                     
                     <button onClick={() => { window.location.hash = '#/surveyor/home'; }} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-full font-bold text-xs">Tutup</button>
                   </div>
-                  {drafts.length > 0 && (
-                     <div className="mb-2 flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl shadow-sm cursor-pointer" onClick={selectAllDrafts}>
-                       <span className="text-sm font-bold text-slate-700">Pilih Semua</span>
-                       <div className={`w-5 h-5 rounded-full border-2 ${selectedDraftIds.length === drafts.length ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div>
-                     </div>
-                  )}
                 </div>
 
-                <div className="flex-1 space-y-2.5 overflow-y-auto px-6 pb-4 custom-scrollbar">
-                  {drafts.length === 0 ? (<div className="text-center text-slate-400 mt-10 p-8 border-2 border-dashed border-slate-300 rounded-2xl">Belum ada survei tersimpan.</div>) : (
-                    drafts.map(d => {
-                      const isSelected = selectedDraftIds.includes(d.id);
+                {/* FILTER TANGGAL DRAFT */}
+                <div className="px-6 py-2 bg-slate-100 z-10 flex gap-2 items-center border-b border-slate-200">
+                    <select value={draftDateFilter} onChange={(e) => { setDraftDateFilter(e.target.value); setSelectedDraftIds([]); }} className="flex-1 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg px-2 py-2 outline-none shadow-sm focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Tanggal</option>
+                        {uniqueDraftDates.map(date => <option key={date} value={date}>{date}</option>)}
+                    </select>
+                    {filteredDrafts.length > 0 && (
+                        <button onClick={selectAllDrafts} className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${selectedDraftIds.length === filteredDrafts.length && filteredDrafts.length > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                            {selectedDraftIds.length === filteredDrafts.length && filteredDrafts.length > 0 ? 'Batal Pilih' : 'Pilih Semua'}
+                        </button>
+                    )}
+                </div>
+                
+                {/* LIST DRAFT */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                  {filteredDrafts.length === 0 ? (
+                    <div className="text-center text-slate-500 mt-10 text-sm font-bold">Belum ada draft tersimpan.</div>
+                  ) : (
+                    filteredDrafts.map((draft, idx) => {
+                      const isSelected = selectedDraftIds.includes(draft.id);
                       return (
-                      <div key={d.id} onClick={() => toggleDraftSelection(d.id)} className={`px-3 py-2.5 rounded-2xl border shadow-sm flex items-center cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'bg-white'}`}>
-                        <div className="pl-1.5 pr-3"><div className={`w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}></div></div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center">
-                             <div className="font-extrabold text-sm truncate max-w-[140px]">{d.name}</div>
-                             <div className="flex space-x-1.5">
-                               <button onClick={(e) => { e.stopPropagation(); handleShareDraft(d); }} className="bg-emerald-50 text-emerald-600 p-1.5 rounded-xl transition-colors hover:bg-emerald-100" title="Bagikan Info (Teks)">
-                                 <Share2 className="w-4 h-4" />
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(d); }} className="bg-amber-50 text-amber-600 p-1.5 rounded-xl transition-colors hover:bg-amber-100" title="Download File (.json)">
-                                 <Download className="w-4 h-4" />
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); editDraft(d); }} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">Edit</button>
-                             </div>
+                        <div key={idx} onClick={() => toggleDraftSelection(draft.id)} className={`bg-white rounded-2xl p-4 shadow-sm border transition-all cursor-pointer relative flex flex-col gap-3 ${isSelected ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-200'}`}>
+                          
+                          <div className={`absolute top-4 right-4 w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-slate-100 border-slate-300'}`}>
+                              {isSelected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
                           </div>
-                          <div className="text-[10px] text-slate-500 mt-1">{d.isUploaded ? '✅ Terunggah' : 'Menunggu Unggah'}</div>
+
+                          <div className="flex items-start justify-between pr-8">
+                            <div>
+                                <h4 className="font-black text-slate-900 text-base">{draft.name}</h4>
+                                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                   <MapPin className="w-3 h-3"/> {formatKel(draft.kelurahan)}
+                                </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                             <span className="px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm" style={{backgroundColor: getConditionColor(draft.condition)}}>{draft.condition}</span>
+                             <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{draft.jenisJalan || 'Aspal'}</span>
+                             <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{draft.length || 0} km</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center mt-1 border-t border-slate-100 pt-3">
+                            <span className="text-[10px] font-bold text-slate-400">{draft.date}</span>
+                            <div className="flex gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); editDraft(draft); }} className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors"><Edit className="w-4 h-4"/></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(draft); }} className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded-lg transition-colors"><Download className="w-4 h-4"/></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleShareDraft(draft); }} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-lg transition-colors"><Share2 className="w-4 h-4"/></button>
+                              <button onClick={(e) => { e.stopPropagation(); deleteDraft(draft.id); }} className="text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      );
+                      )
                     })
                   )}
                 </div>
 
                 {drafts.length > 0 && (
-                  <div className="p-4 bg-white border-t border-slate-200 flex space-x-3">
-                    <button onClick={deleteSelectedDrafts} disabled={selectedDraftIds.length === 0} className={`w-1/3 py-4 rounded-2xl font-black text-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>HAPUS</button>
-                    <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`w-2/3 py-4 rounded-2xl text-white font-black text-sm ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600' : 'bg-slate-400'}`}>UNGGAH ({selectedDraftIds.length})</button>
+                  <div className="p-4 bg-white border-t border-slate-200 flex gap-2">
+                    <button onClick={deleteSelectedDrafts} disabled={selectedDraftIds.length === 0} className={`flex-1 py-3.5 rounded-2xl font-black text-[11px] md:text-sm ${selectedDraftIds.length > 0 ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>HAPUS</button>
+                    <button onClick={handleExportSelectedJSON} disabled={selectedDraftIds.length === 0} className={`flex-1 py-3.5 rounded-2xl font-black text-[11px] md:text-sm ${selectedDraftIds.length > 0 ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>EXPORT</button>
+                    <button onClick={syncDataToCloud} disabled={selectedDraftIds.length === 0} className={`flex-[1.5] py-3.5 rounded-2xl text-white font-black text-[11px] md:text-sm ${isDbConnected && selectedDraftIds.length > 0 ? 'bg-blue-600 shadow-md' : 'bg-slate-400'}`}>UNGGAH ({selectedDraftIds.length})</button>
                   </div>
                 )}
               </div>
@@ -2582,29 +2728,32 @@ export default function App() {
           {/* --- HEADER MAP AREA --- */}
           <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
             <div className="flex items-center space-x-2 shrink-0">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <Menu className="w-5 h-5" />
-              </button>
-              <div className="hidden md:flex bg-blue-600 text-white p-2 rounded-lg items-center justify-center"><MapIcon className="w-5 h-5"/></div>
+              <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center shadow-sm"><MapIcon className="w-5 h-5"/></div>
             </div>
 
-            {/* --- STATISTIK LEGENDA DI HEADER --- */}
-            <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar gap-2 md:gap-3 py-1">
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Baik</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.baik} /></span></div>
-              </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#FACC15]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Ringan</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakRingan} /></span></div>
-              </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EC8533]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Sedang</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakSedang} /></span></div>
-              </div>
-              <div className="flex items-stretch rounded-md border border-slate-200 overflow-hidden h-9 md:h-10 shrink-0 bg-white shadow-sm">
-                 <div className="flex-1 flex items-center gap-1.5 px-2 md:px-3 border-r border-slate-200"><span className="w-2 h-2 rounded-full bg-[#EF4444]"></span><span className="text-[10px] md:text-xs font-bold text-slate-600 uppercase">Rsk Parah</span></div>
-                 <div className="flex items-center justify-center bg-slate-50 px-3 md:px-4"><span className="text-sm md:text-lg font-black text-slate-800"><AnimatedNumber value={adminStats.rusakParah} /></span></div>
+            {/* --- STATISTIK LEGENDA DI HEADER (SIMPEL & TERPADU) --- */}
+            <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar py-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-3.5 md:gap-5 shrink-0 text-xs md:text-sm font-bold text-slate-700 shadow-inner">
+                <span className="text-blue-600 flex items-center gap-1.5 shrink-0">
+                  📍 <span className="uppercase tracking-wider font-black">{selectedKelurahanFooter ? `Kel. ${selectedKelurahanFooter}` : selectedKecamatanFooter ? `Kec. ${selectedKecamatanFooter}` : "Semua Kecamatan"}</span>
+                </span>
+                <div className="w-px h-4 bg-slate-300 shrink-0"></div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                  <span className="text-slate-600 font-normal">Baik: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.baik} /></span></span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
+                  <span className="text-slate-600 font-normal">Rsk. Ringan: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#EC8533]"></span>
+                  <span className="text-slate-600 font-normal">Rsk. Sedang: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#EF4444]"></span>
+                  <span className="text-slate-600 font-normal">Rsk. Parah: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
+                </div>
               </div>
             </div>
 
@@ -2792,6 +2941,27 @@ export default function App() {
 
             {/* --- MAIN MAP AREA --- */}
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
+            
+            {/* Tombol Toggle Sidebar Mengambang (Pojok Kiri Atas Peta) */}
+            {!isSidebarOpen && (
+               <button 
+                  onClick={() => setIsSidebarOpen(true)} 
+                  className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
+                  title="Buka Daftar Layer"
+               >
+                  <Menu className="w-6 h-6" strokeWidth={2.5} />
+               </button>
+            )}
+
+            {/* Tombol Reset View Peta (Pojok Kanan Atas - Bawah Zoom Control) */}
+            <button 
+               onClick={resetMapView}
+               className="absolute top-[135px] right-[10px] z-[1000] bg-white w-[30px] h-[30px] md:w-[34px] md:h-[34px] rounded-[2px] shadow-[0_1px_5px_rgba(0,0,0,0.65)] text-slate-700 hover:bg-[#f4f4f4] hover:text-black transition-colors pointer-events-auto flex items-center justify-center animate-fade-in"
+               title="Reset Tampilan Peta"
+            >
+               <Maximize className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+            </button>
+
             <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
                <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
                    <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
@@ -2806,21 +2976,21 @@ export default function App() {
             
             {/* Bagian Kiri: Info (Sembunyi di Mobile) */}
             <div className="hidden md:flex items-center gap-2 shrink-0 pr-4 border-r border-slate-200">
-               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sistem Informasi Geografis</span>
+               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sistem Informasi Infrastruktur Jalan</span>
             </div>
 
-            {/* Bagian Tengah: Filter Data (Dropdown Tersinkronisasi) */}
+            {/* Bagian Tengah: Filter Data (Dropdown Tersinkronisasi) Tanpa Kotak Luar */}
             <div className="flex flex-1 justify-center items-center gap-2 md:gap-3 shrink-0 min-w-max">
-                <div className="flex items-center gap-1.5 md:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
-                    <span className="text-[10px] md:text-xs font-bold text-slate-500 hidden sm:inline ml-1">Filter Data:</span>
-                    <select value={selectedKecamatanFooter} onChange={onChangeFooterKec} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer max-w-[120px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                    <span className="text-[10px] md:text-xs font-bold text-slate-500 hidden sm:inline">Filter:</span>
+                    <select value={selectedKecamatanFooter} onChange={onChangeFooterKec} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1.5 md:py-1 outline-none cursor-pointer max-w-[130px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
                         <option value="">Semua Kecamatan</option>
                         {Object.keys(KECAMATAN_DATA).sort().map(kec => (
                             <option key={kec} value={kec}>{kec}</option>
                         ))}
                     </select>
                     
-                    <select value={selectedKelurahanFooter} onChange={onChangeFooterKel} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer max-w-[120px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                    <select value={selectedKelurahanFooter} onChange={onChangeFooterKel} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1.5 md:py-1 outline-none cursor-pointer max-w-[130px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
                         <option value="">Semua Kelurahan</option>
                         {(selectedKecamatanFooter ? KECAMATAN_DATA[selectedKecamatanFooter] : KELURAHAN_LIST).map(kel => (
                             <option key={kel} value={kel}>{formatKel(kel)}</option>
