@@ -2714,42 +2714,46 @@ export default function App() {
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
           {/* --- HEADER MAP AREA --- */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-5 py-2.5 md:py-3 flex justify-between items-center z-[1100] shadow-sm shrink-0 relative w-full gap-3 md:gap-4 print-hidden">
-            <div className="flex items-center shrink-0 self-start mt-0.5 md:self-center md:mt-0">
+          <header className="bg-white border-b border-slate-200 px-2 md:px-4 py-2 md:py-0 md:h-16 flex justify-between items-center z-[1100] shadow-sm shrink-0 relative w-full gap-2 md:gap-3 print-hidden">
+            <div className="flex items-center space-x-2 shrink-0 self-start md:self-center mt-1 md:mt-0">
               <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center shadow-sm"><MapIcon className="w-5 h-5"/></div>
             </div>
 
             {/* --- STATISTIK LEGENDA DI HEADER --- */}
-            <div className="flex-1 flex flex-col justify-center min-w-0">
+            <div className="flex-1 flex flex-col justify-center min-w-0 py-0.5 md:py-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl px-3 py-1.5 md:py-2 flex items-center justify-center md:justify-start gap-1 md:gap-4 shrink-0 shadow-inner w-full">
                 
-                {/* Baris Atas: Lokasi (Terpisah tanpa kotak) */}
-                <div className="text-blue-700 flex items-center gap-1.5 shrink-0 text-[11px] md:text-[13px] font-black uppercase tracking-wider truncate mb-1 md:mb-1.5">
-                  <span>📍</span> {selectedKelurahanFooter ? `Kel. ${selectedKelurahanFooter}` : selectedKecamatanFooter ? `Kec. ${selectedKecamatanFooter}` : "Semua Kecamatan"}
-                </div>
+                {/* Lokasi */}
+                <span className="text-blue-600 flex items-center gap-1.5 shrink-0 text-[11px] md:text-sm font-bold w-full md:w-auto justify-center md:justify-start">
+                  📍 <span className="uppercase tracking-wider font-black truncate">{selectedKelurahanFooter ? `Kel. ${selectedKelurahanFooter}` : selectedKecamatanFooter ? `Kec. ${selectedKecamatanFooter}` : "Semua Kecamatan"}</span>
+                </span>
                 
-                {/* Baris Bawah: Statistik Kondisi Jalan (Sejajar Rata Kiri & Membungkus) */}
-                <div className="flex flex-wrap items-center justify-start gap-x-3 md:gap-x-5 gap-y-1.5 text-[9.5px] sm:text-[10px] md:text-xs">
+                <div className="hidden md:block w-px h-4 bg-slate-300 shrink-0"></div>
+                
+                {/* Statistik Kondisi Jalan (Hanya Tampil di Desktop dalam Header) */}
+                <div className="hidden md:flex flex-wrap items-center gap-4 text-sm">
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#10B981]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
                     <span className="text-slate-600 font-normal">Baik: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.baik} /></span></span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#FACC15]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FACC15]"></span>
                     <span className="text-slate-600 font-normal">Rsk. Ringan: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#EC8533]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#EC8533]"></span>
                     <span className="text-slate-600 font-normal">Rsk. Sedang: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#EF4444]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>
                     <span className="text-slate-600 font-normal">Rsk. Parah: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
                   </div>
                 </div>
 
+              </div>
             </div>
 
-            <div className="flex items-center space-x-1.5 md:space-x-2 shrink-0 self-start mt-0.5 md:self-center md:mt-0">
+            <div className="flex items-center space-x-1.5 md:space-x-2 shrink-0 self-start md:self-center mt-1 md:mt-0">
               <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
                 <RefreshCw className="w-4 h-4 md:w-5 md:h-5" />
               </button>
@@ -2758,6 +2762,28 @@ export default function App() {
               </button>
             </div>
           </header>
+
+          {/* --- KOTAK STATISTIK MOBILE (Terpisah di bawah header dengan celah) --- */}
+          <div className="md:hidden w-full px-2 mt-1.5 z-[1090] shrink-0 print-hidden">
+            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 shadow-sm">
+              <div className="flex items-center gap-1 shrink-0 text-[9px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                <span className="text-slate-600 font-medium">Baik: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.baik} /></span></span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 text-[9px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
+                <span className="text-slate-600 font-medium">R.Ringan: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 text-[9px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EC8533]"></span>
+                <span className="text-slate-600 font-medium">R.Sedang: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 text-[9px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span>
+                <span className="text-slate-600 font-medium">R.Parah: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex-1 flex relative w-full overflow-hidden print-hidden">
             
