@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Menu, RefreshCw, LogOut, X, Search, ChevronDown, 
+  Menu, RefreshCw, LogOut, X, Search, ChevronDown,
   Trash2, Play, Share2, Download, Printer, Map as MapIcon, 
   PenTool, FileText, Undo2, Crosshair, Camera, MapPin, 
   Pause, Square, Info, Edit, Check, Maximize
@@ -2874,24 +2874,12 @@ export default function App() {
                                   const isHighlighted = highlightedRoadId === roadId; 
                                   const isSelectedAdmin = selectedAdminRouteIds.includes(roadId);
                                   return (
-                                  <div key={roadId} onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
-                                       className={`p-2.5 rounded-xl border cursor-pointer relative transition-colors backdrop-blur-md ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
+                                  <div key={roadId} 
+                                       className={`p-2.5 rounded-xl border relative transition-colors backdrop-blur-md flex gap-2 ${isHighlighted ? 'bg-blue-50/90 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-white/70 border-slate-300/50 hover:bg-white/90 shadow-sm'}`}>
                                     
-                                    <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`absolute top-2.5 right-2.5 w-5 h-5 rounded-md border z-10 flex items-center justify-center transition-colors ${isSelectedAdmin ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-slate-400 hover:border-blue-400'}`} title="Mode Fokus / Pilih Animasi">
-                                        {isSelectedAdmin && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                                    </div>
-
-                                    <button 
-                                        type="button"
-                                        onPointerDown={(e) => e.stopPropagation()} 
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId, road.name); }} 
-                                        className="absolute bottom-2 right-2 w-7 h-7 rounded-md border border-rose-200 bg-white hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors z-[50] shadow-sm"
-                                        title="Hapus Rute"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-
-                                    <div className="flex gap-3 pr-8">
+                                    {/* AREA KIRI: KHUSUS KLIK UNTUK DETAIL RUTE */}
+                                    <div onClick={() => { setSelectedRoad(road); setHighlightedRoadId(roadId); setVideoSnapshot([]); window.location.hash = '#/admin/detail'; if (window.innerWidth < 768) setIsSidebarOpen(false); if (adminMapInstanceRef.current && road.realGps?.length > 0) adminMapInstanceRef.current.fitBounds(window.L.latLngBounds(road.realGps.map(pt => [pt.lat, pt.lng])), { padding: [40, 40] }); }} 
+                                         className="flex-1 flex gap-3 cursor-pointer min-w-0" title="Klik untuk lihat detail">
                                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200/50 shrink-0 border border-slate-300/50 flex items-center justify-center">
                                         {getThumbnailUrl(road) ? (
                                             <img src={getThumbnailUrl(road)} loading="lazy" decoding="async" className="w-full h-full object-cover bg-slate-200" alt="thumb" />
@@ -2900,18 +2888,39 @@ export default function App() {
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-4 leading-tight">{road.name}</h4>
+                                        <h4 className="font-bold text-sm text-slate-900 truncate pr-1 leading-tight">{road.name}</h4>
                                         <div className="flex flex-col mt-1 gap-0.5">
                                             <div className="flex gap-2 items-center">
                                                <span className="w-2 h-2 rounded-full shadow-sm shrink-0" style={{ backgroundColor: getConditionColor(road.condition)}}></span>
                                                <span className="text-[11px] font-medium text-slate-800 truncate">{formatKel(road.kelurahan)}</span>
                                             </div>
-                                            <div className="text-[10px] text-slate-500 pl-4 font-medium flex items-center gap-1">
+                                            <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
                                                🗓️ {road.date || (road.created_at ? new Date(road.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-')}
                                             </div>
                                         </div>
                                       </div>
                                     </div>
+
+                                    {/* AREA KANAN: KHUSUS KLIK TOMBOL AKSI (PILIH & HAPUS) */}
+                                    <div className="shrink-0 flex flex-col justify-between items-end w-8 border-l border-slate-200/70 pl-2">
+                                        
+                                        {/* Tombol Checkbox */}
+                                        <div onClick={(e) => { e.stopPropagation(); toggleAdminRouteSelection(roadId); }} className={`w-6 h-6 rounded-md border flex items-center justify-center cursor-pointer transition-colors shadow-sm ${isSelectedAdmin ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 hover:border-emerald-400'}`} title="Pilih Animasi">
+                                            {isSelectedAdmin && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                                        </div>
+
+                                        {/* Tombol Hapus */}
+                                        <button 
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); hapusDataCloud(roadId, road.name); }} 
+                                            className="w-6 h-6 rounded-md border border-rose-200 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+                                            title="Hapus Rute"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        
+                                    </div>
+
                                   </div>
                                   );
                               })}
