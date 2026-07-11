@@ -2714,43 +2714,51 @@ export default function App() {
         <div className="h-full bg-[#1e2530] flex flex-col font-sans select-none overflow-hidden relative print-static-root">
           
           {/* --- HEADER MAP AREA --- */}
-          <header className="bg-white border-b border-slate-200 px-3 md:px-4 flex justify-between items-center z-[1100] shadow-sm h-16 md:h-16 shrink-0 relative w-full gap-3 print-hidden">
-            <div className="flex items-center space-x-2 shrink-0">
+          <header className="bg-white border-b border-slate-200 px-2 md:px-4 py-2 md:py-0 md:h-16 flex justify-between items-center z-[1100] shadow-sm shrink-0 relative w-full gap-2 md:gap-3 print-hidden">
+            <div className="flex items-center space-x-2 shrink-0 self-start md:self-center mt-1 md:mt-0">
               <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center shadow-sm"><MapIcon className="w-5 h-5"/></div>
             </div>
 
-            {/* --- STATISTIK LEGENDA DI HEADER (SIMPEL & TERPADU) --- */}
-            <div className="flex-1 flex items-center overflow-x-auto hide-scrollbar py-1">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-3.5 md:gap-5 shrink-0 text-xs md:text-sm font-bold text-slate-700 shadow-inner">
-                <span className="text-blue-600 flex items-center gap-1.5 shrink-0">
-                  📍 <span className="uppercase tracking-wider font-black">{selectedKelurahanFooter ? `Kel. ${selectedKelurahanFooter}` : selectedKecamatanFooter ? `Kec. ${selectedKecamatanFooter}` : "Semua Kecamatan"}</span>
+            {/* --- STATISTIK LEGENDA DI HEADER (RESPONSIF MOBILE TUMPUN) --- */}
+            <div className="flex-1 flex flex-col justify-center min-w-0 py-0.5 md:py-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl px-3 py-1.5 md:py-2 flex flex-col md:flex-row md:items-center gap-1 md:gap-5 shrink-0 shadow-inner w-full">
+                
+                {/* Baris Atas: Lokasi */}
+                <span className="text-blue-600 flex items-center gap-1.5 shrink-0 text-[11px] md:text-sm border-b border-slate-200 pb-1 md:border-none md:pb-0">
+                  📍 <span className="uppercase tracking-wider font-black truncate">{selectedKelurahanFooter ? `Kel. ${selectedKelurahanFooter}` : selectedKecamatanFooter ? `Kec. ${selectedKecamatanFooter}` : "Semua Kecamatan"}</span>
                 </span>
-                <div className="w-px h-4 bg-slate-300 shrink-0"></div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
-                  <span className="text-slate-600 font-normal">Baik: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.baik} /></span></span>
+                
+                <div className="hidden md:block w-px h-4 bg-slate-300 shrink-0"></div>
+                
+                {/* Baris Bawah: Statistik Kondisi Jalan (Mengecil & Membungkus di HP) */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] sm:text-[10px] md:text-sm">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                    <span className="text-slate-600 font-normal">Baik: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.baik} /></span></span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
+                    <span className="text-slate-600 font-normal">Rsk. Ringan: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-[#EC8533]"></span>
+                    <span className="text-slate-600 font-normal">Rsk. Sedang: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-[#EF4444]"></span>
+                    <span className="text-slate-600 font-normal">Rsk. Parah: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
-                  <span className="text-slate-600 font-normal">Rsk. Ringan: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-[#EC8533]"></span>
-                  <span className="text-slate-600 font-normal">Rsk. Sedang: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-[#EF4444]"></span>
-                  <span className="text-slate-600 font-normal">Rsk. Parah: <span className="font-black text-slate-900 inline-block min-w-[12px]"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
-                </div>
+
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 shrink-0">
+            <div className="flex items-center space-x-1.5 md:space-x-2 shrink-0 self-start md:self-center mt-1 md:mt-0">
               <button onClick={() => fetchRoads()} className="text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm" title="Refresh Data">
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-4 h-4 md:w-5 md:h-5" />
               </button>
               <button onClick={() => { window.location.hash = '#/'; }} className="text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="Keluar">
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
           </header>
