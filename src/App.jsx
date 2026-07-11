@@ -1834,17 +1834,6 @@ export default function App() {
     setEditingDraftId(draft.id); window.location.hash = '#/surveyor/form';     
   };
 
-  const handleShareDraft = (draft) => {
-    const shareText = `📍 Draft Survei: ${draft.name}\nKelurahan: ${formatKel(draft.kelurahan)}\nKondisi: ${draft.condition}\nPanjang: ${draft.length || 0} km\nCatatan: ${draft.notes || '-'}${draft.pinLocation ? `\nMap: https://www.google.com/maps?q=${draft.pinLocation.lat},${draft.pinLocation.lng}` : ''}`;
-    
-    if (navigator.share) {
-      navigator.share({ title: `Draft: ${draft.name}`, text: shareText }).catch(()=>{});
-    } else {
-      const textArea = document.createElement("textarea"); textArea.value = shareText; document.body.appendChild(textArea); textArea.select();
-      try { document.execCommand('copy'); showToast("Detail draft disalin ke clipboard!"); } catch (err) { showToast("Gagal menyalin."); } document.body.removeChild(textArea);
-    }
-  };
-
   const handleExportDraftJSON = (draft) => {
     const exportData = {
       app: "WebGIS_Surveyor",
@@ -1896,14 +1885,14 @@ export default function App() {
           if (importedData.drafts && Array.isArray(importedData.drafts)) {
               // Jika import data massal (banyak draft sekaligus)
               const newDrafts = importedData.drafts.map(d => ({ ...d, id: "DRAFT-" + Math.floor(Math.random() * 1000000), isUploaded: false }));
-              setDrafts(prev => [...prev, ...newDrafts]);
+              setDrafts(prev => [...newDrafts, ...prev]);
               showToast(`✅ ${newDrafts.length} Draft berhasil diimpor!`);
           } else if (importedData.draft) {
               // Jika import 1 data satuan
               const newDraft = importedData.draft;
               newDraft.id = "DRAFT-" + Math.floor(Math.random() * 100000);
               newDraft.isUploaded = false; 
-              setDrafts(prev => [...prev, newDraft]);
+              setDrafts(prev => [newDraft, ...prev]);
               showToast(`✅ Draft "${newDraft.name}" berhasil diimpor!`);
           } else {
               showToast("❌ Format file JSON tidak dikenali.");
@@ -1973,7 +1962,7 @@ export default function App() {
     };
     
     if (editingDraftId) { setDrafts(prev => prev.map(d => d.id === editingDraftId ? newDraft : d)); showToast("Draft diperbarui!"); } 
-    else { setDrafts(prev => [...prev, newDraft]); showToast(compressionRate > 0 ? `Tersimpan! Kompresi GPS ${compressionRate}%` : "Tersimpan ke Draf Luring!"); }
+    else { setDrafts(prev => [newDraft, ...prev]); showToast(compressionRate > 0 ? `Tersimpan! Kompresi GPS ${compressionRate}%` : "Tersimpan ke Draf Luring!"); }
 
     setFormData({ name: '', kelurahan: KELURAHAN_LIST[0], jenisJalan: 'Aspal', condition: 'Baik', notes: '' });
     setUploadedVideoFile(null); setUploadedVideoUrl(null); setUploadedPhotoFiles([]); setUploadedPhotoUrls([]); setPinLocation(null); setEditingDraftId(null); window.location.hash = '#/surveyor/drafts'; 
@@ -2698,7 +2687,6 @@ export default function App() {
                             <div className="flex gap-2">
                               <button onClick={(e) => { e.stopPropagation(); editDraft(draft); }} className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors"><Edit className="w-4 h-4"/></button>
                               <button onClick={(e) => { e.stopPropagation(); handleExportDraftJSON(draft); }} className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded-lg transition-colors"><Download className="w-4 h-4"/></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleShareDraft(draft); }} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-lg transition-colors"><Share2 className="w-4 h-4"/></button>
                               <button onClick={(e) => { e.stopPropagation(); deleteDraft(draft.id); }} className="text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>
                             </div>
                           </div>
