@@ -962,39 +962,6 @@ export default function App() {
   const [expandedSection, setExpandedSection] = useState(null); 
   const [sortConfig, setSortConfig] = useState('date_desc'); 
 
-  // --- STATE TOOLBAR HEADER (NEW) ---
-  const [selectedToolbarKec, setSelectedToolbarKec] = useState('Semua');
-  const [selectedToolbarKel, setSelectedToolbarKel] = useState('Semua');
-
-  useEffect(() => {
-      const activeKels = Object.keys(activeKelurahan).filter(k => activeKelurahan[k]);
-      if (activeKels.length === KELURAHAN_LIST.length) {
-          setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua');
-      } else if (activeKels.length > 0) {
-          let foundKec = null; let singleKec = true;
-          for(const kel of activeKels) {
-              const kec = Object.keys(KECAMATAN_DATA).find(k => KECAMATAN_DATA[k].includes(kel));
-              if (!foundKec) foundKec = kec; else if (foundKec !== kec) { singleKec = false; break; }
-          }
-          if (singleKec && foundKec) {
-              setSelectedToolbarKec(foundKec); setSelectedToolbarKel(activeKels.length === 1 ? activeKels[0] : 'Semua');
-          } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
-      } else { setSelectedToolbarKec('Semua'); setSelectedToolbarKel('Semua'); }
-  }, [activeKelurahan]);
-
-  const handleToolbarKecChange = (kec) => {
-      setSelectedToolbarKec(kec); setSelectedToolbarKel('Semua');
-      if (kec === 'Semua') setActiveKelurahan(initialKelurahanState);
-      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); KECAMATAN_DATA[kec].forEach(k => newActive[k] = true); setActiveKelurahan(newActive); }
-  };
-
-  const handleToolbarKelChange = (kel) => {
-      setSelectedToolbarKel(kel);
-      if (kel === 'Semua') handleToolbarKecChange(selectedToolbarKec);
-      else { const newActive = {}; KELURAHAN_LIST.forEach(k => newActive[k] = false); newActive[kel] = true; setActiveKelurahan(newActive); }
-  };
-  // ----------------------------------
-
   const toggleKecamatan = (kecamatan) => {
       const kels = KECAMATAN_DATA[kecamatan];
       const isAllActive = kels.every(k => activeKelurahan[k]);
@@ -1334,24 +1301,18 @@ export default function App() {
                 // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
                 
-                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
-                const props = feature.properties || {};
-                const namaKelurahan = props.name || props.KELURAHAN || props.WADMKD || props.NAMOBJ || props.Desa || "";
-                
+                // 2. FILTER BERDASARKAN SIDEBAR
+                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN;
                 if (namaKelurahan) {
-                    const norm = String(namaKelurahan).toLowerCase().replace(/kelurahan|desa|kel\.|ds\./gi, '').trim();
-                    const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
-                    if (match) return activeKelurahan[match] === true; // Munculkan hanya jika di sidebar aktif
+                    const norm = namaKelurahan.toLowerCase().replace(/kelurahan|desa/gi, '').trim();
+                    const match = KELURAHAN_LIST.find(k => k.toLowerCase() === norm);
+                    if (match) return activeKelurahan[match]; // Munculkan hanya jika di sidebar aktif
                 }
-                
-                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
-                const isAllActive = Object.values(activeKelurahan).every(v => v === true);
-                return isAllActive; 
+                return true; 
             },
             style: { color: '#6366f1', weight: 1.5, opacity: 0.9, fillColor: '#818cf8', fillOpacity: 0.1, dashArray: '3, 3' },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties || {};
-                const namaKelurahan = props.name || props.KELURAHAN || props.WADMKD || props.NAMOBJ || "Tidak Diketahui";
+                const namaKelurahan = feature.properties?.name || feature.properties?.KELURAHAN || "Tidak Diketahui";
                 layer.bindPopup(`<div style="text-align:center;"><b>Kel. ${namaKelurahan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
             }
         }).addTo(map);
@@ -1375,27 +1336,21 @@ export default function App() {
                 // 1. HILANGKAN PIN BIRU (Titik Center dari OSM)
                 if (feature.geometry?.type === 'Point' || feature.geometry?.type === 'MultiPoint') return false;
                 
-                // 2. FILTER KETAT BERDASARKAN SIDEBAR & STANDAR SHP INDONESIA
-                const props = feature.properties || {};
-                const namaKecamatan = props.name || props.KECAMATAN || props.WADMKC || props.NAMOBJ || props.Kecamatan || "";
-                
+                // 2. FILTER BERDASARKAN SIDEBAR
+                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN;
                 if (namaKecamatan) {
-                    const norm = String(namaKecamatan).toLowerCase().replace(/kecamatan|kec\./gi, '').trim();
-                    const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm || k.toLowerCase().includes(norm) || norm.includes(k.toLowerCase()));
+                    const norm = namaKecamatan.toLowerCase().replace(/kecamatan/gi, '').trim();
+                    const match = Object.keys(KECAMATAN_DATA).find(k => k.toLowerCase() === norm);
                     if (match) {
                         // Munculkan batas kecamatan jika ADA kelurahannya yang aktif di sidebar
-                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k] === true);
+                        return KECAMATAN_DATA[match].some(k => activeKelurahan[k]);
                     }
                 }
-                
-                // Jika semua wilayah aktif, tampilkan sebagai fallback. Jika ada yg dimatikan, sembunyikan yg tidak terdeteksi.
-                const isAllActive = Object.values(activeKelurahan).every(v => v === true);
-                return isAllActive;
+                return true;
             },
             style: { color: '#f59e0b', weight: 2.5, opacity: 0.9, fillColor: '#fcd34d', fillOpacity: 0.15, dashArray: '4, 4' },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties || {};
-                const namaKecamatan = props.name || props.KECAMATAN || props.WADMKC || props.NAMOBJ || "Tidak Diketahui";
+                const namaKecamatan = feature.properties?.name || feature.properties?.KECAMATAN || "Tidak Diketahui";
                 layer.bindPopup(`<div style="text-align:center;"><b>Kecamatan ${namaKecamatan}</b><br/><span style="font-size:10px; color:#666;">Batas Wilayah</span></div>`);
             }
         }).addTo(map);
@@ -2123,6 +2078,55 @@ export default function App() {
     }, 400); 
   };
 
+  // --- LOGIKA SINKRONISASI FILTER FOOTER & SIDEBAR ---
+  const activeKelurahanCount = Object.values(activeKelurahan).filter(Boolean).length;
+  let selectedKecamatanFooter = "";
+  let selectedKelurahanFooter = "";
+
+  if (activeKelurahanCount === 1) {
+      selectedKelurahanFooter = Object.keys(activeKelurahan).find(k => activeKelurahan[k]);
+      selectedKecamatanFooter = Object.keys(KECAMATAN_DATA).find(kec => KECAMATAN_DATA[kec].includes(selectedKelurahanFooter)) || "";
+  } else if (activeKelurahanCount > 1 && activeKelurahanCount < KELURAHAN_LIST.length) {
+      for (const [kec, kels] of Object.entries(KECAMATAN_DATA)) {
+          const activeInKec = kels.filter(k => activeKelurahan[k]).length;
+          if (activeInKec === kels.length && activeKelurahanCount === kels.length) {
+              selectedKecamatanFooter = kec;
+              break;
+          }
+      }
+  }
+
+  const onChangeFooterKec = (e) => {
+      const val = e.target.value;
+      if (!val) {
+          setActiveKelurahan(initialKelurahanState); 
+      } else {
+          const newState = { ...initialKelurahanState };
+          Object.keys(newState).forEach(k => newState[k] = false);
+          KECAMATAN_DATA[val].forEach(k => newState[k] = true);
+          setActiveKelurahan(newState);
+      }
+  };
+
+  const onChangeFooterKel = (e) => {
+      const val = e.target.value;
+      if (!val) {
+           if (selectedKecamatanFooter) {
+               const newState = { ...initialKelurahanState };
+               Object.keys(newState).forEach(k => newState[k] = false);
+               KECAMATAN_DATA[selectedKecamatanFooter].forEach(k => newState[k] = true);
+               setActiveKelurahan(newState);
+           } else {
+               setActiveKelurahan(initialKelurahanState);
+           }
+      } else {
+           const newState = { ...initialKelurahanState };
+           Object.keys(newState).forEach(k => newState[k] = false);
+           newState[val] = true;
+           setActiveKelurahan(newState);
+      }
+  };
+
   return (
     <div className="fixed inset-0 w-full overflow-hidden bg-slate-900 text-slate-900 font-sans print-static-root print:bg-white">
       <style dangerouslySetInnerHTML={{__html: `
@@ -2637,6 +2641,14 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="px-4 py-3 flex justify-between items-center border-b border-slate-300/40 bg-transparent">
+                    <span className="text-[10px] font-black text-slate-800 tracking-widest uppercase drop-shadow-md">Tampil Wilayah</span>
+                    <div className="flex space-x-2">
+                      <button onClick={() => { setActiveKelurahan(initialKelurahanState); }} className="border border-slate-300/50 text-slate-900 hover:text-blue-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Semua</button>
+                      <button onClick={() => { setActiveKelurahan(KELURAHAN_LIST.reduce((acc, kel) => { acc[kel] = false; return acc; }, {})); setExpandedSection(null); }} className="border border-slate-300/50 text-slate-900 hover:text-rose-800 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white/80 bg-white/50 transition-all shadow-sm">Kosongkan</button>
+                    </div>
+                </div>
+
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
                   
                   {/* WILAYAH KECAMATAN & KELURAHAN (GABUNGAN) */}
@@ -2667,26 +2679,22 @@ export default function App() {
                                               <LayerToggle active={isAllActive} color={isSomeActive ? "#a78bfa" : "#8b5cf6"} onClick={() => toggleKecamatan(kec)} />
                                               <span className={`text-[11px] font-black uppercase tracking-widest drop-shadow-sm ${isAllActive || isSomeActive ? 'text-slate-800' : 'text-slate-500'}`}>Kec. {kec}</span>
                                           </div>
+                                          <div className="text-[10px] font-bold text-slate-600 bg-white/50 px-1.5 py-0.5 rounded shadow-sm">{activeCount}/{kels.length}</div>
                                       </div>
                                       
                                       {/* Anak Kelurahan */}
                                       <div className="py-1">
-                                          {kels.map(kel => {
-                                             const roadCount = syncedRoads.filter(r => r.kelurahan === kel).length;
-                                             return (
+                                          {kels.map(kel => (
                                              <div key={kel} className="flex items-center justify-between px-4 py-1.5 hover:bg-white/60 transition-colors cursor-pointer" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))}>
                                                 <div className="flex items-center space-x-3 ml-7">
                                                     <LayerToggle active={activeKelurahan[kel]} color="#c4b5fd" onClick={() => setActiveKelurahan(prev => ({...prev, [kel]: !prev[kel]}))} />
                                                     <span className={`text-[12px] font-bold truncate max-w-[140px] drop-shadow-sm ${activeKelurahan[kel] ? 'text-slate-900' : 'text-slate-500'}`}>{formatKel(kel)}</span>
                                                 </div>
                                                 <div className="flex items-center space-x-3">
-                                                    {roadCount > 0 && (
-                                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 border border-blue-200/50 px-2 py-0.5 rounded-md shadow-sm">{roadCount}</span>
-                                                    )}
+                                                    <span className="text-[10px] font-bold text-slate-500">{syncedRoads.filter(r => r.kelurahan === kel).length} jln</span>
                                                 </div>
                                              </div>
-                                             );
-                                          })}
+                                          ))}
                                       </div>
                                    </div>
                                 );
@@ -2793,62 +2801,54 @@ export default function App() {
           </main>
         </div>
 
-        {/* --- FOOTER KONTROL WILAYAH --- */}
-        <div className="bg-white border-t border-slate-200 px-3 md:px-4 py-1.5 md:py-2 flex flex-col md:flex-row items-center justify-between z-[1050] shadow-[0_-5px_15px_rgba(0,0,0,0.05)] shrink-0 w-full gap-2 print-hidden relative pb-[calc(2px+env(safe-area-inset-bottom,0px))]">
-             
-             {/* Kiri Ujung: Toggles Batas Wilayah */}
-             <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-1/3 overflow-x-auto hide-scrollbar shrink-0 order-2 md:order-1">
-                <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKecamatan ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
-                    onClick={() => setShowKecamatan(!showKecamatan)}
-                >
+        {/* --- FOOTER MAP AREA --- */}
+        <footer className="bg-white border-t border-slate-200 px-2 md:px-4 py-2 flex justify-between items-center z-[1100] shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] shrink-0 w-full relative print-hidden gap-2 md:gap-4 overflow-x-auto hide-scrollbar">
+            
+            {/* Bagian Kiri: Info (Sembunyi di Mobile) */}
+            <div className="hidden md:flex items-center gap-2 shrink-0 pr-4 border-r border-slate-200">
+               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sistem Informasi Geografis</span>
+            </div>
+
+            {/* Bagian Tengah: Filter Data (Dropdown Tersinkronisasi) */}
+            <div className="flex flex-1 justify-center items-center gap-2 md:gap-3 shrink-0 min-w-max">
+                <div className="flex items-center gap-1.5 md:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
+                    <span className="text-[10px] md:text-xs font-bold text-slate-500 hidden sm:inline ml-1">Filter Data:</span>
+                    <select value={selectedKecamatanFooter} onChange={onChangeFooterKec} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer max-w-[120px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Kecamatan</option>
+                        {Object.keys(KECAMATAN_DATA).sort().map(kec => (
+                            <option key={kec} value={kec}>{kec}</option>
+                        ))}
+                    </select>
+                    
+                    <select value={selectedKelurahanFooter} onChange={onChangeFooterKel} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer max-w-[120px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Kelurahan</option>
+                        {(selectedKecamatanFooter ? KECAMATAN_DATA[selectedKecamatanFooter] : KELURAHAN_LIST).map(kel => (
+                            <option key={kel} value={kel}>{formatKel(kel)}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Bagian Kanan: Toggle Batas GeoJSON (Lebih Ringkas) */}
+            <div className="flex items-center gap-2 shrink-0 pl-2 md:pl-4 md:border-l border-slate-200">
+                <div className="flex items-center justify-between gap-1.5 md:gap-2 bg-amber-50/50 border border-amber-200 rounded-xl px-2 py-1.5 shadow-sm cursor-pointer hover:bg-amber-50 transition-colors" onClick={() => setShowKecamatan(!showKecamatan)}>
+                    <span className="text-[10px] md:text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                        🗺️ Kec
+                        {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500 ml-1" />}
+                    </span>
                     <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKecamatan ? 'text-amber-700' : 'text-slate-600'}`}>
-                        Batas Kec. {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500" />}
-                    </span>
                 </div>
-                
-                <div 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full border cursor-pointer transition-all shadow-sm ${showKelurahan ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`} 
-                    onClick={() => setShowKelurahan(!showKelurahan)}
-                >
+
+                <div className="flex items-center justify-between gap-1.5 md:gap-2 bg-indigo-50/50 border border-indigo-200 rounded-xl px-2 py-1.5 shadow-sm cursor-pointer hover:bg-indigo-50 transition-colors" onClick={() => setShowKelurahan(!showKelurahan)}>
+                    <span className="text-[10px] md:text-[11px] font-bold text-indigo-700 flex items-center gap-1">
+                        📍 Kel
+                        {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 ml-1" />}
+                    </span>
                     <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
-                    <span className={`text-[11px] font-bold whitespace-nowrap flex items-center gap-1 ${showKelurahan ? 'text-indigo-700' : 'text-slate-600'}`}>
-                        Batas Kel. {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />}
-                    </span>
                 </div>
-             </div>
+            </div>
 
-             {/* Tengah: Filter Kecamatan & Kelurahan */}
-             <div className="flex items-center justify-center gap-2 w-full md:w-1/3 shrink-0 order-1 md:order-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:block mr-1">Filter:</span>
-                <select 
-                   value={selectedToolbarKec}
-                   onChange={(e) => handleToolbarKecChange(e.target.value)}
-                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm w-1/2 md:w-auto h-7"
-                >
-                   <option value="Semua">Semua Kecamatan</option>
-                   {Object.keys(KECAMATAN_DATA).sort().map(kec => (
-                      <option key={kec} value={kec}>{kec}</option>
-                   ))}
-                </select>
-                
-                <select 
-                   value={selectedToolbarKel}
-                   onChange={(e) => handleToolbarKelChange(e.target.value)}
-                   disabled={selectedToolbarKec === 'Semua'}
-                   className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] md:text-xs font-bold rounded-full px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-100 w-1/2 md:w-auto h-7"
-                >
-                   <option value="Semua">Semua Kelurahan</option>
-                   {selectedToolbarKec !== 'Semua' && KECAMATAN_DATA[selectedToolbarKec].map(kel => (
-                      <option key={kel} value={kel}>{formatKel(kel)}</option>
-                   ))}
-                </select>
-             </div>
-
-             {/* Kanan: Spacer untuk menjaga elemen filter tetap di tengah (Desktop only) */}
-             <div className="hidden md:block md:w-1/3 order-3"></div>
-          </div>
+        </footer>
 
         {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
         {selectedRoad && (
@@ -2931,7 +2931,7 @@ export default function App() {
 
         {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
         {isAnimatingMap && animatingRoadsList.length > 0 && (
-             <div className="fixed bottom-[90px] md:bottom-[70px] left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
                  
                  {isAnimControlMinimized ? (
                      <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
