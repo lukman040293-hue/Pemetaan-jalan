@@ -2948,4 +2948,323 @@ export default function App() {
           <main className={`flex-1 relative w-full h-full overflow-hidden bg-transparent`}>
             
             {/* --- KOTAK STATISTIK MOBILE (MENGAMBANG DI ATAS PETA) --- */}
-            <div className="md
+            <div className="md:hidden absolute top-1 left-[60px] right-3 z-[1050] pointer-events-none print-hidden flex justify-center">
+              <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-lg px-2 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 shadow-md pointer-events-auto w-full max-w-full">
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                  <span className="text-slate-600 font-medium">Baik: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.baik} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
+                  <span className="text-slate-600 font-medium">R.Ringan: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakRingan} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#EC8533]"></span>
+                  <span className="text-slate-600 font-medium">R.Sedang: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakSedang} /></span></span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[9px] sm:text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span>
+                  <span className="text-slate-600 font-medium">R.Parah: <span className="font-black text-slate-900"><AnimatedNumber value={adminStats.rusakParah} /></span></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tombol Toggle Sidebar Mengambang (Pojok Kiri Atas Peta) */}
+            {!isSidebarOpen && (
+               <button 
+                  onClick={() => setIsSidebarOpen(true)} 
+                  className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
+                  title="Buka Daftar Layer"
+               >
+                  <Menu className="w-6 h-6" strokeWidth={2.5} />
+               </button>
+            )}
+
+            {/* Tombol Reset View Peta (Pojok Kanan Atas - Bawah Zoom Control) */}
+            <button 
+               onClick={resetMapView}
+               className="absolute top-[135px] right-[10px] z-[1000] bg-white w-[30px] h-[30px] md:w-[34px] md:h-[34px] rounded-[2px] shadow-[0_1px_5px_rgba(0,0,0,0.65)] text-slate-700 hover:bg-[#f4f4f4] hover:text-black transition-colors pointer-events-auto flex items-center justify-center animate-fade-in"
+               title="Reset Tampilan Peta"
+            >
+               <Maximize className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+            </button>
+
+            <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center overflow-hidden">
+               <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
+                   <div ref={adminMapContainerRef} className="absolute inset-0 bg-slate-200 z-0"></div>
+                   {!isLeafletLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-100 font-bold text-slate-400 z-10 pointer-events-none">Memuat Peta...</div>}
+               </div>
+            </div>
+          </main>
+        </div>
+
+        {/* --- FOOTER MAP AREA --- */}
+        <footer className="bg-white border-t border-slate-200 px-2 md:px-4 py-2 flex justify-between items-center z-[1100] shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] shrink-0 w-full relative print-hidden gap-2 md:gap-4 overflow-x-auto hide-scrollbar">
+            
+            {/* Bagian Kiri: Info (Sembunyi di Mobile) */}
+            <div className="hidden md:flex items-center gap-2 shrink-0 pr-4 border-r border-slate-200">
+               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sistem Informasi Infrastruktur Jalan</span>
+            </div>
+
+            {/* Bagian Tengah: Filter Data (Dropdown Tersinkronisasi) Tanpa Kotak Luar */}
+            <div className="flex flex-1 justify-center items-center gap-2 md:gap-3 shrink-0 min-w-max">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                    <span className="text-[10px] md:text-xs font-bold text-slate-500 hidden sm:inline">Filter:</span>
+                    <select value={selectedKecamatanFooter} onChange={onChangeFooterKec} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1.5 md:py-1 outline-none cursor-pointer max-w-[130px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Kecamatan</option>
+                        {Object.keys(KECAMATAN_DATA).sort().map(kec => (
+                            <option key={kec} value={kec}>{kec}</option>
+                        ))}
+                    </select>
+                    
+                    <select value={selectedKelurahanFooter} onChange={onChangeFooterKel} className="bg-white border border-slate-300 text-slate-700 text-[11px] md:text-xs font-bold rounded-lg px-2 py-1.5 md:py-1 outline-none cursor-pointer max-w-[130px] md:max-w-[160px] truncate shadow-sm focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Kelurahan</option>
+                        {(selectedKecamatanFooter ? KECAMATAN_DATA[selectedKecamatanFooter] : KELURAHAN_LIST).map(kel => (
+                            <option key={kel} value={kel}>{formatKel(kel)}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Bagian Kanan: Toggle Batas GeoJSON (Lebih Ringkas) */}
+            <div className="flex items-center gap-2 shrink-0 pl-2 md:pl-4 md:border-l border-slate-200">
+                <div className="flex items-center justify-between gap-1.5 md:gap-2 bg-amber-50/50 border border-amber-200 rounded-xl px-2 py-1.5 shadow-sm cursor-pointer hover:bg-amber-50 transition-colors" onClick={() => setShowKecamatan(!showKecamatan)}>
+                    <span className="text-[10px] md:text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                        🗺️ Kec
+                        {isLoadingKecamatan && <RefreshCw className="w-3 h-3 animate-spin text-amber-500 ml-1" />}
+                    </span>
+                    <LayerToggle active={showKecamatan} color="#f59e0b" onClick={() => setShowKecamatan(!showKecamatan)} />
+                </div>
+
+                <div className="flex items-center justify-between gap-1.5 md:gap-2 bg-indigo-50/50 border border-indigo-200 rounded-xl px-2 py-1.5 shadow-sm cursor-pointer hover:bg-indigo-50 transition-colors" onClick={() => setShowKelurahan(!showKelurahan)}>
+                    <span className="text-[10px] md:text-[11px] font-bold text-indigo-700 flex items-center gap-1">
+                        📍 Kel
+                        {isLoadingKelurahan && <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 ml-1" />}
+                    </span>
+                    <LayerToggle active={showKelurahan} color="#6366f1" onClick={() => setShowKelurahan(!showKelurahan)} />
+                </div>
+            </div>
+
+        </footer>
+
+        {/* --- SELECTED ROAD POPUP (DETAIL RUTE) --- */}
+        {selectedRoad && (
+          <>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1500] print-hidden" onClick={closeAdminModal}></div>
+            
+            <div className="fixed inset-0 z-[1600] flex items-end md:items-center justify-center p-0 pointer-events-none print-hidden">
+              
+              <div className={`relative w-full md:w-[600px] ${isVideoFullscreen ? 'h-[100vh] md:w-full md:h-full max-h-none rounded-none' : 'max-h-[90vh] md:max-h-[92vh] rounded-t-3xl md:rounded-3xl'} bg-white shadow-2xl flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 animate-fade-in-up md:animate-fade-in`}>
+                
+                {!isVideoFullscreen && (
+                  <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 bg-white z-10 shrink-0">
+                    <h3 className="font-black text-slate-900">Detail Rute</h3>
+                    <button onClick={closeAdminModal} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+                  </div>
+                )}
+
+                <div className={`${isVideoFullscreen ? 'fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl w-full h-full flex flex-col justify-center' : 'aspect-video w-full max-h-[35vh] md:max-h-[300px] bg-slate-900 relative'} shrink-0 transition-all duration-300`}>
+                  {videoSnapshot.length > 0 ? (
+                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                          {videoSnapshot.map((snap, i) => <img key={i} src={snap} className="w-full h-full object-cover rounded-sm" />)}
+                      </div>
+                    ) : selectedRoad.videoUrl ? (
+                      <>
+                        <video id="admin-vid-player" crossOrigin="anonymous" src={selectedRoad.videoUrl} controls controlsList="nofullscreen" playsInline className="absolute inset-0 w-full h-full object-contain"></video>
+                        <button onClick={() => setIsVideoFullscreen(!isVideoFullscreen)} className={`absolute z-30 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-xl pointer-events-auto backdrop-blur-md border border-white/20 transition-all shadow-lg ${isVideoFullscreen ? 'top-6 right-6' : 'bottom-12 right-4 md:bottom-4 md:right-4'}`} title="Toggle Fullscreen">
+                            {isVideoFullscreen ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
+                            )}
+                        </button>
+                      </>
+                    ) : selectedRoad.photoUrls?.length > 0 ? (
+                      <img src={selectedRoad.photoUrls[0]} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (<div className="text-center flex items-center justify-center h-full w-full text-white text-sm font-bold">Media Tidak Dilampirkan</div>)}
+                  
+                  {/* --- WATERMARK OVERLAY --- */}
+                  {(selectedRoad.videoUrl || selectedRoad.photoUrls?.length > 0) && videoSnapshot.length === 0 && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 w-full text-center">
+                       <div className={`font-black text-white/30 drop-shadow-md tracking-widest transition-all duration-300 ${isVideoFullscreen ? 'text-3xl md:text-5xl opacity-40' : 'text-lg md:text-xl opacity-60'}`}>
+                          {selectedRoad.date || new Date().toLocaleDateString('id-ID')}
+                       </div>
+                    </div>
+                  )}
+                </div>
+                
+                {!isVideoFullscreen && (
+                  <div className="w-full p-4 md:p-5 flex flex-col flex-1 min-h-0 gap-3">
+                    <div className="flex flex-wrap gap-2 justify-end shrink-0">
+                       <button onClick={() => hapusDataCloud(selectedRoad.id || selectedRoad.dbId, selectedRoad.name)} className="text-[9px] md:text-xs text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-md font-bold transition-colors shadow-sm">Hapus</button>
+                       <button onClick={() => { closeAdminModal(); if (adminMapInstanceRef.current) adminMapInstanceRef.current.closePopup(); setAnimatingRoadsList([selectedRoad]); setIsAnimatingMap(true); setIsAnimPaused(true); setCurrentAnimDistance(0); setAnimationSpeedMultiplier(1.0); setShowSpeedControl(false); setIsAnimFinished(false); setIsAnimControlMinimized(false); if(window.innerWidth < 768) setIsSidebarOpen(false); }} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Play Animasi</button>
+                       <button onClick={handleShareLocation} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Share Lokasi</button>
+                       <button onClick={handleExportKML} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Export KML</button>
+                       <button onClick={handlePrint} className="text-[9px] md:text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md font-bold transition-colors">Print</button>
+                    </div>
+                    
+                    <div className="shrink-0">
+                        <h4 className="text-lg md:text-xl font-black mb-1 leading-tight text-slate-900">{selectedRoad.name}</h4>
+                        <p className="text-xs md:text-sm text-slate-600 italic mb-2">"{selectedRoad.notes || 'Tidak ada catatan.'}"</p>
+                    </div>
+                    
+                    <div className="border border-slate-200 rounded-lg overflow-y-auto custom-scrollbar flex-1 min-h-[100px] bg-white">
+                      <table className="w-full text-left text-[10px] md:text-xs border-collapse">
+                        <tbody className="divide-y divide-slate-200">
+                          <tr><th className="py-3 px-3 bg-slate-50 w-1/3">Kelurahan</th><td className="py-3 px-3">{formatKel(selectedRoad.kelurahan)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Jenis/Kondisi</th><td className="py-3 px-3">{selectedRoad.jenisJalan} / <span className="font-bold" style={{color:getConditionColor(selectedRoad.condition)}}>{selectedRoad.condition}</span></td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50">Panjang Rute</th><td className="py-3 px-3">{formatLength(selectedRoad.length)}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Titik Lokasi</th><td className="py-3 px-3">{selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat.toFixed(5)}, ${selectedRoad.pinLocation.lng.toFixed(5)}` : '-'}</td></tr>
+                          <tr><th className="py-3 px-3 bg-slate-50 align-top">Tanggal</th><td className="py-3 px-3">{selectedRoad.date || '-'}</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* --- OVERLAY KONTROL ANIMASI BAWAH --- */}
+        {isAnimatingMap && animatingRoadsList.length > 0 && (
+             <div className="fixed bottom-4 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[360px] z-[2000] flex flex-col pointer-events-none print-hidden">
+                 
+                 {isAnimControlMinimized ? (
+                     <button onClick={() => setIsAnimControlMinimized(false)} className="pointer-events-auto mx-auto bg-white/95 px-5 py-3 rounded-full shadow-2xl border border-blue-200 text-blue-700 text-sm font-black w-auto">
+                         Buka Kontrol Animasi
+                     </button>
+                 ) : (
+                     <div className="pointer-events-auto bg-white/95 backdrop-blur-xl p-3 md:p-4 rounded-3xl flex flex-col shadow-2xl border border-slate-200 w-full gap-3">
+                         
+                         <div className="flex justify-between items-center w-full">
+                             <div className="flex gap-2 items-center">
+                                 {isAnimFinished ? (
+                                     <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-colors" title="Ulang">
+                                         <RefreshCw className="w-5 h-5"/>
+                                     </button>
+                                 ) : (
+                                     <>
+                                         <button onClick={() => setIsAnimPaused(!isAnimPaused)} className={`w-10 h-10 flex items-center justify-center rounded-full text-white shadow-sm transition-colors ${isAnimPaused ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`} title={isAnimPaused ? "Play" : "Pause"}>
+                                            {isAnimPaused ? <Play className="w-5 h-5 ml-0.5" /> : <Pause className="w-5 h-5" />}
+                                         </button>
+                                         <button onClick={() => { setIsAnimatingMap(false); setTimeout(() => { setIsAnimatingMap(true); setIsAnimPaused(false); setIsAnimFinished(false); setCurrentAnimDistance(0); }, 50); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 shadow-sm transition-colors" title="Mulai Ulang">
+                                             <RefreshCw className="w-5 h-5" />
+                                         </button>
+                                     </>
+                                 )}
+                                 <button onClick={() => setShowSpeedControl(!showSpeedControl)} className={`px-3 py-1 h-10 rounded-full text-[11px] md:text-xs font-bold border shadow-sm flex items-center justify-center ${showSpeedControl ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700 border-slate-300'}`}>
+                                     {Number(animationSpeedMultiplier).toFixed(2)}x
+                                 </button>
+                             </div>
+
+                             <div className="flex gap-1.5 items-center">
+                                 <button onClick={() => setIsAnimControlMinimized(true)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full shrink-0 hover:bg-slate-200 transition-colors" title="Sembunyikan">
+                                    <ChevronDown className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => { setIsAnimatingMap(false); setIsAnimPaused(false); setShowSpeedControl(false); setAnimatingRoadsList([]); setIsAnimFinished(false); setIsAnimControlMinimized(false); }} className="w-8 h-8 flex items-center justify-center bg-rose-100 text-rose-600 border border-rose-200 rounded-full shrink-0 hover:bg-rose-200 transition-colors" title="Tutup">
+                                    <X className="w-4 h-4" />
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <div className="flex gap-2 w-full items-stretch">
+                             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-center text-slate-800 shadow-inner">
+                                 {animatingRoadsList.length > 1 ? (
+                                     <span className="text-blue-700 text-sm font-black truncate">{animatingRoadsList.length} Rute Aktif</span>
+                                 ) : (
+                                     <span className="text-base md:text-lg font-black truncate tracking-wide">
+                                         {currentAnimDistance < 1000 ? Math.round(currentAnimDistance) + ' m' : (currentAnimDistance / 1000).toFixed(2) + ' km'}
+                                     </span>
+                                 )}
+                             </div>
+                             
+                             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+                                 <button onClick={() => setAnimIconType('car')} className={`p-1.5 rounded-lg ${animIconType === 'car' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚗</button>
+                                 <button onClick={() => setAnimIconType('motorcycle')} className={`p-1.5 rounded-lg ${animIconType === 'motorcycle' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏍️</button>
+                                 <button onClick={() => setAnimIconType('runner')} className={`p-1.5 rounded-lg ${animIconType === 'runner' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🏃</button>
+                                 <button onClick={() => setAnimIconType('truck')} className={`p-1.5 rounded-lg ${animIconType === 'truck' ? 'bg-white shadow-sm' : 'opacity-50'}`}>🚛</button>
+                             </div>
+                         </div>
+
+                         {/* --- KONTROL SPEED --- */}
+                         {showSpeedControl && (
+                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner w-full">
+                                 <div className="flex items-center space-x-2 md:space-x-3 mb-3">
+                                     <button onClick={() => setAnimationSpeedMultiplier(Math.max(0.25, animationSpeedMultiplier - 0.25))} className="w-6 h-6 bg-white text-slate-800 rounded-full font-black border border-slate-300">-</button>
+                                     <input type="range" min="0.25" max="3.0" step="0.25" value={animationSpeedMultiplier} onChange={(e) => setAnimationSpeedMultiplier(parseFloat(e.target.value))} className="flex-1 h-1.5 bg-slate-300 rounded-lg" style={{ accentColor: '#2563eb' }}/>
+                                     <button onClick={() => setAnimationSpeedMultiplier(Math.min(3.0, animationSpeedMultiplier + 0.25))} className="w-6 h-6 bg-white text-slate-800 rounded-full font-black border border-slate-300">+</button>
+                                 </div>
+                                 <div className="flex justify-between gap-1 md:gap-1.5">
+                                     {[1.0, 1.5, 2.0, 2.5, 3.0].map(speed => (
+                                         <button key={speed} onClick={() => setAnimationSpeedMultiplier(speed)} className={`flex-1 py-1.5 rounded-md text-[10px] md:text-xs font-bold border ${animationSpeedMultiplier === speed ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'}`}>{speed}x</button>
+                                     ))}
+                                 </div>
+                             </div>
+                         )}
+
+                         {/* --- NEW: TOMBOL 3D & RECORDING TERPISAH --- */}
+                         {animatingRoadsList.length === 1 && (
+                            <div className="flex gap-2 w-full items-stretch pt-1">
+                                <button onClick={() => setIsExportingDroneVideo(true)} className={`w-full py-3.5 rounded-xl text-xs font-black border transition-colors shadow-sm flex items-center justify-center gap-1.5 bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700`}>
+                                    <Camera className="w-5 h-5"/>
+                                    Export Video 3D (Drone View)
+                                </button>
+                            </div>
+                         )}
+                     </div>
+                 )}
+             </div>
+          )}
+        </div>
+      )}
+
+      {/* --- AREA CETAK PDF --- */}
+      {appRole === 'admin' && selectedRoad && (
+        <div className="hidden print-show w-full bg-white text-black p-4 md:p-8" id="print-area">
+           <div className="text-center border-b-4 border-black pb-4 mb-6 relative">
+              <h1 className="text-2xl font-black uppercase tracking-wide text-black">Laporan Survei Kondisi Jalan</h1>
+           </div>
+           
+           <table className="w-full mb-6 text-[14px] border-collapse text-black">
+              <tbody>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold w-1/3 text-black">Nama Rute / Jalan</td><td className="py-2.5 font-black text-[14px] text-[#800000]">: {selectedRoad.name}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kelurahan Wilayah</td><td className="py-2.5 font-bold text-black">: {formatKel(selectedRoad.kelurahan)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Jenis Material Jalan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.jenisJalan || '-'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Kondisi Dominan</td><td className="py-2.5 text-[#800000]">: <span className="font-bold border border-[#800000] px-2 py-0.5 rounded text-[14px] text-[#800000]">{selectedRoad.condition}</span></td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Panjang Rute Terecord</td><td className="py-2.5 font-bold text-black">: {formatLength(selectedRoad.length)}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black align-top">Catatan Lapangan</td><td className="py-2.5 italic text-[#800000]">: "{selectedRoad.notes || 'Tidak ada catatan khusus.'}"</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Titik Pin Lokasi (GPS)</td><td className="py-2.5 font-mono text-[14px] font-bold text-black">: {selectedRoad.pinLocation ? `${selectedRoad.pinLocation.lat}, ${selectedRoad.pinLocation.lng}` : 'Tidak ditandai'}</td></tr>
+                <tr className="border-b border-black/20"><td className="py-2.5 font-bold text-black">Tanggal Pelaksanaan</td><td className="py-2.5 font-bold text-black">: {selectedRoad.date}</td></tr>
+              </tbody>
+           </table>
+
+           {/* --- LAMPIRAN GAMBAR/VIDEO --- */}
+           <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="pt-4">
+              <h3 className="font-bold text-[16px] border-b-2 border-black mb-4 pb-1 text-black">Lampiran Visual Lapangan</h3>
+              {videoSnapshot.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {videoSnapshot.map((snap, i) => (
+                       <div key={i} className="aspect-[4/3] bg-white rounded-lg overflow-hidden border border-black relative">
+                          <img src={snap} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-2 left-2 bg-black/80 text-white text-[16px] px-2 py-1 rounded backdrop-blur-sm">Frame {i+1}</div>
+                       </div>
+                    ))}
+                 </div>
+              ) : selectedRoad.photoUrls?.length > 0 ? (
+                 <div className="grid grid-cols-2 gap-4">
+                    {selectedRoad.photoUrls.slice(0, 4).map((url, i) => (
+                       <div key={i} className="aspect-[4/3] bg-white rounded-lg overflow-hidden border border-black">
+                          <img src={url} className="w-full h-full object-cover" />
+                       </div>
+                    ))}
+                 </div>
+              ) : (
+                 <div className="text-[16px] text-black italic p-4 bg-white rounded-lg border border-black">Tidak ada media visual yang dilampirkan pada survei ini.</div>
+              )}
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}
