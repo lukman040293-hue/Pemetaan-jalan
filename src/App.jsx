@@ -2973,7 +2973,7 @@ export default function App() {
             {!isSidebarOpen && (
                <button 
                   onClick={() => setIsSidebarOpen(true)} 
-                  className="absolute top-[48px] left-2 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
+                  className="absolute top-[48px] md:top-4 left-2 md:left-4 z-[1000] bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-200 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all pointer-events-auto animate-fade-in"
                   title="Buka Daftar Layer"
                >
                   <Menu className="w-5 h-5" strokeWidth={2.5} />
